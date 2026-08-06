@@ -36,6 +36,11 @@ wedges — six, eight, ten or twelve of them depending on the sector.
 
 **The HUD.**
 - Top left: **SIGNAL** — your score this run.
+- Top centre: **your velocity**, as a fraction of the speed of light. It rises
+  with the level and with overdrive, and when an event horizon opens — a
+  slipstream, or the one at the end of a level — you fall toward it and the
+  number goes with you, up to 0.999. It never reads 1.000, because that would
+  be a lie and every player knows it.
 - Top right: **LV n  x/y** — the level, and how many rings you have cleared of
   the target. Tap it to pause.
 - Middle, when you have a chain going: your **multiplier** and chain length.
