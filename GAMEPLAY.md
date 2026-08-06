@@ -114,9 +114,13 @@ world upside down; the green one turns it back. See §16.
 
 ## 6. Colour and shape
 
-Levels use **three colours** early and **four** once they get hard. Each colour
-also owns a **shape** — circle, triangle, square, diamond — stamped on every
-wedge that wears it.
+Levels use **three colours** up to level 17 and **four** from level 18 on. Each
+colour also owns a **shape** — circle, triangle, square, diamond — stamped on
+every wedge that wears it.
+
+The fourth colour is the single largest step in the game: it lengthens the tap
+cycle every ring is solved with. It is on the schedule in §15 for that reason,
+rather than falling out of a difficulty threshold.
 
 The shapes are not decoration. Roughly one man in twelve has some red-green
 colour deficiency, and several of the sector palettes are exactly the pairs
@@ -264,7 +268,17 @@ result card arrives.
 
 ## 15. The campaign
 
-**246 distinct levels** before anything repeats.
+**246 levels**, and no two of them are the same level.
+
+That claim used to rest on nothing. Every hazard rule saturated by the fourth
+sector, so from level 31 onward a level's contents depended only on its
+position within its sector — level 31 and level 241 carried exactly the same
+mechanics, and only speed and length still moved. There were 26 distinct hazard
+combinations in the whole campaign.
+
+What a level *is* is now drawn per level (§15, "Hazards are drawn, not
+accumulated"), which gives 197 distinct combinations across the 246 — on top of
+the eight palettes, the ring counts, and the speed.
 
 Levels are grouped in **sectors of ten**, each with its own colour scheme and
 tunnel style:
@@ -282,22 +296,51 @@ tolerance for repetition.
 
 ### The hazards, in the order you meet them
 
+Every mechanic has a level it is introduced on, and the gaps widen as they go —
+five levels between the first two, thirteen between the last two, because a
+player who has learned nine things needs longer with the ninth than a player
+who has learned one needed with the first.
+
 | From | Hazard | What it does |
 |---|---|---|
 | L4 | **Fast rings** | Some rings spin far quicker than the ones you have been reading |
 | L5 | **Boss ring** | Sealed ring at the end of every 5th level, steering reversed |
-| L6 | **Late colour** | Wedges arrive blank and colour up as they close |
-| L8 | **Phasing colour** | Purple rings swap their colours as they travel |
-| L8 | **Fast pairs** | Rings arrive in twos, too close to solve separately |
-| L10 | **Dissolving colour** | Colour drains out of the wedges — read them early |
-| L14 | **Inverted stretch** | See §16 |
-| L15 | **Reversing spin** | Rings change direction mid-flight |
-| L17 | **Strobing wedges** | The wedges flicker; what you saw is still what is there |
-| L24 | **Hardened rings** | Resonance will not rewrite them |
-| L26 | **Tunnel blackout** | The lights go out in waves; the rings stay lit |
+| L9 | **Late colour** | Wedges arrive blank and colour up as they close |
+| L15 | **Phasing colour** | Purple rings swap their colours as they travel |
+| L18 | **A fourth colour** | The tap cycle gets longer, and every ring gets harder to solve |
+| L22 | **Reversing spin** | Rings change direction mid-flight |
 | L29 | **Checkpoints** | See §18 |
-| L34 | **Drift** | The whole tunnel slowly turns under you |
-| L49 | **Reversed steering** | The conduit turns the opposite way for a whole level |
+| L30 | **Dissolving colour** | Colour drains out of the wedges — read them early |
+| L37 | **Inverted stretch** | See §16 |
+| L46 | **Fast pairs** | Rings arrive in twos, too close to solve separately |
+| L57 | **Strobing wedges** | The wedges flicker; what you saw is still what is there |
+| L69 | **Hardened rings** | Resonance will not rewrite them |
+| L82 | **Tunnel blackout** | The lights go out in waves; the rings stay lit |
+| L96 | **Drift** | The whole tunnel slowly turns under you |
+| L109 | **Reversed steering** | The conduit turns the opposite way for a whole level |
+
+**The last new mechanic arrives on level 109.** There is no point in the
+campaign where you have been shown everything it has.
+
+### Hazards are drawn, not accumulated
+
+Once a hazard has been introduced it joins a **pool**, and a level draws a
+subset of that pool rather than carrying all of it.
+
+- **How many** comes from where the level sits on its sector's curve: position
+  1 carries about three even in the deepest sectors, position 10 carries about
+  eight.
+- **Which ones** is fixed for that level and never changes, so a level is
+  always the same level.
+
+This is what stops the back half being one flat wall of everything at once. The
+first level of a sector is a breather however deep you are, and two levels in
+the same position never carry the same set. Across the 246 levels there are 197
+distinct hazard combinations.
+
+A newly introduced hazard is guaranteed for the three levels after it arrives —
+so you actually meet it — and the level that introduces it carries **at most
+two other hazards**, so the lesson lands (§23).
 
 **Fast pairs** deserve a note: the second ring of a pair arrives too soon to
 solve on its own terms, and it is not supposed to be. It is built to be
@@ -383,14 +426,19 @@ Six hulls, unlocked with total stars earned:
 | Ship | Stars | What it changes |
 |---|---|---|
 | **DART** | 0 | Balanced. Nothing fancy, nothing in the way. |
-| **DELTA** | 6 | Wide resonance — converts two wedges a ring. Razors land far more often, turning is slower. |
-| **TALON** | 15 | Cheap fast pulses, short reach. Spins far faster, but the razor window is tight. |
-| **WRAITH** | 30 | Starts shielded, regrows one every 20 rings. Cheap short pulses; multiplier climbs slower. |
-| **MONOLITH** | 50 | Long-range resonance, five rings deep. Overdrive burns 50% longer. Turns like a freighter. |
-| **HALO** | 80 | Wide, deep, expensive resonance. Opens at x2 — but gaps break your chain. |
+| **DELTA** | 25 | Wide resonance — converts two wedges a ring. Razors land far more often, turning is slower. |
+| **TALON** | 60 | Cheap fast pulses, short reach. Spins far faster, but the razor window is tight. |
+| **WRAITH** | 110 | Starts shielded, regrows one every 20 rings. Cheap short pulses; multiplier climbs slower. |
+| **MONOLITH** | 175 | Long-range resonance, five rings deep. Overdrive burns 50% longer. Turns like a freighter. |
+| **HALO** | 260 | Wide, deep, expensive resonance. Opens at x2 — but gaps break your chain. |
 
 HALO is the interesting one: it starts you at a x2 multiplier but takes away
 the free safety of gaps, so it is a pure aggression build.
+
+The costs are set against a player averaging about two stars a level, which
+puts DELTA around level 15, WRAITH around 60 and HALO somewhere past 130. Three
+stars a level is the maximum, so replaying an early level for its third star is
+the intended way to pull any of them closer — that is what stars are *for*.
 
 ---
 

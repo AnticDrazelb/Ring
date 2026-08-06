@@ -1688,7 +1688,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 2.3 &middot; animated chart</div>
+      <div class="setVer">Ringshift &middot; version 2.4 &middot; paced campaign</div>
     </div>
 
     <div class="setFoot">
@@ -3272,23 +3272,31 @@ var SYM_TEX = [symTexture(0), symTexture(1), symTexture(2), symTexture(3), symTe
      shieldStart / shieldEvery   free hits
      startMult / startCharge     head start
      gapBreaksChain              gaps stop being a safety valve   */
+/* SHIP COSTS.
+   Three stars a level means the old ladder — 6/15/30/50/80 — handed over the
+   entire hangar for 27 cleared levels, and four of the six hulls inside the
+   first ten. A campaign of 246 levels had nothing left to give by level 30.
+   These are set against a player averaging about two stars a level, which puts
+   DELTA around level 15, WRAITH around 60, and HALO — the pure aggression
+   build — somewhere past 130. Replaying an early level for its third star is
+   the intended way to pull any of them closer. */
 var HULLS = [
   {id:'dart', name:'DART', need:0, tier:1,
    ab:{}, rig:{fin:0.34, nacN:2, nacX:0.20, nacZ:0.40, nacR:0.115, spineH:1.00}, blurb:'Balanced. Nothing fancy, nothing in the way.',
    pts:[[0,1.3],[0.1,0.62],[0.3,0.1],[1.3,-0.58],[1.16,-0.76],[0.34,-0.5],[0.22,-0.8],[0,-0.62],[-0.22,-0.8],[-0.34,-0.5],[-1.16,-0.76],[-1.3,-0.58],[-0.3,0.1],[-0.1,0.62]]},
-  {id:'delta', name:'DELTA', need:6, tier:3,
+  {id:'delta', name:'DELTA', need:25, tier:3,
    ab:{razor:1.7, steer:0.85, pulseWide:2, pulseCost:1.35}, rig:{fin:0.00, nacN:2, nacX:0.11, nacZ:0.34, nacR:0.135, spineH:0.72}, blurb:'Wide resonance — converts two wedges a ring. Razors land far more often, turning is slower.',
    pts:[[0,1.02],[0.14,0.66],[1.95,-0.44],[1.8,-0.64],[0.5,-0.26],[0.3,-0.72],[0,-0.5],[-0.3,-0.72],[-0.5,-0.26],[-1.8,-0.64],[-1.95,-0.44],[-0.14,0.66]]},
-  {id:'talon', name:'TALON', need:15, tier:5,
+  {id:'talon', name:'TALON', need:60, tier:5,
    ab:{steer:1.38, razor:0.7, pulseCost:0.7, pulseSpeed:1.35, pulseRings:2}, rig:{fin:0.16, nacN:2, nacX:0.30, nacZ:0.22, nacR:0.125, shoulder:0.16, spineH:1.25}, blurb:'Cheap fast pulses, short reach. Spins far faster, but the razor window is tight.',
    pts:[[0,1.36],[0.13,0.5],[0.26,0.18],[1.58,0.04],[1.58,-0.12],[0.32,-0.24],[0.42,-0.66],[0.2,-0.84],[0,-0.6],[-0.2,-0.84],[-0.42,-0.66],[-0.32,-0.24],[-1.58,-0.12],[-1.58,0.04],[-0.26,0.18],[-0.13,0.5]]},
-  {id:'wraith', name:'WRAITH', need:30, tier:2,
+  {id:'wraith', name:'WRAITH', need:110, tier:2,
    ab:{shieldStart:true, shieldEvery:20, multEvery:6, pulseRings:2, pulseCost:0.75}, rig:{fin:0.00, nacN:2, nacX:0.62, nacZ:0.12, nacR:0.105, pyl:true, spineH:0.85}, blurb:'Starts shielded, regrows one every 20 rings. Cheap short pulses; multiplier climbs slower.',
    pts:[[0,1.1],[0.16,0.5],[0.72,-0.12],[1.3,0.46],[1.6,0.2],[1.24,-0.54],[0.44,-0.44],[0.24,-0.78],[0,-0.58],[-0.24,-0.78],[-0.44,-0.44],[-1.24,-0.54],[-1.6,0.2],[-1.3,0.46],[-0.72,-0.12],[-0.16,0.5]]},
-  {id:'monolith', name:'MONOLITH', need:50, tier:7,
+  {id:'monolith', name:'MONOLITH', need:175, tier:7,
    ab:{overMul:1.5, charge:1.3, steer:0.8, pulseRings:5, pulseCost:1.2}, rig:{fin:0.22, nacN:4, nacX:0.24, nacZ:0.44, nacR:0.105, spineH:1.15}, blurb:'Long-range resonance, five rings deep. Overdrive burns 50% longer. Turns like a freighter.',
    pts:[[0,0.78],[0.44,0.52],[0.54,0.1],[1.28,-0.18],[1.28,-0.68],[0.58,-0.6],[0.34,-0.88],[0,-0.72],[-0.34,-0.88],[-0.58,-0.6],[-1.28,-0.68],[-1.28,-0.18],[-0.54,0.1],[-0.44,0.52]]},
-  {id:'halo', name:'HALO', need:80, tier:9,
+  {id:'halo', name:'HALO', need:260, tier:9,
    ab:{startMult:2, startCharge:0.4, gapBreaksChain:true, pulseWide:2, pulseRings:4, pulseCost:1.5}, rig:{fin:0.44, nacN:2, nacX:0.15, nacZ:0.46, nacR:0.120, spineH:0.90}, blurb:'Wide, deep, expensive resonance. Opens at x2 — but gaps break your chain.',
    pts:[[0,1.42],[0.12,0.7],[0.34,0.04],[1.02,-0.74],[1.66,-0.14],[1.52,0.12],[0.46,-0.36],[0.26,-0.86],[0,-0.62],[-0.26,-0.86],[-0.46,-0.36],[-1.52,0.12],[-1.66,-0.14],[-1.02,-0.74],[-0.34,0.04],[-0.12,0.7]]}
 ];
@@ -3993,32 +4001,101 @@ var THEMES = [
 ];
 var BLOCK_CURVE = [0.00,0.10,0.20,0.32,0.44,0.55,0.68,0.90,0.74,1.05];
 
+/* ============================================================
+   THE HAZARD SCHEDULE
+
+   Hazards used to be rules of the form "block >= 2 && pos >= 4", and that had
+   two faults that were really the same fault.
+
+   It was FAST: the last of the twelve arrived on level 34, and eleven of them
+   were live by level 26. A campaign of 246 levels had shown you everything it
+   had by the end of the third sector.
+
+   And it was MONOTONIC: hazards only ever accumulated, and every rule
+   saturated at block 4, so from level 31 onward a level's contents depended on
+   nothing but its position in the sector. Level 31 and level 241 carried
+   exactly the same mechanics. The only things that still moved were speed and
+   length.
+
+   So the arrival of a mechanic is now a date in a diary, and the diary runs to
+   level 109 with the gaps widening as it goes — five levels between the first
+   two, thirteen between the last two, because a player who has learned nine
+   things needs longer with the ninth than a player who has learned one needed
+   with the first.
+
+   After a mechanic is introduced it goes into a POOL, and a level draws a
+   subset of that pool: how many from where it sits on the sector's difficulty
+   curve, which ones from a shuffle seeded on the level number. So a level is a
+   combination rather than a running total, position 1 of a late sector is a
+   breather rather than a slightly shorter version of position 10, and no two
+   levels with the same position carry the same set.
+
+   `only` pins the two set-pieces to the positions they were always peppered
+   across. Their intro levels are chosen to land on one of those positions —
+   37 is a 7, 109 is a 9 — because a mechanic that cannot appear on the level
+   that is supposed to teach it never gets taught.
+   ============================================================ */
+var HAZARDS = [
+  {k:'spin',     lab:'Spinning rings',         from:4},
+  {k:'fadein',   lab:'Late colour',            from:9},
+  {k:'phase',    lab:'Phasing colour',         from:15},
+  {k:'shear',    lab:'Rings reverse spin',     from:22},
+  {k:'dissolve', lab:'Dissolving colour',      from:30},
+  {k:'flip',     lab:'Inverted stretch',       from:37,  only:[4,7]},
+  {k:'twin',     lab:'Rings in fast pairs',    from:46},
+  {k:'strobe',   lab:'Strobing wedges',        from:57},
+  {k:'hardened', lab:'Rings resist resonance', from:69},
+  {k:'blackout', lab:'Tunnel blackouts',       from:82},
+  {k:'drift',    lab:'The world drifts',       from:96},
+  {k:'inverted', lab:'Steering reversed',      from:109, only:[9]}
+];
+/* A new arrival is guaranteed for this many levels, so it is met properly
+   rather than shuffled straight back out of sight. */
+var HAZ_GRACE = 3;
+/* The fourth colour is the single largest step in the game — it lengthens the
+   tap cycle every ring is solved with. It used to land on level 6, by accident,
+   as a side effect of an intensity threshold. It is a date now like everything
+   else. */
+var COLOUR4_FROM = 18;
+
 function levelPlan(n){
   var block = Math.floor((n-1)/10);
   var pos   = ((n-1)%10)+1;
   var theme = THEMES[block % THEMES.length];         // one theme per sector
   var mods  = {};
   var haz   = [];
-  function add(k, label){ mods[k] = true; haz.push(label); }
 
-  // --- sector 1: learn the verbs ---
-  if(pos >= 4 || block > 0)   add('spin',     'Spinning rings');
-  if(pos >= 6)                add('fadein',   'Late colour');
-  if(pos === 8 || pos === 10) add('phase',    'Phasing colour');
-  if(pos === 10)              add('dissolve', 'Dissolving colour');
-  // --- deeper sectors keep adding dangers, so the tunnel never settles ---
-  if(block >= 1 && pos >= 7)  add('strobe',   'Strobing wedges');
-  if(block >= 1 && pos >= 5)  add('shear',    'Rings reverse spin');
-  if(block >= 2 && pos >= 3)  add('twin',     'Rings in fast pairs');
-  if(block >= 2 && pos >= 6)  add('blackout', 'Tunnel blackouts');
-  if(block >= 3 && pos >= 4)  add('drift',    'The world drifts');
-  if(block >= 2 && pos >= 4) add('hardened', 'Rings resist resonance');
-  if(block >= 4 && pos === 9) add('inverted', 'Steering reversed');
-  /* peppered, not constant: one inverted stretch a sector from sector 2, a
-     second from sector 4. A whole campaign of it would be exhausting; the
-     point is that you cannot settle. */
-  if(block >= 1 && pos === 4)  add('flip',     'Inverted stretch');
-  if(block >= 3 && pos === 7)  add('flip',     'Inverted stretch');
+  /* what this level is allowed to draw from, and what it must include */
+  var pool = [], forced = [], hi, H;
+  for(hi=0; hi<HAZARDS.length; hi++){
+    H = HAZARDS[hi];
+    if(n < H.from) continue;
+    if(H.only && H.only.indexOf(pos) < 0) continue;
+    if(n < H.from + HAZ_GRACE) forced.push(H); else pool.push(H);
+  }
+  var U = pool.length + forced.length;
+  if(U > 0){
+    /* How full the level is. The sector curve decides — position 1 stays thin
+       however deep you are, position 10 is nearly everything available — and
+       it is scaled off U-1 so the first hazard is always present and the
+       count grows only as the pool does. */
+    var curve = BLOCK_CURVE[pos-1] / 1.05;                    // 0 .. 1
+    var count = 1 + Math.round((U - 1) * (0.25 + 0.55*curve));
+    /* An introduction gets room. §23 of the design is that a mechanic is
+       explained once, at the moment it arrives; three other things happening
+       at the same time is not that. */
+    if(forced.length) count = Math.min(count, forced.length + 2);
+    count = Math.max(1, Math.min(count, U));
+
+    var order = pool.slice(), rr = mrnd(n * 2246822519), s, t2, tmp;
+    for(s=order.length-1; s>0; s--){
+      t2 = Math.floor(rr()*(s+1)); tmp = order[s]; order[s] = order[t2]; order[t2] = tmp;
+    }
+    var chosen = forced.concat(order.slice(0, Math.max(0, count - forced.length)));
+    // back into schedule order, so the briefing chips always read the same way
+    chosen.sort(function(a,b){ return a.from - b.from; });
+    for(hi=0; hi<chosen.length; hi++){ mods[chosen[hi].k] = true; haz.push(chosen[hi].lab); }
+  }
 
   /* LENGTH IS AN AXIS, BUT A BOUNDED ONE.
 
@@ -4119,7 +4196,7 @@ function applyLevelFrom(p){
   for(var ri=0;ri<rails.length;ri++) rails[ri].material.color.setHex(t.wall);
   buildGeos(plan.segs, t.style);
   rebuildPool();
-  colorCount = plan.intensity > 0.45 ? 4 : 3;
+  colorCount = plan.n >= COLOUR4_FROM ? 4 : 3;
   if(colorIdx >= colorCount) colorIdx = 0;
   applyShipColor();
 }
@@ -7768,7 +7845,8 @@ var MANUAL = [
 
 { t:'Colour and shape', build:function(){
   return '<div class="pgKick">Chapter four</div><div class="pgH">Colour &amp; shape</div>'+
-    '<div class="pgLead">Levels use <b>three colours</b> early and <b>four</b> once they get hard. '+
+    '<div class="pgLead">Levels use <b>three colours</b> up to level '+(COLOUR4_FROM-1)+
+      ' and <b>four</b> from level '+COLOUR4_FROM+' on. '+
       'Each colour also owns a shape, stamped on every wedge that wears it.</div>'+
     figGlyphs()+
     '<div class="pgP">The shapes are not decoration. Roughly one man in twelve has some red-green '+
@@ -7918,28 +7996,43 @@ var MANUAL = [
 }},
 
 { t:'Hazards, in order', build:function(){
-  var rows = [
-    ['L4','Fast rings','Some rings spin far quicker than the ones you have been reading'],
-    ['L5','Boss ring','Sealed ring at the end of every 5th level, steering reversed'],
-    ['L6','Late colour','Wedges arrive blank and colour up as they close'],
-    ['L8','Phasing colour','Purple rings swap their colours as they travel'],
-    ['L8','Fast pairs','Rings arrive in twos, too close to solve separately'],
-    ['L10','Dissolving colour','Colour drains out of the wedges &mdash; read them early'],
-    ['L14','Inverted stretch','The two verbs swap jobs'],
-    ['L15','Reversing spin','Rings change direction mid-flight'],
-    ['L17','Strobing wedges','The wedges flicker; what you saw is still what is there'],
-    ['L24','Hardened rings','Resonance will not rewrite them'],
-    ['L26','Tunnel blackout','The lights go out in waves; the rings stay lit'],
-    ['L29','Checkpoints','Progress banks every '+CP_EVERY+' rings'],
-    ['L34','Drift','The whole tunnel slowly turns under you'],
-    ['L49','Reversed steering','The conduit turns the opposite way for a whole level']
-  ];
+  /* Built from the schedule itself rather than typed out beside it. A manual
+     that can disagree with the game eventually does. */
+  var BLURB = {
+    spin:     'Some rings spin far quicker than the ones you have been reading',
+    fadein:   'Wedges arrive blank and colour up as they close',
+    phase:    'Purple rings swap their colours as they travel',
+    shear:    'Rings change direction mid-flight',
+    dissolve: 'Colour drains out of the wedges &mdash; read them early',
+    flip:     'The two verbs swap jobs. See <b>Inversion</b>',
+    twin:     'Rings arrive in twos, too close to solve separately',
+    strobe:   'The wedges flicker; what you saw is still what is there',
+    hardened: 'Resonance will not rewrite them',
+    blackout: 'The lights go out in waves; the rings stay lit',
+    drift:    'The whole tunnel slowly turns under you',
+    inverted: 'The conduit turns the opposite way for a whole level'
+  };
+  var rows = [];
+  for(var i=0;i<HAZARDS.length;i++)
+    rows.push([HAZARDS[i].from, HAZARDS[i].lab, BLURB[HAZARDS[i].k] || '']);
+  // the beats that are not hazards but arrive on their own schedule
+  rows.push([5, 'Boss ring', 'Sealed ring at the end of every 5th level, steering reversed']);
+  rows.push([COLOUR4_FROM, 'A fourth colour', 'The tap cycle gets longer, and every ring gets harder to solve']);
+  rows.push([29, 'Checkpoints', 'Progress banks every ' + CP_EVERY + ' rings']);
+  rows.sort(function(a,b){ return a[0] - b[0]; });
+
   var s = '<div class="pgKick pink">Chapter ten</div><div class="pgH">The hazards</div>'+
-    '<div class="pgLead">In the order you meet them.</div>'+
-    '<table class="pgTable"><tr><th>From</th><th>Hazard</th></tr>';
-  for(var i=0;i<rows.length;i++)
-    s += '<tr><td class="num">'+rows[i][0]+'</td><td><b>'+rows[i][1]+'</b><br>'+rows[i][2]+'</td></tr>';
+    '<div class="pgLead">In the order you meet them. The last of them arrives on level '+
+      HAZARDS[HAZARDS.length-1].from + ' &mdash; there is no point in the campaign where you '+
+      'have seen everything it has.</div>'+
+    '<table class="pgTable"><tr><th>From</th><th>What arrives</th></tr>';
+  for(i=0;i<rows.length;i++)
+    s += '<tr><td class="num">L'+rows[i][0]+'</td><td><b>'+rows[i][1]+'</b><br>'+rows[i][2]+'</td></tr>';
   return s + '</table>'+
+    '<div class="pgP">After a hazard has been introduced it joins a pool, and every level draws from '+
+      'that pool rather than carrying all of it: how many depends on where the level sits in its sector, '+
+      'which ones is fixed per level and never changes. So the first level of a sector is a breather '+
+      'however deep you are, and no two levels in the same position carry the same set.</div>'+
     '<div class="pgNote calm"><b>Fast pairs</b> deserve a note. The second ring of a pair arrives too soon to '+
       'solve on its own terms, and it is not supposed to be &mdash; it is built to be reachable from wherever the '+
       'first one leaves you. Take the first cleanly and the second is already lined up.</div>';
