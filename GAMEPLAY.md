@@ -41,6 +41,13 @@ wedges — six, eight, ten or twelve of them depending on the sector.
   slipstream, or the one at the end of a level — you fall toward it and the
   number goes with you, up to 0.999. It never reads 1.000, because that would
   be a lie and every player knows it.
+
+  It is never quite still: the conduit breathes, and the reading wanders by
+  about a hundredth of *c* while you cruise. It drops clearly twice — on a
+  **gate**, the level's designed breather, and on the far side of a horizon,
+  where the rings have stopped and you are coasting into clear air. Both are
+  readout only; the ring cadence is not touched, because the reachability
+  guarantee is derived from it.
 - Top right: **LV n  x/y** — the level, and how many rings you have cleared of
   the target. Tap it to pause.
 - Middle, when you have a chain going: your **multiplier** and chain length.

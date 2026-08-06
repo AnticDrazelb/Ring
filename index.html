@@ -834,6 +834,11 @@
   }
   #speedPill.hot #spdVal{color:#fffaf0;text-shadow:0 0 22px rgba(255,225,150,.9);}
   #speedPill.hot #spdIcon,#speedPill.hot #spdUnit{color:#ffd34d;}
+  /* coasting — a gate, or the far side of a horizon. It cools and settles back
+     rather than just showing a smaller number. */
+  #speedPill.slow{transform:scale(.96);border-color:rgba(190,225,255,.10);}
+  #speedPill.slow #spdVal{color:#9db5cf;}
+  #speedPill.slow #spdIcon,#speedPill.slow #spdUnit{color:#5f7799;}
 
   /* The row sheds what is least load-bearing, in order, rather than letting
      anything overlap. Which step it is on is decided by MEASURING the row, not
@@ -1755,7 +1760,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 2.6 &middot; velocity readout</div>
+      <div class="setVer">Ringshift &middot; version 2.7 &middot; velocity readout</div>
     </div>
 
     <div class="setFoot">
@@ -4924,6 +4929,9 @@ function resolveRing(r){
   var px = 0, py = SHIP_Y;
   var x2 = over.on ? 2 : 1;
 
+  // a gate is the level's designed breather, and the readout should say so
+  if(r.type === 'gate') speedDip(0.30);
+
   /* The state rings resolve before anything else can happen to them. They do
      not score, they do not chain, they do not count toward the target and they
      do not appear in the run log — they are punctuation, not a ring you
@@ -5126,6 +5134,10 @@ function beginJump(){
 function endJump(){
   clearBoard();
   hideHole();
+  /* Out the far side. The rings stopped for JUMP_SECS and there is JUMP_LEAD
+     of clear air ahead, so this really is the quietest moment in the level —
+     you were at 0.999 a beat ago and now you are coasting. */
+  speedDip(0.72);
   flash = Math.max(flash, 0.55);
   flashCol.r = 0.72; flashCol.g = 0.62; flashCol.b = 1;
   shockwave(0x8c6bff, 2.2);
@@ -5535,13 +5547,44 @@ function updateHud(){
 var V_CRUISE = 0.020, V_PACE = 0.160, V_DEPTH = 0.220, V_HORIZON = 0.999;
 var spdT = 0, spdShown = -1;
 
+/* A DECELERATION, set by an event and bled off over about a second and a half.
+   0 is cruise, 1 would be a dead stop. Two things set it, and both of them are
+   real lulls rather than decoration:
+
+     · a GATE ring, which is mostly gaps — the level's designed breather
+     · coming OUT of a horizon. A slipstream stops the rings for JUMP_SECS and
+       then gives you JUMP_LEAD of clear air on the far side, so the moment
+       after you are thrown through genuinely is the quietest in the level.
+       You get flung to 0.999 and then dumped out of it.
+
+   It moves the readout only. The engine's pace is left alone on purpose: the
+   cadence, the turn budget and the reachability guarantee are all derived from
+   it, and none of them should change because you took an easy ring. */
+var spdDip = 0;
+function speedDip(amount){ spdDip = Math.max(spdDip, amount); }
+
 function lightSpeed(){
   var s01 = Math.max(0, Math.min(1, (speed - 32) / 63));
   var d01 = Math.min(1, (plan.n - 1) / 245);   // the whole campaign, so it never plateaus
   var v = V_CRUISE + s01*V_PACE + d01*V_DEPTH;
+
+  /* A conduit is not a treadmill. Three sines that do not share a period, so
+     the wander never visibly repeats, summing to about +/-0.01 — enough to
+     keep the last digit alive and occasionally nudge the one before it. */
+  var t = elapsed;
+  var wob = Math.sin(t*0.87)*0.0062 + Math.sin(t*2.31 + 1.7)*0.0033 + Math.sin(t*5.13 + 0.4)*0.0014;
+  /* Eased in over the first few levels. A flat +/-0.01 is right at cruise and
+     absurd at level one, where the whole reading is 0.020 and the wander would
+     be two thirds of it. */
+  v += wob * Math.min(1, v / 0.06);
+
+  if(spdDip > 0.001) v *= (1 - spdDip);
+  v = Math.max(0.001, v);
+
   /* Both kinds of horizon: `holeAmt` is the one at the end of a level and the
      one a slipstream opens, `u_jumpPull` is how far through the fall you are.
-     Whichever is deeper wins. */
+     Whichever is deeper wins, and it overrides everything above — nothing
+     wobbles or coasts while it is being swallowed. */
   var pull = Math.max(holeAmt || 0, u_jumpPull || 0);
   if(pull > 0.001){
     var e = pull*pull*(3 - 2*pull);            // smoothstep, so the last of it bites
@@ -5588,10 +5631,17 @@ function updateSpeedRead(dt){
   if(!el) return;
   if(state !== S_PLAY && state !== S_CLEAR){ el.classList.remove('show'); return; }
   el.classList.add('show');
+  // bled off here rather than in lightSpeed(), which is also called to draw
+  spdDip *= Math.max(0, 1 - dt*1.7);
+  if(spdDip < 0.002) spdDip = 0;
   spdT -= dt;
   var pull = Math.max(holeAmt || 0, u_jumpPull || 0);
+  /* Coasting and being swallowed are mutually exclusive states, and `slow` is
+     declared after `hot` in the stylesheet — so without this a gate dip that
+     was still bleeding off when a horizon opened would paint the fall grey. */
+  el.classList.toggle('slow', spdDip > 0.06 && pull < 0.12);
   // 20Hz is plenty to read; a fall gets every frame because that is the moment
-  if(spdT > 0 && pull < 0.02) return;
+  if(spdT > 0 && pull < 0.02 && spdDip < 0.02) return;
   spdT = 0.05;
   var v = lightSpeed();
   var txt = v.toFixed(3);
@@ -7967,8 +8017,9 @@ var MANUAL = [
       '<li><b>Your ship.</b> Bottom-centre, always. It never moves left or right &mdash; the world turns around it.</li>'+
       '<li><b>SIGNAL</b>, top left: your score this run.</li>'+
       '<li><b>Your velocity</b>, top centre, as a fraction of the speed of light (<b>c</b>). It climbs with '+
-        'the level and with overdrive &mdash; and when an event horizon opens in front of you it '+
-        'goes where anything falling into one goes.</li>'+
+        'the level and with overdrive, wanders by about a hundredth as the conduit breathes, drops '+
+        'when you coast a <b>gate</b>, and when an event horizon opens in front of you it goes where '+
+        'anything falling into one goes &mdash; then dumps you out the far side.</li>'+
       '<li><b>LV n &nbsp;x/y</b>, top right: the level and rings cleared of the target. Tap it to pause.</li>'+
       '<li><b>The thin bar</b> along the bottom: your resonance charge.</li>'+
     '</ul>';
