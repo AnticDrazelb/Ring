@@ -24,7 +24,10 @@ colour, because the colour is worth points".
 ## 2. What is on screen
 
 **The tunnel.** A long cylinder you are flying down. It has walls, glowing
-rails running to the vanishing point, and drifting debris. Its colour scheme
+rails running to the vanishing point, and drifting debris. The speed streaks
+along its walls are motion trails, so when you turn they **spiral** — their far
+ends are older, and the world moved while they were being laid down. Which way
+they wind tells you which way you are turning. Its colour scheme
 changes every ten levels.
 
 **Your ship.** Sits at the bottom-centre, always. It never moves left or right

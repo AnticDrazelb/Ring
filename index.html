@@ -1796,7 +1796,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 2.9 &middot; steady boot</div>
+      <div class="setVer">Ringshift &middot; version 3.0 &middot; spiralling streaks</div>
     </div>
 
     <div class="setFoot">
@@ -3231,11 +3231,29 @@ for(var ri=0;ri<RAILN;ri++){
   rails.push(rm);
 }
 
-// --- speed streaks along the tunnel wall
-var STREAKS = 320;
+/* --- speed streaks along the tunnel wall ---------------------
+   A streak used to be one line segment with both ends at the same angle, so
+   it was a straight bar parallel to the axis and it stayed straight however
+   hard you span — the whole field rotated as one rigid piece, which is the
+   one thing that reads as a picture of the tunnel rather than a flight
+   through it.
+
+   A streak is a motion trail, and a trail records where the particle WAS. Its
+   far end is older, and in the time that light took to fall behind, the world
+   turned. So the far end belongs at an earlier world angle, and the streak is
+   a helix. Which needs more than two points to draw, hence the segments.
+
+   TWO segments, not more. Three draws a visibly smoother arc and costs 13% of
+   the frame in a software rasteriser (18.5fps -> 16.0 measured while turning);
+   two is free — the same frame rate as the straight version it replaces. Two
+   gets away with it because perspective is already doing half the work: the
+   joint sits at the midpoint in Z, which projects close to the vanishing point,
+   exactly where the curvature needs to be tightest. */
+var STREAKS = 320, STREAK_SEG = 2, STREAK_TWIST = 0.62;   // radians, saturated
+var SVERT = STREAK_SEG * 2;                 // LineSegments: two vertices a segment
 var streakGeo = new THREE.BufferGeometry();
-var sPos = new Float32Array(STREAKS*6);
-var sCol = new Float32Array(STREAKS*6);
+var sPos = new Float32Array(STREAKS*SVERT*3);
+var sCol = new Float32Array(STREAKS*SVERT*3);
 var sData = [];
 for(var si=0;si<STREAKS;si++){
   var a = Math.random()*Math.PI*2;
@@ -3244,8 +3262,14 @@ for(var si=0;si<STREAKS;si++){
   // mostly cold white, occasionally a palette colour, so they read as motion not confetti
   var c = (si%5===0) ? PAL[si%PAL.length] : {hex:0xbcd8ff};
   var cr=((c.hex>>16)&255)/255, cg=((c.hex>>8)&255)/255, cb=(c.hex&255)/255;
-  sCol[si*6]=cr*0.55; sCol[si*6+1]=cg*0.55; sCol[si*6+2]=cb*0.55;
-  sCol[si*6+3]=cr*0.02; sCol[si*6+4]=cg*0.02; sCol[si*6+5]=cb*0.02;
+  // the head-to-tail fade is fixed per streak, so it is written once
+  for(var sj=0; sj<STREAK_SEG; sj++){
+    var f0 = 0.55 + (0.02 - 0.55) * (sj / STREAK_SEG);
+    var f1 = 0.55 + (0.02 - 0.55) * ((sj+1) / STREAK_SEG);
+    var b0 = (si*SVERT + sj*2)*3;
+    sCol[b0]=cr*f0; sCol[b0+1]=cg*f0; sCol[b0+2]=cb*f0;
+    sCol[b0+3]=cr*f1; sCol[b0+4]=cg*f1; sCol[b0+5]=cb*f1;
+  }
 }
 streakGeo.setAttribute('position', new THREE.BufferAttribute(sPos,3));
 streakGeo.setAttribute('color', new THREE.BufferAttribute(sCol,3));
@@ -9330,19 +9354,36 @@ function update(dt){
   dustMat.opacity = 0.34 + beatPulse*0.2;
 
   // streaks
+  /* How far the world turned while the trail was being laid down. The trail is
+     `stretch` long and the world is coming at you at `flow`, so its far end is
+     stretch/flow seconds old, and the world has turned by omega x that in the
+     meantime. Negative because the older end is BEHIND the rotation.
+
+     Saturated with tanh rather than clamped: a hard limit would make every
+     turn above some rate look identical, and at a full-rate steer the raw
+     figure is about 75 degrees, which stops being a spiral and becomes a chord
+     straight across the tunnel. This stays proportional when you nudge and
+     eases off when you sweep. */
+  var wRad = (ambRotVel || 0) * Math.PI / 180;
+  var flowSafe = Math.max(6, flow);
   for(var i3=0;i3<STREAKS;i3++){
     var s = sData[i3];
     s.z += flow * dt;
     if(s.z > camZ+6){ s.z = -180 - Math.random()*40; s.a = Math.random()*Math.PI*2; }
-    var x = Math.cos(s.a)*s.r, y = Math.sin(s.a)*s.r;
     /* Named apart from the spd01 below deliberately: that one is clamped to 1
        and starts at 32, this one is neither. Two different curves under one
        name in one function is a bug waiting for someone to move a line. */
     var streakSpd = Math.max(0, (speed-34)/46);
     var stretch = s.len * (0.5 + streakSpd*3.4 + (over.on?1.2:0) + aberrPunch*4.0);
-    var k=i3*6;
-    sPos[k]=x; sPos[k+1]=y; sPos[k+2]=s.z;
-    sPos[k+3]=x; sPos[k+4]=y; sPos[k+5]=s.z - stretch;
+    var twist = -STREAK_TWIST * Math.tanh(wRad * (stretch / flowSafe) / STREAK_TWIST);
+    var base = i3*SVERT*3;
+    for(var sj=0; sj<STREAK_SEG; sj++){
+      var t0 = sj / STREAK_SEG, t1 = (sj+1) / STREAK_SEG;
+      var a0 = s.a + twist*t0, a1 = s.a + twist*t1;
+      var p = base + sj*6;
+      sPos[p]   = Math.cos(a0)*s.r; sPos[p+1] = Math.sin(a0)*s.r; sPos[p+2] = s.z - stretch*t0;
+      sPos[p+3] = Math.cos(a1)*s.r; sPos[p+4] = Math.sin(a1)*s.r; sPos[p+5] = s.z - stretch*t1;
+    }
   }
   streakGeo.attributes.position.needsUpdate = true;
   streakMat.opacity = 0.22 + Math.max(0,(speed-34)/46)*0.75 + beatPulse*0.12;
