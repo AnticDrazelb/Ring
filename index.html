@@ -772,23 +772,32 @@
   /* ============ IN-GAME HUD ============ */
   #hud{position:absolute;inset:0;pointer-events:none;z-index:5;}
   .pill{
-    position:absolute;display:flex;align-items:center;
+    position:relative;display:flex;align-items:center;
     padding:0 18px;height:52px;border-radius:var(--r-pill);
     background:rgba(12,22,38,.5);border:1px solid rgba(190,225,255,.18);
     -webkit-backdrop-filter:blur(18px) saturate(1.25);backdrop-filter:blur(18px) saturate(1.25);
     box-shadow:0 0 28px -14px rgba(35,200,255,.8);
   }
-  #scorePill{top:max(14px,calc(env(safe-area-inset-top) + 8px));left:14px;gap:10px;}
+  /* 1fr | auto | 1fr, so the middle pill sits on the centre line of the screen
+     whatever the two either side of it happen to weigh. */
+  #hudTop{
+    position:absolute;left:14px;right:14px;
+    top:max(14px,calc(env(safe-area-inset-top) + 8px));
+    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
+  }
+  #hudTop .pill{min-width:0;}
+  #scorePill{justify-self:start;gap:10px;}
+  #speedPill{justify-self:center;}
+  #levelPill{justify-self:end;}
   #scorePill .lab{font-size:14px;font-weight:700;letter-spacing:.02em;color:#e6f2ff;
                   text-transform:uppercase;}
   #scoreVal{font-size:27px;font-weight:800;line-height:1;color:#fff;letter-spacing:-.02em;}
   #sigBars{width:20px;height:20px;color:#4fc3ff;flex:0 0 auto;}
-  #levelPill{top:max(14px,calc(env(safe-area-inset-top) + 8px));right:14px;gap:9px;
-             pointer-events:auto;cursor:pointer;}
+  #levelPill{gap:9px;pointer-events:auto;cursor:pointer;}
   #lvVal{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.02em;}
   #lvProg{font-size:15px;font-weight:600;color:#9db5cf;}
   #levelPill .chev{width:16px;height:16px;color:#9db5cf;}
-  #comboBox{top:max(76px,calc(env(safe-area-inset-top) + 70px));right:14px;
+  #comboBox{position:absolute;top:max(76px,calc(env(safe-area-inset-top) + 70px));right:14px;
             flex-direction:column;align-items:flex-end;height:auto;padding:9px 15px;
             border-radius:var(--r-btn);
             opacity:0;transform:translateY(-6px);transition:opacity .2s ease,transform .2s ease;}
@@ -801,41 +810,44 @@
   #levelPill.punch{animation:none;}
 
   /* ---- VELOCITY ----
-     No plate behind it: it sits over the vanishing point, where the tunnel is
-     darkest and a panel would be the only opaque thing on screen. Tabular
-     figures so a number changing thirty times a second does not jitter its own
-     width. */
-  #speedPill{
-    position:absolute;left:50%;
-    top:max(74px,calc(env(safe-area-inset-top) + 68px));
-    display:flex;flex-direction:column;align-items:center;
-    transform:translateX(-50%);
-    transition:opacity .3s ease,transform .18s ease;
-    opacity:0;pointer-events:none;
-  }
+     Same plate, same height, same blur as the two beside it — it is a HUD
+     readout, not a caption floating under one. The icon rhymes with the signal
+     bars on the left for the same reason. */
+  #speedPill{gap:9px;padding:0 15px;opacity:0;transition:opacity .3s ease,transform .18s ease;}
   #speedPill.show{opacity:1;}
-  .spdRow{display:flex;align-items:baseline;gap:5px;}
+  #spdIcon{width:19px;height:19px;color:#4fc3ff;flex:0 0 auto;}
   #spdVal{
-    font-size:24px;font-weight:800;line-height:1;letter-spacing:-.01em;color:#9fefff;
+    font-size:25px;font-weight:800;line-height:1;letter-spacing:-.02em;color:#fff;
+    /* tabular figures: a number that changes twenty times a second must not
+       change its own width while it does it */
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
-    text-shadow:0 0 18px rgba(60,210,255,.75);
   }
-  #spdUnit{font-size:13px;font-weight:900;color:#5fa8c8;letter-spacing:.04em;}
-  .spdCap{
-    margin-top:3px;font-size:8px;font-weight:900;letter-spacing:.24em;
-    text-transform:uppercase;color:#4d7690;
-  }
+  #spdUnit{font-size:14px;font-weight:800;color:#9db5cf;letter-spacing:.02em;}
   /* overdrive tints it the same amber as everything else overdrive touches */
-  #speedPill.over #spdVal{color:#ffdda6;text-shadow:0 0 20px rgba(255,179,71,.85);}
-  #speedPill.over #spdUnit{color:var(--ember);}
-  /* an event horizon is the only thing that does this to the number */
-  #speedPill.hot{transform:translateX(-50%) scale(1.22);}
-  #speedPill.hot #spdVal{
-    color:#fffaf0;
-    text-shadow:0 0 28px rgba(255,235,180,.95),0 0 70px rgba(255,170,60,.7);
+  #speedPill.over #spdVal{color:#ffdda6;}
+  #speedPill.over #spdIcon,#speedPill.over #spdUnit{color:var(--ember);}
+  /* an event horizon is the only thing that does this to it */
+  #speedPill.hot{
+    transform:scale(1.1);
+    border-color:rgba(255,211,77,.55);
+    box-shadow:0 0 34px -8px rgba(255,190,90,.9);
   }
-  #speedPill.hot #spdUnit,#speedPill.hot .spdCap{color:#ffd34d;}
-  @media (max-height:680px){ #spdVal{font-size:21px;} .spdCap{display:none;} }
+  #speedPill.hot #spdVal{color:#fffaf0;text-shadow:0 0 22px rgba(255,225,150,.9);}
+  #speedPill.hot #spdIcon,#speedPill.hot #spdUnit{color:#ffd34d;}
+
+  /* The row sheds what is least load-bearing, in order, rather than letting
+     anything overlap. Which step it is on is decided by MEASURING the row, not
+     by a viewport breakpoint — these pills are sized by their text, text is a
+     font, and the font is whatever the device happens to have. Guessing width
+     thresholds gets it wrong on one device or the other; the same three pills
+     that fit on a 430px iPhone overflow a 430px headless Chromium. */
+  #hudTop.t1 #scorePill .lab{display:none;}
+  #hudTop.t1 #spdIcon{display:none;}
+  #hudTop.t1 #speedPill{gap:6px;}
+  #hudTop.t2{gap:6px;}
+  #hudTop.t2 .pill{padding:0 12px;height:48px;}
+  #hudTop.t2 #scoreVal,#hudTop.t2 #spdVal,#hudTop.t2 #lvVal{font-size:21px;}
+  #hudTop.t2 #lvProg,#hudTop.t2 #levelPill .chev{display:none;}
 
   /* The tray is 40px off the bottom and about 80px tall, so at 122 the charge
      bar was resting on its lid. Clear of it now. */
@@ -1400,21 +1412,34 @@
   <div id="grain"></div>
 
   <div id="hud">
-    <div class="pill" id="scorePill">
-      <svg id="sigBars" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <rect x="2" y="14" width="4" height="7" rx="1.4"/>
-        <rect x="8" y="10" width="4" height="11" rx="1.4"/>
-        <rect x="14" y="6" width="4" height="15" rx="1.4"/>
-        <rect x="20" y="3" width="3" height="18" rx="1.3" opacity=".55"/>
-      </svg>
-      <span class="lab">Signal</span>
-      <span id="scoreVal" class="disp">0</span>
-    </div>
-    <div class="pill" id="levelPill">
-      <span id="lvVal" class="disp">LV 1</span>
-      <span id="lvProg">0/12</span>
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
-           stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+    <!-- One row, laid out as a grid so the middle pill is genuinely centred
+         and the three can never overlap each other the way the two of them
+         used to below 340px. -->
+    <div id="hudTop">
+      <div class="pill" id="scorePill">
+        <svg id="sigBars" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <rect x="2" y="14" width="4" height="7" rx="1.4"/>
+          <rect x="8" y="10" width="4" height="11" rx="1.4"/>
+          <rect x="14" y="6" width="4" height="15" rx="1.4"/>
+          <rect x="20" y="3" width="3" height="18" rx="1.3" opacity=".55"/>
+        </svg>
+        <span class="lab">Signal</span>
+        <span id="scoreVal" class="disp">0</span>
+      </div>
+      <div class="pill" id="speedPill" aria-hidden="true">
+        <svg id="spdIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+          <path d="M3 8h11M3 14h8M3 20h13"/><path d="M17.5 5.5L21 12l-3.5 6.5"/>
+        </svg>
+        <span id="spdVal" class="disp">0.000</span>
+        <span id="spdUnit">c</span>
+      </div>
+      <div class="pill" id="levelPill">
+        <span id="lvVal" class="disp">LV 1</span>
+        <span id="lvProg">0/12</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+      </div>
     </div>
     <div class="pill" id="comboBox">
       <span id="multVal" class="disp">x1</span>
@@ -1423,10 +1448,6 @@
     <!-- Velocity. Top centre, under the two pills rather than between them:
          at 390px the pills leave four pixels of gap, and at 320 they already
          overlap each other. -->
-    <div id="speedPill" aria-hidden="true">
-      <div class="spdRow"><span id="spdVal">0.000</span><span id="spdUnit">c</span></div>
-      <div class="spdCap">Light speed</div>
-    </div>
     <div id="chargeWrap"><div id="chargeFill"></div></div>
     <div id="invEdge"></div>
     <div id="edgeGlow"></div>
@@ -1734,7 +1755,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 2.5 &middot; velocity readout</div>
+      <div class="setVer">Ringshift &middot; version 2.6 &middot; velocity readout</div>
     </div>
 
     <div class="setFoot">
@@ -2732,6 +2753,8 @@ function setTunnel(on, hud){
   var h = document.getElementById('hud');
   var showHud = (hud === undefined ? on : hud);
   if(h) h.classList.toggle('hidden', !showHud);
+  // the row can only be measured once it is on screen
+  if(showHud && typeof fitHudTop === 'function') fitHudTop(true);
   // on the menu we want the empty conduit; a parked ship reads as an artefact
   if(typeof ship !== 'undefined' && ship) ship.visible = showHud;
   if(typeof lane !== 'undefined' && lane) lane.visible = showHud;
@@ -5480,6 +5503,7 @@ function updateHud(){
   scorePill.classList.remove('punch'); void scorePill.offsetWidth; scorePill.classList.add('punch');
   lvVal.textContent = 'LV ' + plan.n;
   lvProg.textContent = Math.min(ringsCleared, plan.target) + '/' + plan.target;
+  fitHudTop();
   if(combo >= 3){
     comboBox.classList.add('show');
     multVal.textContent = 'x'+mult+(over.on?'!':'');
@@ -5525,6 +5549,39 @@ function lightSpeed(){
   }
   return v;
 }
+
+/* Does the top row still fit? Two reflows at worst, and only when the text in
+   it has actually changed shape — a new digit on the score, a new level, a
+   rotation. Not per frame. */
+var hudFitKey = '';
+function fitHudTop(force){
+  var row = document.getElementById('hudTop');
+  if(!row) return;
+  var a = document.getElementById('scorePill'),
+      b = document.getElementById('speedPill'),
+      c = document.getElementById('levelPill');
+  if(!a || !b || !c) return;
+  /* A hidden HUD measures zero, which fails every fit test and would cache
+     the most stripped-down tier as the answer for the whole run. */
+  if(row.clientWidth < 40){ hudFitKey = ''; return; }
+  var key = row.clientWidth + '|' + scoreVal.textContent.length + '|' +
+            lvVal.textContent.length + '|' + lvProg.textContent.length;
+  if(!force && key === hudFitKey) return;
+  hudFitKey = key;
+  row.className = '';
+  /* The middle pill is centred, so the two 1fr columns either side are EQUAL —
+     which means the row fits when twice the wider side fits, not when the
+     three widths happen to add up. Testing the sum let the level pill sit 5px
+     under the speed pill at 430 while the arithmetic said there was room. */
+  var over = function(){
+    return Math.max(a.offsetWidth, c.offsetWidth)*2 + b.offsetWidth + 16 > row.clientWidth;
+  };
+  if(!over()) return;
+  row.className = 't1';
+  if(!over()) return;
+  row.className = 't1 t2';
+}
+window.addEventListener('resize', function(){ fitHudTop(true); });
 
 function updateSpeedRead(dt){
   var el = document.getElementById('speedPill');
@@ -7909,7 +7966,7 @@ var MANUAL = [
       '<li><b>The tunnel.</b> Walls, glowing rails to the vanishing point, drifting debris. Its colour scheme changes every ten levels.</li>'+
       '<li><b>Your ship.</b> Bottom-centre, always. It never moves left or right &mdash; the world turns around it.</li>'+
       '<li><b>SIGNAL</b>, top left: your score this run.</li>'+
-      '<li><b>Your velocity</b>, top centre, as a fraction of the speed of light. It climbs with '+
+      '<li><b>Your velocity</b>, top centre, as a fraction of the speed of light (<b>c</b>). It climbs with '+
         'the level and with overdrive &mdash; and when an event horizon opens in front of you it '+
         'goes where anything falling into one goes.</li>'+
       '<li><b>LV n &nbsp;x/y</b>, top right: the level and rings cleared of the target. Tap it to pause.</li>'+
@@ -9217,7 +9274,10 @@ function update(dt){
   if(displayScore !== score){
     var diffS = score - displayScore;
     displayScore += (Math.abs(diffS) < 1) ? diffS : diffS * Math.min(1, dt*9);
+    var wasLen = scoreVal.textContent.length;
     scoreVal.textContent = Math.round(displayScore);
+    // only when the score gains or loses a digit does the row's fit change
+    if(scoreVal.textContent.length !== wasLen) fitHudTop();
   }
 
   // ship idle motion
