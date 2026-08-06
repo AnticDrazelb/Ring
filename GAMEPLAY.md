@@ -43,7 +43,9 @@ wedges — six, eight, ten or twelve of them depending on the sector.
   be a lie and every player knows it.
 
   It is never quite still: the conduit breathes, and the reading wanders by
-  about a hundredth of *c* while you cruise. It drops clearly twice — on a
+  about a hundredth of *c* while you cruise. **Turning scrubs off 0.005** for
+  as long as you are doing it — banking the conduit costs you speed, and it
+  comes back when you settle. It drops much harder twice — on a
   **gate**, the level's designed breather, and on the far side of a horizon,
   where the rings have stopped and you are coasting into clear air. Both are
   readout only; the ring cadence is not touched, because the reachability

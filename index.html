@@ -1760,7 +1760,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 2.7 &middot; velocity readout</div>
+      <div class="setVer">Ringshift &middot; version 2.8 &middot; velocity readout</div>
     </div>
 
     <div class="setFoot">
@@ -3154,6 +3154,13 @@ function hideHole(){
   bholeRing.rotation.z = 0;
   bholeDisk.rotation.z = 0;
   holeAmt = 0;
+  /* And the OTHER horizon variable. `u_jumpPull` ramps 0->1 across a slipstream
+     and the branch that drives it stops running the moment the jump ends, so
+     it was left sitting at 1 for the rest of the run — which pinned the
+     velocity readout at 0.999 forever and kept every swallowed ring's shrink
+     factor maxed out. Both horizon inputs are cleared in the one place that
+     means "there is no horizon now". */
+  u_jumpPull = 0;
 }
 
 // --- pulsing bands of light on the wall: gives the tunnel real depth cues
@@ -5563,6 +5570,11 @@ var spdT = 0, spdShown = -1;
 var spdDip = 0;
 function speedDip(amount){ spdDip = Math.max(spdDip, amount); }
 
+/* Turning costs velocity. 0..1, eased both ways off the world's rotation rate,
+   saturating at 60 deg/s — well under the 190 a held key produces, so any
+   deliberate turn pays the full price and only a hair of drift pays less. */
+var V_TURN = 0.005, spdTurn = 0;
+
 function lightSpeed(){
   var s01 = Math.max(0, Math.min(1, (speed - 32) / 63));
   var d01 = Math.min(1, (plan.n - 1) / 245);   // the whole campaign, so it never plateaus
@@ -5578,6 +5590,7 @@ function lightSpeed(){
      be two thirds of it. */
   v += wob * Math.min(1, v / 0.06);
 
+  v -= V_TURN * spdTurn;              // banking the conduit scrubs speed off
   if(spdDip > 0.001) v *= (1 - spdDip);
   v = Math.max(0.001, v);
 
@@ -5634,6 +5647,8 @@ function updateSpeedRead(dt){
   // bled off here rather than in lightSpeed(), which is also called to draw
   spdDip *= Math.max(0, 1 - dt*1.7);
   if(spdDip < 0.002) spdDip = 0;
+  var turn01 = Math.min(1, Math.abs(ambRotVel) / 60);
+  spdTurn += (turn01 - spdTurn) * Math.min(1, dt*7);   // eased, so it is not a flicker
   spdT -= dt;
   var pull = Math.max(holeAmt || 0, u_jumpPull || 0);
   /* Coasting and being swallowed are mutually exclusive states, and `slow` is
@@ -8017,9 +8032,10 @@ var MANUAL = [
       '<li><b>Your ship.</b> Bottom-centre, always. It never moves left or right &mdash; the world turns around it.</li>'+
       '<li><b>SIGNAL</b>, top left: your score this run.</li>'+
       '<li><b>Your velocity</b>, top centre, as a fraction of the speed of light (<b>c</b>). It climbs with '+
-        'the level and with overdrive, wanders by about a hundredth as the conduit breathes, drops '+
-        'when you coast a <b>gate</b>, and when an event horizon opens in front of you it goes where '+
-        'anything falling into one goes &mdash; then dumps you out the far side.</li>'+
+        'the level and with overdrive, wanders by about a hundredth as the conduit breathes, and '+
+        'scrubs off <b>0.005</b> for as long as you are turning. It drops hard when you coast a '+
+        '<b>gate</b>, and when an event horizon opens in front of you it goes where anything falling '+
+        'into one goes &mdash; then dumps you out the far side.</li>'+
       '<li><b>LV n &nbsp;x/y</b>, top right: the level and rings cleared of the target. Tap it to pause.</li>'+
       '<li><b>The thin bar</b> along the bottom: your resonance charge.</li>'+
     '</ul>';
