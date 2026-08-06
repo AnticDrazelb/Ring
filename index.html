@@ -375,6 +375,73 @@
   /* the selected world wears a reticle; only one node ever carries it */
   .selRing{opacity:0;}
   .nodeG.sel .selRing{opacity:1;}
+
+  /* ============ CHART MOTION ============
+     Worlds turn, rings shed particles, moons orbit, stars twinkle, a star's
+     convection churns. All of it is CSS rather than SMIL for one reason: a CSS
+     animation can be PAUSED BY A CLASS, and an IntersectionObserver puts that
+     class on a world only while it is actually on screen.
+
+     So a 250-world chart is not animating 250 worlds. It is animating the five
+     or six you can see, and the rest are inert DOM until you scroll to them.
+     Everything here is transform or opacity — nothing animated touches layout
+     or triggers a repaint of anything but its own layer. */
+  #mapSvg .anim{
+    animation-timing-function:linear;
+    animation-iteration-count:infinite;
+    animation-play-state:paused;
+  }
+  #mapSvg .vis .anim{animation-play-state:running;}
+
+  /* rotation about a body's own centre. Every group that carries this also
+     carries an invisible centring circle, so its fill-box is square on the
+     local origin and the spin cannot wobble. */
+  #mapSvg .aRot,#mapSvg .aRotR,#mapSvg .aPulse{transform-box:fill-box;transform-origin:50% 50%;}
+  #mapSvg .aRot{animation-name:mRot;}
+  #mapSvg .aRotR{animation-name:mRotR;}
+  @keyframes mRot{to{transform:rotate(360deg);}}
+  @keyframes mRotR{to{transform:rotate(-360deg);}}
+
+  /* A WORLD TURNING. The surface is drawn twice, side by side, and slid one
+     body-width left on a loop — features leave at one limb and arrive at the
+     other, and the seam is exactly where the second copy starts, so there
+     isn't one. Four keyframe sets because there are four radii; a calc() on a
+     custom property would do it in one, and would be the thing that breaks on
+     the one browser nobody tested. */
+  #mapSvg .sp22{animation-name:sp22;} @keyframes sp22{to{transform:translateX(-44px);}}
+  #mapSvg .sp25{animation-name:sp25;} @keyframes sp25{to{transform:translateX(-50px);}}
+  #mapSvg .sp28{animation-name:sp28;} @keyframes sp28{to{transform:translateX(-56px);}}
+  #mapSvg .sp33{animation-name:sp33;} @keyframes sp33{to{transform:translateX(-66px);}}
+
+  #mapSvg .aTwk{animation-name:mTwk;animation-direction:alternate;
+                animation-timing-function:ease-in-out;}
+  @keyframes mTwk{to{opacity:.22;}}
+
+  /* ring particles orbiting, read off the dashes rather than by turning an
+     ellipse that is symmetrical enough for a rotation to be invisible */
+  #mapSvg .aDash{animation-name:mDash;}
+  @keyframes mDash{to{stroke-dashoffset:-60;}}
+
+  #mapSvg .aProm{animation-name:mProm;animation-direction:alternate;
+                 animation-timing-function:ease-in-out;}
+  @keyframes mProm{from{opacity:.12;}to{opacity:.85;}}
+
+  #mapSvg .aPulse{animation-name:mPulse;animation-duration:2.4s;}
+  @keyframes mPulse{from{transform:scale(1);opacity:.55;}to{transform:scale(1.52);opacity:0;}}
+
+  #mapSvg .aBreath{animation-name:mBreath;animation-direction:alternate;
+                   animation-timing-function:ease-in-out;}
+  @keyframes mBreath{from{opacity:.22;}to{opacity:.6;}}
+
+  #mapSvg .aComet{animation-name:mComet;animation-duration:9s;}
+  @keyframes mComet{
+    0%{transform:translate(0,0);opacity:0;}
+    8%{opacity:.9;}
+    82%{opacity:.9;}
+    100%{transform:translate(-470px,150px);opacity:0;}
+  }
+
+  @media (prefers-reduced-motion:reduce){ #mapSvg .anim{animation:none!important;} }
   .nextHead{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
   .nextTag{
     display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:var(--r-pill);
@@ -6498,12 +6565,20 @@ function heroStar(x, y, s, col, seed){
     '<path d="M'+(-s*4.6).toFixed(1)+' 0L0 '+(-s*0.5).toFixed(1)+'L'+(s*4.6).toFixed(1)+
       ' 0L0 '+(s*0.5).toFixed(1)+'Z" fill="'+col+'" opacity="0.75"/>'+
     '<circle r="'+(s*0.85).toFixed(2)+'" fill="#ffffff"/>';
-  if(!REDUCED){
-    var dur = (2.6 + (seed % 40)/12).toFixed(2);
-    g += '<animate attributeName="opacity" values="1;0.45;1" dur="'+dur+
-         's" repeatCount="indefinite" begin="'+((seed%23)/7).toFixed(2)+'s"/>';
-  }
   return g + '</g>';
+}
+
+/* A twinkling field star. Cheaper than a hero star — a dot and a small halo,
+   no glint — because there are a lot of them and they are scenery. The
+   negative delay starts each one part-way through its cycle, so a band does
+   not come on screen all blinking together. */
+function twinkleStar(x, y, s, col, seed){
+  var dur = (1.9 + (seed % 47)/13).toFixed(2);
+  return '<g class="anim aTwk" style="animation-duration:'+dur+'s;animation-delay:-'+
+         ((seed % 31)/7).toFixed(2)+'s" transform="translate('+x.toFixed(1)+','+y.toFixed(1)+')">'+
+    '<circle r="'+(s*2.6).toFixed(2)+'" fill="url(#glint)" opacity="0.5"/>'+
+    '<circle r="'+(s*0.8).toFixed(2)+'" fill="'+col+'"/>'+
+  '</g>';
 }
 
 /* A galaxy seen edge-on-ish, far outside the campaign. Two ellipses and a
@@ -6535,9 +6610,15 @@ function speciesFor(n, p){
 /* The surface, drawn in the body's own coordinates and clipped to its disc.
    Nothing here is a texture — craters are circles with a lit rim on the
    sunward side, bands are over-wide ellipses, continents are four-point
-   blobs. It is the cheapest thing that still reads as a place. */
+   blobs. It is the cheapest thing that still reads as a place.
+
+   It comes back in two pieces, because a rotating world does not move all of
+   itself: `fx` is what a spin leaves where it is — latitude bands, polar ice
+   caps, the things that are uniform all the way round — and `sp` is what
+   travels with the surface. Getting that split wrong is what makes a spinning
+   planet look like a spinning plate. */
 function planetSkin(sp, R, base, pal, rnd){
-  var s = '', i, a, d, cx, cy, cr;
+  var fx = '', s = '', i, a, d, cx, cy, cr;
   var alt = pal[1] || base, alt2 = pal[2] || base;
 
   if(sp === 'gas'){
@@ -6546,8 +6627,9 @@ function planetSkin(sp, R, base, pal, rnd){
       var yy = -R + (i + 0.5)*(2*R/nb) + (rnd()-0.5)*R*0.10;
       var hh = (R/nb)*(0.55 + rnd()*0.95);
       var tint = rnd() > 0.5 ? shade(base, 0.26 + rnd()*0.26) : shade(base, -0.26 - rnd()*0.24);
-      s += '<ellipse cy="'+yy.toFixed(1)+'" rx="'+(R*1.3).toFixed(1)+'" ry="'+hh.toFixed(1)+
-           '" fill="'+tint+'" opacity="'+(0.26 + rnd()*0.30).toFixed(2)+'"/>';
+      // bands are latitudes: they stay put while the world turns under them
+      fx += '<ellipse cy="'+yy.toFixed(1)+'" rx="'+(R*1.3).toFixed(1)+'" ry="'+hh.toFixed(1)+
+            '" fill="'+tint+'" opacity="'+(0.26 + rnd()*0.30).toFixed(2)+'"/>';
     }
     if(rnd() > 0.3){                                   // the great red spot
       cx = (rnd()-0.5)*R*0.95; cy = (rnd()-0.5)*R*1.05;
@@ -6581,10 +6663,11 @@ function planetSkin(sp, R, base, pal, rnd){
     }
 
   } else if(sp === 'ice'){
-    s += '<ellipse cy="'+(-R*0.86).toFixed(1)+'" rx="'+(R*0.78).toFixed(1)+'" ry="'+(R*0.34).toFixed(1)+
-         '" fill="#eaf7ff" opacity="0.80"/>';
-    s += '<ellipse cy="'+(R*0.90).toFixed(1)+'" rx="'+(R*0.66).toFixed(1)+'" ry="'+(R*0.28).toFixed(1)+
-         '" fill="#eaf7ff" opacity="0.66"/>';
+    // the caps are on the axis, so they are the one thing a spin must not move
+    fx += '<ellipse cy="'+(-R*0.86).toFixed(1)+'" rx="'+(R*0.78).toFixed(1)+'" ry="'+(R*0.34).toFixed(1)+
+          '" fill="#eaf7ff" opacity="0.80"/>';
+    fx += '<ellipse cy="'+(R*0.90).toFixed(1)+'" rx="'+(R*0.66).toFixed(1)+'" ry="'+(R*0.28).toFixed(1)+
+          '" fill="#eaf7ff" opacity="0.66"/>';
     for(i=0;i<5;i++){                                  // fracture lines
       a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.7;
       cx = Math.cos(a)*d; cy = Math.sin(a)*d;
@@ -6639,7 +6722,7 @@ function planetSkin(sp, R, base, pal, rnd){
            '" fill="'+shade(base,0.85)+'" opacity="0.95"/>';
     }
   }
-  return s;
+  return { fx: fx, sp: s };
 }
 
 /* A ring system: two arcs and a shadow, tilted, with the near half drawn over
@@ -6653,7 +6736,11 @@ function ringSystem(R, col, wide, half){
   var g = '<g transform="rotate(-18)">';
   g += '<path d="'+d+'" fill="none" stroke="'+shade(col,0.45)+'" stroke-width="'+(wide?4.6:3.4)+
        '" opacity="'+(half==='back'?0.34:0.62)+'"/>';
-  g += '<path d="'+d+'" fill="none" stroke="'+shade(col,-0.2)+'" stroke-width="'+(wide?1.6:1.2)+
+  /* The particles orbit by running the dashes along the arc. Turning the
+     ellipse itself would be invisible — it is very nearly symmetrical — and
+     rotating a tilted ring in 2D just wobbles it. */
+  g += '<path class="anim aDash" style="animation-duration:'+(wide?18:13)+'s" d="'+d+
+       '" fill="none" stroke="'+shade(col,-0.2)+'" stroke-width="'+(wide?1.6:1.2)+
        '" opacity="'+(half==='back'?0.4:0.75)+'" stroke-dasharray="'+(wide?'7 3':'5 2.5')+'"/>';
   return g + '</g>';
 }
@@ -6682,9 +6769,8 @@ function starBody(R, base, rnd, rich){
             '" x2="'+(Math.cos(ra)*r2).toFixed(1)+'" y2="'+(Math.sin(ra)*r2).toFixed(1)+
             '" stroke="'+hot+'" stroke-opacity="0.3" stroke-width="1.1" stroke-linecap="round"/>';
   }
-  s += '<g>'+rays+
-       (rich ? '<animateTransform attributeName="transform" type="rotate" from="0" to="360" '+
-               'dur="160s" repeatCount="indefinite"/>' : '')+'</g>';
+  s += (rich ? '<g class="anim aRot" style="animation-duration:170s"><circle r="'+
+                 (R*1.4).toFixed(0)+'" fill="none"/>' : '<g>')+rays+'</g>';
 
   // photosphere
   s += '<circle r="'+R+'" fill="url(#ps'+pi+')"/>';
@@ -6700,11 +6786,10 @@ function starBody(R, base, rnd, rich){
                     (c ? 'cellD' : 'cellL')+')"/>';
       }
     }
+    var ctr = '<circle r="'+R+'" fill="none"/>';   // centring reference for fill-box
     s += '<g clip-path="url(#cd'+R+')">'+
-           '<g>'+cells[0]+'<animateTransform attributeName="transform" type="rotate" '+
-             'from="0" to="360" dur="34s" repeatCount="indefinite"/></g>'+
-           '<g>'+cells[1]+'<animateTransform attributeName="transform" type="rotate" '+
-             'from="360" to="0" dur="53s" repeatCount="indefinite"/></g>'+
+           '<g class="anim aRot"  style="animation-duration:34s">'+ctr+cells[0]+'</g>'+
+           '<g class="anim aRotR" style="animation-duration:53s">'+ctr+cells[1]+'</g>'+
          '</g>';
   }
 
@@ -6718,21 +6803,20 @@ function starBody(R, base, rnd, rich){
   for(var p=0;p<3;p++){
     var pa = (rnd()*360)|0, ph = R*(0.13 + rnd()*0.16), pw2 = R*(0.16 + rnd()*0.08);
     // in the star's own colour, not a washed-out white — these are flame
-    s += '<g transform="rotate('+pa+')"><path d="M'+(R*0.98).toFixed(1)+' '+(-pw2).toFixed(1)+
+    s += '<g transform="rotate('+pa+')"><path'+
+         (rich ? ' class="anim aProm" style="animation-duration:'+(2.5+p*1.2).toFixed(1)+'s"' : '')+
+         ' d="M'+(R*0.98).toFixed(1)+' '+(-pw2).toFixed(1)+
          'Q'+(R+ph).toFixed(1)+' 0 '+(R*0.98).toFixed(1)+' '+pw2.toFixed(1)+
-         '" fill="none" stroke="'+shade(base,0.22)+'" stroke-width="2.6" opacity="0.75" stroke-linecap="round">'+
-         (rich ? '<animate attributeName="opacity" values="0.18;0.85;0.18" dur="'+
-                 (5+p*2.3).toFixed(1)+'s" repeatCount="indefinite"/>' : '')+
-         '</path></g>';
+         '" fill="none" stroke="'+shade(base,0.22)+
+         '" stroke-width="2.6" opacity="0.75" stroke-linecap="round"/></g>';
   }
 
   /* The breath is the corona swelling, not a hoop expanding out of it. The
      hoop version read as a selection ring around the star, which is exactly
      the one thing on this chart that already means something else. */
   if(rich){
-    s += '<circle r="'+(R*1.7).toFixed(0)+'" fill="url(#pg'+pi+')" opacity="0.5">'+
-         '<animate attributeName="opacity" values="0.22;0.6;0.22" dur="6.5s" repeatCount="indefinite"/>'+
-         '</circle>';
+    s += '<circle class="anim aBreath" style="animation-duration:3.2s" r="'+
+         (R*1.7).toFixed(0)+'" fill="url(#pg'+pi+')" opacity="0.5"/>';
   }
   return s;
 }
@@ -6876,38 +6960,38 @@ function buildMap(){
     var gy = blockTop(b) + (2.5 + nr()*5)*NODE_GAP;
     bg += galaxy(nr() > 0.5 ? MAP_W*0.12 : MAP_W*0.88, gy, 12 + nr()*10,
                  ((nr()*120)-60)|0, t.pal[1] || t.pal[0]);
-  }
 
-  /* --- foreground stars, only where you are reading --- */
-  var hb = Math.floor((store.level-1)/10);
-  var hr = mrnd(77021 + hb*911);
-  var hTop = blockTop(hb) - BANNER_GAP, hSpan = 10*NODE_GAP + BANNER_GAP*2;
-  for(var hs=0; hs<14; hs++){
-    var hx = hr()*MAP_W, hy = hTop + hr()*hSpan;
-    // keep them off the track so they never read as a level
-    if(Math.abs(hx - MAP_W/2) < 40) hx += (hx < MAP_W/2 ? -62 : 62);
-    bg += heroStar(hx, hy, 1.1 + hr()*1.5,
-                   hr() > 0.72 ? '#bcd4ff' : '#ffffff', (hs*37 + hb*13)|0);
-  }
-
-  /* One comet, in the sector you are reading, on a long cycle. It is a single
-     animated element on the entire chart — enough to make the field feel like
-     somewhere rather than a wallpaper, cheap enough not to matter. */
-  if(!REDUCED){
-    var cy0 = hTop + hSpan*0.34, cx0 = -60, cx1 = MAP_W + 60;
-    bg += '<g opacity="0">'+
-      '<path d="M0 0L46 17" stroke="url(#cometTail)" stroke-width="2.6" stroke-linecap="round"/>'+
+    /* Foreground stars, one band per sector. The band is the unit the observer
+       watches: a sector off screen is a group with `vis` removed, and every
+       animation inside it is paused. The three tiled pattern layers underneath
+       stay static — animating inside a <pattern> re-rasterises the tile across
+       the whole chart, which is the one thing here that would actually cost
+       something. */
+    var bTop = blockTop(b) - BANNER_GAP, bSpan = 10*NODE_GAP + BANNER_GAP;
+    var band = '';
+    for(var hs=0; hs<11; hs++){
+      var hx = nr()*MAP_W, hy = bTop + nr()*bSpan;
+      // keep them off the track so they never read as a level
+      if(Math.abs(hx - MAP_W/2) < 44) hx += (hx < MAP_W/2 ? -66 : 66);
+      var hcol = nr() > 0.74 ? '#bcd4ff' : nr() > 0.9 ? '#ffdfb4' : '#ffffff';
+      band += (hs < 4)
+        ? heroStar(hx, hy, 1.1 + nr()*1.4, hcol, (hs*37 + b*13)|0)
+        : twinkleStar(hx, hy, 0.8 + nr()*1.1, hcol, (hs*53 + b*29)|0);
+    }
+    /* One comet per sector, crossing on a long cycle with a long stagger, so
+       one goes past every so often rather than a shower going past all at
+       once. Off-screen sectors have theirs paused with everything else. */
+    band += '<g class="anim aComet" style="animation-delay:-'+(b*3.7).toFixed(1)+'s" '+
+              'transform="translate('+(MAP_W+50)+','+(bTop + bSpan*0.3).toFixed(0)+')" opacity="0">'+
+      '<path d="M0 0L48 16" stroke="url(#cometTail)" stroke-width="2.6" stroke-linecap="round"/>'+
       '<circle r="2.1" fill="#ffffff"/>'+
-      '<animateTransform attributeName="transform" type="translate" '+
-        'values="'+cx1+','+(cy0-70).toFixed(0)+';'+cx0+','+(cy0+70).toFixed(0)+'" '+
-        'dur="9s" repeatCount="indefinite" begin="4s"/>'+
-      '<animate attributeName="opacity" values="0;0;0.9;0.9;0" keyTimes="0;0.06;0.2;0.8;1" '+
-        'dur="9s" repeatCount="indefinite" begin="4s"/>'+
     '</g>';
-    defs += '<linearGradient id="cometTail" x1="0" y1="0" x2="1" y2="0">'+
-              '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>'+
-              '<stop offset="100%" stop-color="#9fd8ff" stop-opacity="0"/></linearGradient>';
+
+    bg += '<g class="starBand">'+band+'</g>';
   }
+  defs += '<linearGradient id="cometTail" x1="0" y1="0" x2="1" y2="0">'+
+            '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>'+
+            '<stop offset="100%" stop-color="#9fd8ff" stop-opacity="0"/></linearGradient>';
 
   /* the conduit itself: an orbital transit line, hairline and dashed ahead of
      you, solid and lit behind. The lit half used to carry a 16px gaussian blur
@@ -7044,10 +7128,26 @@ function buildMap(){
       if(ringed) g += ringSystem(R, lit2, n % 5 === 0, 'back');
       g += '<circle r="'+(R*2.15).toFixed(0)+'" fill="url(#pg'+pi+')"/>';
       g += '<circle r="'+R+'" fill="url(#pb'+pi+')"/>';
-      if(rich) g += '<g clip-path="url(#cd'+R+')">'+planetSkin(kind, R, accent, theme.pal, rnd)+'</g>';
+      if(rich){
+        var skin = planetSkin(kind, R, accent, theme.pal, rnd);
+        /* The surface, twice, one body-width apart, sliding left forever. A
+           world that never turns is a sticker; a world that turns by rotating
+           its disc is a plate. This is the third option and the only one that
+           reads as a sphere. Periods run 34-82s and are seeded per world, so
+           no two neighbours ever march in step. */
+        var per = (34 + (n*37 % 48)).toFixed(0);
+        g += '<g clip-path="url(#cd'+R+')">'+ skin.fx +
+               '<g class="anim sp'+R+'" style="animation-duration:'+per+'s">'+
+                 skin.sp +
+                 '<g transform="translate('+(R*2)+',0)">'+ skin.sp +'</g>'+
+               '</g>'+
+             '</g>';
+      }
       /* Lit from the upper left, the same side for every body in the chart —
          a planet lit from a different direction to its neighbour reads as a
-         mistake even when nobody can say why. */
+         mistake even when nobody can say why. And it sits OVER the turning
+         surface, so the terminator stays nailed to the light source while the
+         world rotates under it. */
       g += '<circle r="'+R+'" fill="url(#limb)"/>';
       g += '<circle r="'+R+'" fill="url(#pa'+pi+')"/>';   // atmosphere on the limb
       g += '<circle r="'+R+'" fill="none" stroke="'+shade(accent,0.35)+
@@ -7060,24 +7160,39 @@ function buildMap(){
        of the world's colour bounced back at them. */
     var moons = Math.min(3, p.hazards.length);
     for(var mo=0; mo<moons; mo++){
-      var ma = (-40 + mo*52 + (n*23)%40) * Math.PI/180;
-      var mr = R*1.75 + mo*5.5;
-      var msz = 2.9 - mo*0.35;
-      var mx = Math.cos(ma)*mr, my = Math.sin(ma)*mr*0.6;
-      g += '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="'+msz.toFixed(1)+
-           '" fill="#dce9f7"/>'+
-           '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="'+msz.toFixed(1)+
-           '" fill="url(#limb)"/>';
+      var ma = (-40 + mo*52 + (n*23)%40);
+      // close in, so a moon reads as belonging to the world it is going round
+      var mr = R*1.45 + mo*4.5;
+      var msz = 2.7 - mo*0.3;
+      /* An orbit, not a decoration.
+
+         The orbit is CIRCULAR on purpose. Squashing it to a foreshortened
+         ellipse means wrapping the spin in scale(1,0.6), and a scale outside a
+         rotation squashes the moon along with its path — every moon on the
+         chart became a horizontal dash. The counter-scale that would undo it
+         has a rotation in between, so it only cancels at two points of the
+         orbit and shears everywhere else. A round orbit is honest and costs
+         one transform.
+
+         The invisible circle is the group's centring reference: without it
+         fill-box takes its origin from the moon's own box and the orbit
+         becomes a moon spinning on the spot. */
+      g += '<g class="anim '+(mo % 2 ? 'aRotR' : 'aRot')+'" style="animation-duration:'+
+             (26 + mo*9 + (n*13 % 17))+'s">'+
+             '<circle r="'+mr.toFixed(1)+'" fill="none"/>'+
+             '<g transform="rotate('+ma+')">'+
+               '<circle cx="'+mr.toFixed(1)+'" r="'+msz.toFixed(1)+'" fill="#dce9f7"/>'+
+               '<circle cx="'+mr.toFixed(1)+'" r="'+msz.toFixed(1)+'" fill="url(#limb)"/>'+
+             '</g>'+
+           '</g>';
     }
 
     /* The "you are here" pulse. It starts outside a star's corona rather than
        inside it — landing in the middle of the glow it read as part of the
        star, which is the one place on the chart it must not. */
-    if(live && !REDUCED){
-      var p0 = kind === 'star' ? R+14 : R+6, p1 = p0 + 15;
-      g += '<circle r="'+p0+'" fill="none" stroke="#8fe8ff" stroke-width="1.4" opacity="0.55">'+
-             '<animate attributeName="r" values="'+p0+';'+p1+';'+p0+'" dur="2.4s" repeatCount="indefinite"/>'+
-             '<animate attributeName="opacity" values="0.55;0;0.55" dur="2.4s" repeatCount="indefinite"/></circle>';
+    if(live){
+      g += '<circle class="anim aPulse" r="'+(kind === 'star' ? R+14 : R+6)+
+           '" fill="none" stroke="#8fe8ff" stroke-width="1.4" opacity="0.55"/>';
     }
 
     /* The number rides on a surface now, not a flat disc, so it carries its
@@ -7169,7 +7284,43 @@ function buildMap(){
     });
   }
   markSelected();
+  watchViewport(path);
   scrollMapToLive();
+}
+
+/* ============================================================
+   WHAT IS ON SCREEN
+
+   The chart is one SVG tens of thousands of pixels tall and a browser will
+   happily run every animation in it, forever, whether or not the element is
+   within a mile of the viewport. At level 120 that is a hundred and twenty
+   turning worlds, three hundred orbiting moons and a hundred and thirty
+   twinkling stars, of which you can see about six.
+
+   So nothing animates by default — `.anim` is declared paused in the
+   stylesheet — and an IntersectionObserver against the scroller adds `vis` to
+   a world or a star band only while it is actually on screen, which is the
+   one selector that starts everything inside it. Scroll away and it stops
+   dead. No rAF, no scroll handler, no per-frame work of our own at all: the
+   observer fires only on crossings.
+   ============================================================ */
+var mapIO = null;
+function watchViewport(path){
+  if(REDUCED || !window.IntersectionObserver) return;
+  if(mapIO) mapIO.disconnect();           // the old nodes are gone with innerHTML
+  mapIO = new IntersectionObserver(function(entries){
+    for(var i=0;i<entries.length;i++){
+      var e = entries[i];
+      if(e.isIntersecting) e.target.classList.add('vis');
+      else                 e.target.classList.remove('vis');
+    }
+  }, {
+    root: document.getElementById('mapScroll'),
+    // start a beat before the edge so nothing is caught mid-stride arriving
+    rootMargin: '160px 0px'
+  });
+  var live = path.querySelectorAll('.nodeG,.starBand');
+  for(var i=0;i<live.length;i++) mapIO.observe(live[i]);
 }
 
 function scrollMapToLive(){
