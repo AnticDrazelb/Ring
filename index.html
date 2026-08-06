@@ -1270,8 +1270,27 @@
      reliable way to make a phone quietly stop animating it. The glow is its
      own element behind the mark for exactly that reason.
      ============================================================ */
+  /* CENTRED ON WHAT IS ACTUALLY VISIBLE.
+
+     `inset:0` alone is not that. iOS resolves the fixed-position viewport late
+     while the bottom toolbar settles on load, so for the first frames the card
+     is laid out against a viewport about a toolbar taller than the one you can
+     see — which puts the mark half a toolbar low, and then it snaps up when
+     the layout lands. That is the jump.
+
+     Three defences, in the order they take effect: svh is the SMALL viewport
+     (toolbar shown) and is right from the very first frame; vh is the fallback
+     where svh is not understood; and the boot script drives the height off
+     visualViewport, which reports what is genuinely on screen and fires while
+     it changes, so the card tracks the toolbar instead of jumping after it.
+
+     bottom is over-constrained by the explicit height and correctly ignored;
+     inset:0 stays for the coverage. Nothing shows through underneath anyway —
+     the body is the same void. */
   #nds-splash{
     position:fixed; inset:0; z-index:9999;
+    height:100vh;
+    height:100svh;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     background:var(--void);
     opacity:1; transition:opacity 1s ease;
@@ -1383,9 +1402,26 @@
   var s = document.getElementById('nds-splash');
   if(!s) return;
   var started = false, dismissed = false;
+
+  /* Track the visible viewport for as long as the card is up. See the comment
+     on #nds-splash: this is the layer that makes the mark hold still while
+     iOS decides how tall its own window is. */
+  var vv = window.visualViewport;
+  function fitSplash(){
+    var h = (vv && vv.height) || window.innerHeight || 0;
+    if(h > 0) s.style.height = h + 'px';
+  }
+  fitSplash();
+  if(vv) vv.addEventListener('resize', fitSplash);
+  window.addEventListener('resize', fitSplash);
+  window.addEventListener('orientationchange', fitSplash);
+
   function dismiss(){
     if(dismissed) return;
     dismissed = true;
+    if(vv) vv.removeEventListener('resize', fitSplash);
+    window.removeEventListener('resize', fitSplash);
+    window.removeEventListener('orientationchange', fitSplash);
     /* Read by the game before it stands down. Without it, a card skipped by a
        tap before the first frame lands would leave the game holding a render
        loop that nothing is ever going to release. */
@@ -1760,7 +1796,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 2.8 &middot; velocity readout</div>
+      <div class="setVer">Ringshift &middot; version 2.9 &middot; steady boot</div>
     </div>
 
     <div class="setFoot">
