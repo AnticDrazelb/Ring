@@ -378,29 +378,31 @@
 
   /* ============ CHART MOTION ============
      Worlds turn, rings shed particles, moons orbit, stars twinkle, a star's
-     convection churns. All of it is CSS rather than SMIL for one reason: a CSS
-     animation can be PAUSED BY A CLASS, and an IntersectionObserver puts that
-     class on a world only while it is actually on screen.
+     convection churns.
 
-     So a 250-world chart is not animating 250 worlds. It is animating the five
-     or six you can see, and the rest are inert DOM until you scroll to them.
-     Everything here is transform or opacity — nothing animated touches layout
-     or triggers a repaint of anything but its own layer. */
+     TWO RULES, both learned the hard way.
+
+     1. IT FAILS OPEN. Animations RUN by default and the viewport gate switches
+        them off. The first version was the other way round — everything paused
+        until an IntersectionObserver said otherwise — which meant one weak spot
+        in one engine (IO against a scrolling root, with SVG elements as
+        targets) took the entire feature with it and the chart just sat there.
+        An optimisation is allowed to stop working. It is not allowed to be the
+        thing the feature depends on.
+
+     2. NOTHING ROTATES. Rotating an SVG <g> about its own centre in CSS needs
+        transform-box:fill-box, and where that is not honoured the origin falls
+        back to the viewBox corner — thousands of units away — so every moon and
+        every convection cell is flung somewhere off the chart and the body
+        looks static. Everything here is translate, opacity, or dash offset:
+        properties whose meaning cannot be argued with. A moon's circle is a
+        translate keyframe emitted per orbit radius (see orbitClass), and a
+        world — star or planet — turns by sliding a doubled surface. */
   #mapSvg .anim{
     animation-timing-function:linear;
     animation-iteration-count:infinite;
-    animation-play-state:paused;
   }
-  #mapSvg .vis .anim{animation-play-state:running;}
-
-  /* rotation about a body's own centre. Every group that carries this also
-     carries an invisible centring circle, so its fill-box is square on the
-     local origin and the spin cannot wobble. */
-  #mapSvg .aRot,#mapSvg .aRotR,#mapSvg .aPulse{transform-box:fill-box;transform-origin:50% 50%;}
-  #mapSvg .aRot{animation-name:mRot;}
-  #mapSvg .aRotR{animation-name:mRotR;}
-  @keyframes mRot{to{transform:rotate(360deg);}}
-  @keyframes mRotR{to{transform:rotate(-360deg);}}
+  #mapSvg .zzz .anim{animation-play-state:paused;}
 
   /* A WORLD TURNING. The surface is drawn twice, side by side, and slid one
      body-width left on a loop — features leave at one limb and arrive at the
@@ -425,9 +427,6 @@
   #mapSvg .aProm{animation-name:mProm;animation-direction:alternate;
                  animation-timing-function:ease-in-out;}
   @keyframes mProm{from{opacity:.12;}to{opacity:.85;}}
-
-  #mapSvg .aPulse{animation-name:mPulse;animation-duration:2.4s;}
-  @keyframes mPulse{from{transform:scale(1);opacity:.55;}to{transform:scale(1.52);opacity:0;}}
 
   #mapSvg .aBreath{animation-name:mBreath;animation-direction:alternate;
                    animation-timing-function:ease-in-out;}
@@ -1687,7 +1686,9 @@
         <label class="setRow"><span>Reset all progress</span>
           <button class="miniBtn" id="wipeBtn">Wipe</button></label>
       </div>
-      <div class="setVer">Ringshift &middot; version 2.0</div>
+      <!-- bumped whenever the build changes, so "am I actually running the new
+           one?" is a question the game can answer rather than a guess -->
+      <div class="setVer">Ringshift &middot; version 2.3 &middot; animated chart</div>
     </div>
 
     <div class="setFoot">
@@ -6245,6 +6246,12 @@ function refreshLifeUI(){
   if(startScreen && !startScreen.classList.contains('hidden')){
     // the label follows the SELECTED world, not the one you happen to be on
     updatePlayTarget();
+    /* A second safety net under the scroll handler. If scroll events are ever
+       not delivered — a momentum quirk, a listener that failed to bind — the
+       worst case is a world staying asleep a second too long instead of
+       forever. It is a range comparison and an early return when nothing
+       moved, so it costs nothing to have. */
+    updateChartVis();
     var mc = document.getElementById('mapCredits');
     if(mc) mc.textContent = fmtChip(store.credits);
   }
@@ -6524,6 +6531,33 @@ function palId(hex){
   return i;
 }
 
+/* --- orbits ---------------------------------------------------
+   A circular orbit written as a translate-only keyframe set, emitted once per
+   distinct orbit radius and injected into the chart's own <style>. Sixteen
+   steps: the path is technically a 16-gon, whose radius varies by 1.9%, which
+   at three pixels is nothing.
+
+   The obvious implementation is rotate() on a group, and it is a trap — that
+   needs transform-box:fill-box to mean "about my own centre", and where an
+   engine does not honour it on a <g> the origin silently becomes the viewBox
+   corner and the moon leaves the chart. A translate keyframe cannot be
+   misinterpreted by anyone. */
+var _orbIx = null, _orbCss = '';
+function orbitClass(r){
+  r = Math.round(r);
+  if(_orbIx[r]) return _orbIx[r];
+  var name = 'orb' + r;
+  _orbIx[r] = name;
+  var steps = 16, css = '@keyframes ' + name + '{';
+  for(var i=0;i<=steps;i++){
+    var a = i/steps*Math.PI*2;
+    css += (i/steps*100).toFixed(3) + '%{transform:translate(' +
+           (Math.cos(a)*r).toFixed(2) + 'px,' + (Math.sin(a)*r).toFixed(2) + 'px);}';
+  }
+  _orbCss += css + '}#mapSvg .' + name + '{animation-name:' + name + ';}';
+  return name;
+}
+
 /* --- star fields ---------------------------------------------
    Three tiled patterns instead of a few thousand circles. The whole field is
    three <rect>s; the browser rasterises one tile of each and repeats it, so
@@ -6769,13 +6803,15 @@ function starBody(R, base, rnd, rich){
             '" x2="'+(Math.cos(ra)*r2).toFixed(1)+'" y2="'+(Math.sin(ra)*r2).toFixed(1)+
             '" stroke="'+hot+'" stroke-opacity="0.3" stroke-width="1.1" stroke-linecap="round"/>';
   }
-  s += (rich ? '<g class="anim aRot" style="animation-duration:170s"><circle r="'+
-                 (R*1.4).toFixed(0)+'" fill="none"/>' : '<g>')+rays+'</g>';
+  s += '<g>'+rays+'</g>';
 
   // photosphere
   s += '<circle r="'+R+'" fill="url(#ps'+pi+')"/>';
 
-  // convection: two counter-rotating sets of soft cells, clipped to the disc
+  /* Convection: two sets of soft cells sliding across the face in opposite
+     directions, each doubled a body-width apart so the wrap is seamless. This
+     is the same mechanism a planet turns by — a star rotates too, and the
+     counter-flow is what makes it churn rather than drift. */
   if(rich){
     var cells = ['',''];
     for(var c=0;c<2;c++){
@@ -6786,10 +6822,13 @@ function starBody(R, base, rnd, rich){
                     (c ? 'cellD' : 'cellL')+')"/>';
       }
     }
-    var ctr = '<circle r="'+R+'" fill="none"/>';   // centring reference for fill-box
+    var twice = function(inner){
+      return inner + '<g transform="translate('+(R*2)+',0)">' + inner + '</g>';
+    };
     s += '<g clip-path="url(#cd'+R+')">'+
-           '<g class="anim aRot"  style="animation-duration:34s">'+ctr+cells[0]+'</g>'+
-           '<g class="anim aRotR" style="animation-duration:53s">'+ctr+cells[1]+'</g>'+
+           '<g class="anim sp'+R+'" style="animation-duration:26s">'+twice(cells[0])+'</g>'+
+           '<g class="anim sp'+R+'" style="animation-duration:41s;animation-direction:reverse">'+
+             twice(cells[1])+'</g>'+
          '</g>';
   }
 
@@ -6861,6 +6900,8 @@ function sizeMapSvg(){
   if(foot) sc.style.paddingBottom = (foot.offsetHeight + 40) + 'px';
   var w = path.clientWidth || sc.clientWidth;
   el.style.height = (parseFloat(el.getAttribute('data-h')) * (w / MAP_W)) + 'px';
+  // the scale just changed, so the visible band did too
+  if(typeof updateChartVis === 'function') updateChartVis();
 }
 
 /* The chart is a single ~200KB SVG string at level 200, and it was rebuilt from
@@ -6887,6 +6928,7 @@ function buildMap(){
   var defs = '', bg = '', trail = '', banners = '', nodes = '';
 
   _palIx = {}; _palN = 0; _palDefs = '';
+  _orbIx = {}; _orbCss = '';
 
   defs += starFieldDefs();
   defs += '<linearGradient id="coreLive" x1="0" y1="0" x2="0" y2="1">'+
@@ -7164,35 +7206,39 @@ function buildMap(){
       // close in, so a moon reads as belonging to the world it is going round
       var mr = R*1.45 + mo*4.5;
       var msz = 2.7 - mo*0.3;
-      /* An orbit, not a decoration.
+      /* An orbit, not a decoration. Circular on purpose: foreshortening it
+         means wrapping the motion in scale(1,0.6), which squashes the moon
+         along with its path — every moon on the chart came out a horizontal
+         dash — and the counter-scale that would undo it only cancels at two
+         points of the orbit.
 
-         The orbit is CIRCULAR on purpose. Squashing it to a foreshortened
-         ellipse means wrapping the spin in scale(1,0.6), and a scale outside a
-         rotation squashes the moon along with its path — every moon on the
-         chart became a horizontal dash. The counter-scale that would undo it
-         has a rotation in between, so it only cancels at two points of the
-         orbit and shears everywhere else. A round orbit is honest and costs
-         one transform.
-
-         The invisible circle is the group's centring reference: without it
-         fill-box takes its origin from the moon's own box and the orbit
-         becomes a moon spinning on the spot. */
-      g += '<g class="anim '+(mo % 2 ? 'aRotR' : 'aRot')+'" style="animation-duration:'+
-             (26 + mo*9 + (n*13 % 17))+'s">'+
-             '<circle r="'+mr.toFixed(1)+'" fill="none"/>'+
-             '<g transform="rotate('+ma+')">'+
-               '<circle cx="'+mr.toFixed(1)+'" r="'+msz.toFixed(1)+'" fill="#dce9f7"/>'+
-               '<circle cx="'+mr.toFixed(1)+'" r="'+msz.toFixed(1)+'" fill="url(#limb)"/>'+
-             '</g>'+
+         The moon is drawn at the origin and carried round by the keyframe. A
+         negative delay starts it part-way along, so a world's moons are spread
+         over their orbits instead of leaving the gate together. */
+      var odur = 26 + mo*9 + (n*13 % 17);
+      var ophase = (((ma % 360) + 360) % 360) / 360;      // 0..1 round the orbit
+      g += '<g class="anim '+orbitClass(mr)+'" style="animation-duration:'+odur+
+             's;animation-delay:-'+(odur*ophase).toFixed(2)+'s">'+
+             '<circle r="'+msz.toFixed(1)+'" fill="#dce9f7"/>'+
+             '<circle r="'+msz.toFixed(1)+'" fill="url(#limb)"/>'+
            '</g>';
     }
 
     /* The "you are here" pulse. It starts outside a star's corona rather than
        inside it — landing in the middle of the glow it read as part of the
        star, which is the one place on the chart it must not. */
-    if(live){
-      g += '<circle class="anim aPulse" r="'+(kind === 'star' ? R+14 : R+6)+
-           '" fill="none" stroke="#8fe8ff" stroke-width="1.4" opacity="0.55"/>';
+    /* The "you are here" pulse is the one animation on the chart that is still
+       SMIL, and deliberately: it exists exactly once, it animates `r` rather
+       than a transform so there is no origin to get wrong, and SMIL's meaning
+       on an SVG attribute is the same in every engine there has ever been.
+       Nothing is saved by gating a single ring. */
+    if(live && !REDUCED){
+      var p0 = kind === 'star' ? R+14 : R+6, p1 = p0 + 15;
+      g += '<circle r="'+p0+'" fill="none" stroke="#8fe8ff" stroke-width="1.4" opacity="0.55">'+
+             '<animate attributeName="r" values="'+p0+';'+p1+';'+p0+
+               '" dur="2.4s" repeatCount="indefinite"/>'+
+             '<animate attributeName="opacity" values="0.55;0;0.55" dur="2.4s" '+
+               'repeatCount="indefinite"/></circle>';
     }
 
     /* The number rides on a surface now, not a flat disc, so it carries its
@@ -7258,6 +7304,8 @@ function buildMap(){
             'viewBox="0 0 '+MAP_W+' '+HH+'" preserveAspectRatio="xMidYMin meet" '+
             'xmlns="http://www.w3.org/2000/svg">'+
             '<defs>'+defs+_palDefs+'</defs>'+
+            // the orbit keyframes, one per radius the chart actually uses
+            '<style>'+_orbCss+'</style>'+
             '<rect width="'+MAP_W+'" height="'+HH+'" fill="#02040b"/>'+
             bg+trail+banners+nodes+'</svg>';
   var path = document.getElementById('mapPath');
@@ -7291,37 +7339,102 @@ function buildMap(){
 /* ============================================================
    WHAT IS ON SCREEN
 
-   The chart is one SVG tens of thousands of pixels tall and a browser will
-   happily run every animation in it, forever, whether or not the element is
+   The chart is one SVG tens of thousands of pixels tall, and a browser will
+   happily run every animation in it forever whether or not the element is
    within a mile of the viewport. At level 120 that is a hundred and twenty
    turning worlds, three hundred orbiting moons and a hundred and thirty
    twinkling stars, of which you can see about six.
 
-   So nothing animates by default — `.anim` is declared paused in the
-   stylesheet — and an IntersectionObserver against the scroller adds `vis` to
-   a world or a star band only while it is actually on screen, which is the
-   one selector that starts everything inside it. Scroll away and it stops
-   dead. No rAF, no scroll handler, no per-frame work of our own at all: the
-   observer fires only on crossings.
+   The first version of this asked an IntersectionObserver, rooted on the
+   scroller, with SVG elements as targets. That is a lot of trust to place in
+   one API's least-travelled corner, and it was doing it in the fail-CLOSED
+   direction: nothing animated until the observer said otherwise, so an engine
+   that reported nothing produced a chart where nothing moved.
+
+   This asks nobody. Every world's y is a closed-form function of its number
+   — mapPoint(n).y — so the visible band is arithmetic on scrollTop, and the
+   only DOM work is adding or removing a class on the handful of worlds that
+   crossed the edge since the last frame. And it is fail-OPEN: `.zzz` is what
+   stops an animation, so if any of this breaks, the chart animates in full.
    ============================================================ */
-var mapIO = null;
-function watchViewport(path){
-  if(REDUCED || !window.IntersectionObserver) return;
-  if(mapIO) mapIO.disconnect();           // the old nodes are gone with innerHTML
-  mapIO = new IntersectionObserver(function(entries){
-    for(var i=0;i<entries.length;i++){
-      var e = entries[i];
-      if(e.isIntersecting) e.target.classList.add('vis');
-      else                 e.target.classList.remove('vis');
-    }
-  }, {
-    root: document.getElementById('mapScroll'),
-    // start a beat before the edge so nothing is caught mid-stride arriving
-    rootMargin: '160px 0px'
-  });
-  var live = path.querySelectorAll('.nodeG,.starBand');
-  for(var i=0;i<live.length;i++) mapIO.observe(live[i]);
+var chartNodes = null, chartBands = null, chartLo = -1, chartHi = -1, chartTick = 0;
+
+function chartGeom(){
+  var sc = document.getElementById('mapScroll');
+  var svgEl = document.getElementById('mapSvg');
+  if(!sc || !svgEl) return null;
+  var scale = (svgEl.clientWidth || MAP_W) / MAP_W;
+  if(!(scale > 0)) return null;
+  var padTop = parseFloat(getComputedStyle(sc).paddingTop) || 0;
+  // the scroller's viewport, expressed in the SVG's own units
+  return {
+    y0: (sc.scrollTop - padTop) / scale,
+    y1: (sc.scrollTop + sc.clientHeight - padTop) / scale
+  };
 }
+
+/* A world's drawn extent reaches about this far above and below its centre —
+   tag, stars row, corona — so the band is grown by it before anything is
+   judged off screen. */
+var NODE_REACH = 70;
+
+function updateChartVis(){
+  chartTick = 0;
+  if(!chartNodes) return;
+  var v = chartGeom();
+  if(!v) return;
+  var lo = v.y0 - NODE_REACH, hi = v.y1 + NODE_REACH;
+
+  var nLo = 0, nHi = -1;
+  for(var n=1; n<chartNodes.length; n++){
+    if(!chartNodes[n]) continue;
+    var y = mapPoint(n).y;
+    if(y >= lo && y <= hi){ if(!nLo) nLo = n; nHi = n; }
+    else if(nLo) break;                 // y(n) is monotonic; past the band
+  }
+  if(nLo === chartLo && nHi === chartHi) return;
+
+  /* The first successful pass has to sweep the whole chart, because nothing is
+     marked yet; after that only the previous band can be holding a class that
+     needs clearing. It is deliberately done HERE and not at build time — this
+     line is only reached once the geometry actually resolved, so a chart whose
+     scroller could not be measured is left fully animated rather than fully
+     frozen. */
+  var from = chartLo > 0 ? chartLo : 1;
+  var to   = chartLo > 0 ? chartHi : chartNodes.length - 1;
+  for(var i=from; i<=to; i++)
+    if(chartNodes[i] && (i < nLo || i > nHi)) chartNodes[i].classList.add('zzz');
+  for(var j=nLo; j>0 && j<=nHi; j++)
+    if(chartNodes[j]) chartNodes[j].classList.remove('zzz');
+  chartLo = nLo; chartHi = nHi;
+
+  for(var b=0; b<chartBands.length; b++){
+    var bTop = blockTop(b) - BANNER_GAP, bBot = blockTop(b) + 10*NODE_GAP;
+    chartBands[b].classList.toggle('zzz', bBot < lo || bTop > hi);
+  }
+}
+
+function watchViewport(path){
+  chartNodes = []; chartBands = []; chartLo = -1; chartHi = -1;
+  var gs = path.querySelectorAll('.nodeG');
+  for(var i=0;i<gs.length;i++){
+    var lv = parseInt(gs[i].getAttribute('data-lv'), 10);
+    if(lv) chartNodes[lv] = gs[i];
+  }
+  var bs = path.querySelectorAll('.starBand');
+  for(var k=0;k<bs.length;k++) chartBands[k] = bs[k];
+
+  if(!mapScrollBound){
+    mapScrollBound = true;
+    var sc = document.getElementById('mapScroll');
+    if(sc) sc.addEventListener('scroll', function(){
+      // one class sweep per frame at most, never one per scroll event
+      if(!chartTick) chartTick = requestAnimationFrame(updateChartVis);
+    }, {passive:true});
+  }
+  updateChartVis();
+}
+var mapScrollBound = false;
 
 function scrollMapToLive(){
   setTimeout(function(){
@@ -7334,6 +7447,7 @@ function scrollMapToLive(){
     var footH = foot ? foot.offsetHeight : 0;
     sc2.scrollTop = Math.max(0,
       padTop + mapPoint(store.level).y*scale - (sc2.clientHeight - footH)*0.44 - footH*0.1);
+    updateChartVis();          // the landing position decides what is awake
   }, 40);
 }
 
