@@ -282,8 +282,33 @@
   #startScreen .hudChip b{font-size:17px;}
   #startScreen .iconBtn{width:42px;height:42px;}
   #startScreen .iconBtn svg{width:21px;height:21px;}
-  @media (max-width:430px){ #startScreen .hudChip .chipLab{display:none;} }
-  @media (max-width:360px){ #startScreen .hudChip{padding:0 9px;} #startScreen .hudChip b{font-size:16px;} }
+  /* Seven controls in one tray on a 390px phone. Everything in it is
+     flex:0 0 auto — it cannot shrink, it can only spill — so the tray tightens
+     itself by steps instead, and drops the streak chip outright before it would
+     ever push the gear off the edge. */
+  @media (max-width:430px){
+    #startScreen .hudChip .chipLab{display:none;}
+    #startScreen .topTray{gap:4px;padding:6px;}
+    #startScreen .iconBtn{width:40px;height:40px;}
+    #startScreen .iconBtn svg{width:20px;height:20px;}
+    #startScreen .hudChip{padding:0 8px;gap:4px;height:40px;}
+  }
+  @media (max-width:430px){ #menuScreen .hudChip .chipLab{display:none;} }
+  /* The tray holds seven controls and every one of them is a 44px touch target
+     that must not shrink, so on a narrow window it sheds READOUTS instead —
+     the two that are shown in full somewhere else — rather than clipping a
+     button off the edge, which is what it did when the manual was added to it. */
+  @media (max-width:420px){
+    #startScreen .hudChip{padding:0 7px;}
+    #startScreen .hudChip b{font-size:16px;}
+    #startScreen .streakChip{display:none;}      /* also on the daily card */
+  }
+  @media (max-width:344px){
+    #startScreen .topTray{gap:3px;padding:5px;}
+    #startScreen .creditChip{display:none;}      /* also on the menu and the result card */
+    #menuScreen .topTray{gap:5px;padding:7px;}
+    #menuScreen .hudChip{padding:0 8px;gap:4px;}
+  }
   .mapHead .progPill,.mapHead 
   .mapTitle{
     margin-top:18px;font-size:13px;font-weight:800;letter-spacing:.32em;
@@ -338,10 +363,13 @@
   .panelClose svg{width:15px;height:15px;}
   .panelClose:active{transform:scale(.92);}
   .nextTag.locked{border-color:rgba(255,90,90,.5);color:#ff8f8f;}
+  /* Sits over a busy chart, so it carries its own plate rather than trusting
+     the foot's gradient to be dark wherever a world happens to be. */
   .mapTip{
-    max-width:460px;margin:0 auto;text-align:center;
-    font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-    color:#5f7799;padding:4px 0 2px;
+    width:max-content;max-width:92%;margin:0 auto;text-align:center;
+    font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    color:#7d95b4;padding:7px 14px;border-radius:var(--r-pill);
+    background:rgba(6,11,22,.82);border:1px solid rgba(190,225,255,.10);
   }
   .mapTip.hidden{display:none;}
   /* the selected world wears a reticle; only one node ever carries it */
@@ -1431,7 +1459,7 @@
                stroke-linecap="round" stroke-linejoin="round"><path d="M10 19l-7-7 7-7"/><path d="M3 12h13a5 5 0 0 1 5 5v2"/></svg>
         </button>
         <div class="hudChip"><svg viewBox="0 0 24 24" class="ic gold"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" fill="currentColor"/></svg><span class="chipLab">Stars</span><b id="starsStart">0</b></div>
-        <div class="hudChip"><svg viewBox="0 0 24 24" class="ic gold"><circle cx="12" cy="12" r="9.2" fill="#ffd34d"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#a97f10" stroke-width="1.4"/></svg><b id="mapCredits">0</b></div>
+        <div class="hudChip creditChip"><svg viewBox="0 0 24 24" class="ic gold"><circle cx="12" cy="12" r="9.2" fill="#ffd34d"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#a97f10" stroke-width="1.4"/></svg><b id="mapCredits">0</b></div>
         <div class="hudChip streakChip"><svg viewBox="0 0 24 24" class="ic cyan"><path d="M13 2L4 14h6l-1 8 9-12h-6z" fill="currentColor"/></svg><b id="streakCount">0</b></div>
         <div class="spring"></div>
         <button class="iconBtn" id="mapManual" aria-label="Flight manual">
@@ -6151,7 +6179,7 @@ function refreshLifeUI(){
     // the label follows the SELECTED world, not the one you happen to be on
     updatePlayTarget();
     var mc = document.getElementById('mapCredits');
-    if(mc) mc.textContent = (store.credits||0).toLocaleString();
+    if(mc) mc.textContent = fmtChip(store.credits);
   }
   if(!overScreen.classList.contains('hidden')){
     var rt = document.getElementById('retryBtn');
@@ -6339,6 +6367,375 @@ function trailPath(count){
   return d;
 }
 function starsFor(n){ return (store.stars && store.stars[n]) || 0; }
+
+/* ============================================================
+   CHART PAINT KIT
+
+   Everything the star chart is drawn with. Two rules run through all of it:
+
+   · Deterministic. A world's craters, its bands, the drift of its moons —
+     all of it comes out of the level number, so world 63 looks like world 63
+     every time you open the map, on every device, forever. Nothing is stored
+     and nothing is random at paint time.
+   · No blur filters. A feGaussianBlur is a raster operation over its whole
+     filter region, and the old chart had one on every body's halo and one on
+     a path that spanned the entire map. Radial gradients draw the same soft
+     falloff on the GPU for nothing. There is not a single filter left on a
+     body.
+   ============================================================ */
+
+/* mulberry32 — small, fast, and the same everywhere */
+function mrnd(seed){
+  var s = seed >>> 0;
+  return function(){
+    s = (s + 0x6D2B79F5) >>> 0;
+    var t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function _hx(h){
+  h = h.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function _rgb(c){
+  var o = '#';
+  for(var i=0;i<3;i++){
+    var v = Math.max(0, Math.min(255, Math.round(c[i])));
+    o += (v < 16 ? '0' : '') + v.toString(16);
+  }
+  return o;
+}
+/* t > 0 lifts toward white, t < 0 sinks toward black */
+function shade(hex, t){
+  var c = _hx(hex), o = [];
+  for(var i=0;i<3;i++) o[i] = t > 0 ? c[i] + (255 - c[i])*t : c[i] * (1 + t);
+  return _rgb(o);
+}
+/* Perceived brightness, so a label knows whether it is being written on a pale
+   ice world or a dark basalt one and picks its own ink. */
+function lum(hex){
+  var c = _hx(hex);
+  return (0.299*c[0] + 0.587*c[1] + 0.114*c[2]) / 255;
+}
+
+/* --- the palette registry ------------------------------------
+   A body's paint depends only on its colour, and eight sectors share
+   thirty-two colours between them however deep the campaign runs. So the
+   gradients are emitted once per colour and referenced by id, instead of once
+   per world — 250 worlds still cost at most a few dozen paint servers. */
+var _palIx = null, _palN = 0, _palDefs = '';
+function palId(hex){
+  if(_palIx[hex] !== undefined) return _palIx[hex];
+  var i = _palIx[hex] = _palN++;
+  var lit = shade(hex, 0.62), deep = shade(hex, -0.58);
+  _palDefs +=
+    // the body itself, lit from the upper left like everything else on the chart
+    '<radialGradient id="pb'+i+'" cx="0.33" cy="0.27" r="0.85">'+
+      '<stop offset="0%" stop-color="'+lit+'"/>'+
+      '<stop offset="38%" stop-color="'+hex+'"/>'+
+      '<stop offset="100%" stop-color="'+deep+'"/></radialGradient>'+
+    // the halo that used to be a 16px gaussian blur
+    '<radialGradient id="pg'+i+'" cx="0.5" cy="0.5" r="0.5">'+
+      '<stop offset="34%" stop-color="'+hex+'" stop-opacity="0.30"/>'+
+      '<stop offset="60%" stop-color="'+hex+'" stop-opacity="0.11"/>'+
+      '<stop offset="100%" stop-color="'+hex+'" stop-opacity="0"/></radialGradient>'+
+    /* A rim of atmosphere on the limb. Deliberately thin: run it any wider and
+       it puts a bright ring round the whole world and eats the surface just
+       inside the edge, which is exactly where the detail is. */
+    '<radialGradient id="pa'+i+'" cx="0.5" cy="0.5" r="0.5">'+
+      '<stop offset="84%" stop-color="'+lit+'" stop-opacity="0"/>'+
+      '<stop offset="96%" stop-color="'+lit+'" stop-opacity="0.42"/>'+
+      '<stop offset="100%" stop-color="'+lit+'" stop-opacity="0"/></radialGradient>'+
+    // a star's photosphere: white core, colour body, cooler limb
+    '<radialGradient id="ps'+i+'" cx="0.42" cy="0.37" r="0.76">'+
+      '<stop offset="0%" stop-color="#fffdf4"/>'+
+      '<stop offset="13%" stop-color="'+shade(hex,0.68)+'"/>'+
+      '<stop offset="42%" stop-color="'+shade(hex,0.12)+'"/>'+
+      '<stop offset="78%" stop-color="'+shade(hex,-0.20)+'"/>'+
+      '<stop offset="100%" stop-color="'+shade(hex,-0.55)+'"/></radialGradient>';
+  return i;
+}
+
+/* --- star fields ---------------------------------------------
+   Three tiled patterns instead of a few thousand circles. The whole field is
+   three <rect>s; the browser rasterises one tile of each and repeats it, so
+   the cost does not grow with how deep the campaign goes. */
+var _starDefs = null;
+function starFieldDefs(){
+  if(_starDefs) return _starDefs;
+  var cfg = [
+    {id:'sfA', size:170, n:30, rmax:0.62, op:0.42},
+    {id:'sfB', size:250, n:18, rmax:1.05, op:0.62},
+    {id:'sfC', size:430, n:10, rmax:1.55, op:0.85}
+  ];
+  var out = '';
+  for(var c=0;c<cfg.length;c++){
+    var k = cfg[c], r = mrnd(9173 + c*7919), body = '';
+    for(var i=0;i<k.n;i++){
+      var tint = r();
+      // real star fields are mostly white with a scatter of blue and amber
+      var col = tint > 0.88 ? '#bcd4ff' : tint > 0.74 ? '#ffdfb4' : '#ffffff';
+      body += '<circle cx="'+(r()*k.size).toFixed(1)+'" cy="'+(r()*k.size).toFixed(1)+
+              '" r="'+(0.26 + r()*k.rmax).toFixed(2)+'" fill="'+col+
+              '" opacity="'+(0.16 + r()*k.op).toFixed(2)+'"/>';
+    }
+    out += '<pattern id="'+k.id+'" width="'+k.size+'" height="'+k.size+
+           '" patternUnits="userSpaceOnUse">'+body+'</pattern>';
+  }
+  _starDefs = out;
+  return out;
+}
+
+/* A bright foreground star with the four-point glint a camera puts on one.
+   These are placed by hand near where you are reading, and they are the only
+   things in the field that twinkle. */
+function heroStar(x, y, s, col, seed){
+  var g = '<g transform="translate('+x.toFixed(1)+','+y.toFixed(1)+')">'+
+    '<circle r="'+(s*3.4).toFixed(1)+'" fill="url(#glint)"/>'+
+    '<path d="M0 '+(-s*4.6).toFixed(1)+'L'+(s*0.5).toFixed(1)+' 0L0 '+(s*4.6).toFixed(1)+
+      'L'+(-s*0.5).toFixed(1)+' 0Z" fill="'+col+'" opacity="0.75"/>'+
+    '<path d="M'+(-s*4.6).toFixed(1)+' 0L0 '+(-s*0.5).toFixed(1)+'L'+(s*4.6).toFixed(1)+
+      ' 0L0 '+(s*0.5).toFixed(1)+'Z" fill="'+col+'" opacity="0.75"/>'+
+    '<circle r="'+(s*0.85).toFixed(2)+'" fill="#ffffff"/>';
+  if(!REDUCED){
+    var dur = (2.6 + (seed % 40)/12).toFixed(2);
+    g += '<animate attributeName="opacity" values="1;0.45;1" dur="'+dur+
+         's" repeatCount="indefinite" begin="'+((seed%23)/7).toFixed(2)+'s"/>';
+  }
+  return g + '</g>';
+}
+
+/* A galaxy seen edge-on-ish, far outside the campaign. Two ellipses and a
+   core — at this size that is all a galaxy is. */
+function galaxy(x, y, rx, rot, col){
+  return '<g transform="translate('+x.toFixed(0)+','+y.toFixed(0)+') rotate('+rot+')" opacity="0.5">'+
+    '<ellipse rx="'+rx+'" ry="'+(rx*0.30).toFixed(1)+'" fill="url(#galHalo)"/>'+
+    '<ellipse rx="'+(rx*0.62).toFixed(1)+'" ry="'+(rx*0.15).toFixed(1)+'" fill="'+col+'" opacity="0.30"/>'+
+    '<ellipse rx="'+(rx*0.16).toFixed(1)+'" ry="'+(rx*0.13).toFixed(1)+'" fill="#fff6e0" opacity="0.75"/>'+
+  '</g>';
+}
+
+/* --- worlds ---------------------------------------------------
+   What a level IS still decides what kind of body it is — the sector's last
+   level is its star, level 5 is the gas giant, position 8 wears rings — but
+   everything else now draws from a species list, so a sector reads as a system
+   of DIFFERENT places rather than eight recolours of one ball. */
+var SPECIES = ['rock','ice','ocean','lava','gas','desert','barren'];
+function speciesFor(n, p){
+  if(p.extreme)    return 'star';
+  if(n % 5 === 0)  return 'gas';
+  if(p.hard)       return 'rock';
+  /* The stride has to be COPRIME with the list length or the sequence
+     collapses: n*7 % 7 is zero for every n, which quietly gave every world in
+     the campaign the same species and made eight sectors of recolours. */
+  return SPECIES[(n*3 + p.block*2) % SPECIES.length];
+}
+
+/* The surface, drawn in the body's own coordinates and clipped to its disc.
+   Nothing here is a texture — craters are circles with a lit rim on the
+   sunward side, bands are over-wide ellipses, continents are four-point
+   blobs. It is the cheapest thing that still reads as a place. */
+function planetSkin(sp, R, base, pal, rnd){
+  var s = '', i, a, d, cx, cy, cr;
+  var alt = pal[1] || base, alt2 = pal[2] || base;
+
+  if(sp === 'gas'){
+    var nb = 5 + Math.floor(rnd()*3);
+    for(i=0;i<nb;i++){
+      var yy = -R + (i + 0.5)*(2*R/nb) + (rnd()-0.5)*R*0.10;
+      var hh = (R/nb)*(0.55 + rnd()*0.95);
+      var tint = rnd() > 0.5 ? shade(base, 0.26 + rnd()*0.26) : shade(base, -0.26 - rnd()*0.24);
+      s += '<ellipse cy="'+yy.toFixed(1)+'" rx="'+(R*1.3).toFixed(1)+'" ry="'+hh.toFixed(1)+
+           '" fill="'+tint+'" opacity="'+(0.26 + rnd()*0.30).toFixed(2)+'"/>';
+    }
+    if(rnd() > 0.3){                                   // the great red spot
+      cx = (rnd()-0.5)*R*0.95; cy = (rnd()-0.5)*R*1.05;
+      s += '<ellipse cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" rx="'+(R*0.31).toFixed(1)+
+           '" ry="'+(R*0.145).toFixed(1)+'" fill="'+shade(alt,0.10)+'" opacity="0.66"/>'+
+           '<ellipse cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" rx="'+(R*0.15).toFixed(1)+
+           '" ry="'+(R*0.07).toFixed(1)+'" fill="'+shade(alt,0.5)+'" opacity="0.7"/>';
+    }
+
+  } else if(sp === 'rock' || sp === 'barren' || sp === 'desert'){
+    if(sp !== 'barren'){                               // maria / dune seas
+      for(i=0;i<2;i++){
+        a = rnd()*Math.PI*2; d = rnd()*R*0.45;
+        s += '<ellipse cx="'+(Math.cos(a)*d).toFixed(1)+'" cy="'+(Math.sin(a)*d).toFixed(1)+
+             '" rx="'+(R*(0.42+rnd()*0.3)).toFixed(1)+'" ry="'+(R*(0.24+rnd()*0.22)).toFixed(1)+
+             '" transform="rotate('+(rnd()*180).toFixed(0)+')" fill="'+
+             shade(sp === 'desert' ? alt : base, sp === 'desert' ? 0.18 : -0.34)+
+             '" opacity="'+(sp === 'desert' ? 0.34 : 0.42)+'"/>';
+      }
+    }
+    var nc = sp === 'rock' ? 6 + Math.floor(rnd()*4) : 3 + Math.floor(rnd()*3);
+    for(i=0;i<nc;i++){
+      a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.84;
+      cx = Math.cos(a)*d; cy = Math.sin(a)*d; cr = R*(0.06 + rnd()*0.14);
+      s += '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+cr.toFixed(1)+
+           '" fill="'+shade(base,-0.45)+'" opacity="0.5"/>'+
+           // the crater's sunward wall catches the light, the rest does not
+           '<path d="M'+(cx-cr).toFixed(1)+' '+cy.toFixed(1)+'A'+cr.toFixed(1)+' '+cr.toFixed(1)+
+             ' 0 0 1 '+cx.toFixed(1)+' '+(cy-cr).toFixed(1)+'" fill="none" stroke="'+
+             shade(base,0.55)+'" stroke-width="'+Math.max(0.4,cr*0.3).toFixed(2)+'" opacity="0.5"/>';
+    }
+
+  } else if(sp === 'ice'){
+    s += '<ellipse cy="'+(-R*0.86).toFixed(1)+'" rx="'+(R*0.78).toFixed(1)+'" ry="'+(R*0.34).toFixed(1)+
+         '" fill="#eaf7ff" opacity="0.80"/>';
+    s += '<ellipse cy="'+(R*0.90).toFixed(1)+'" rx="'+(R*0.66).toFixed(1)+'" ry="'+(R*0.28).toFixed(1)+
+         '" fill="#eaf7ff" opacity="0.66"/>';
+    for(i=0;i<5;i++){                                  // fracture lines
+      a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.7;
+      cx = Math.cos(a)*d; cy = Math.sin(a)*d;
+      var fa = rnd()*Math.PI*2, fl = R*(0.3 + rnd()*0.4);
+      s += '<path d="M'+cx.toFixed(1)+' '+cy.toFixed(1)+
+           'q'+(Math.cos(fa)*fl*0.5).toFixed(1)+' '+(Math.sin(fa)*fl*0.5 - fl*0.2).toFixed(1)+' '+
+           (Math.cos(fa)*fl).toFixed(1)+' '+(Math.sin(fa)*fl).toFixed(1)+
+           '" fill="none" stroke="'+shade(base,0.62)+'" stroke-width="0.9" opacity="0.45"/>';
+    }
+
+  } else if(sp === 'ocean'){
+    for(i=0;i<3;i++){                                  // continents
+      a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.55;
+      cx = Math.cos(a)*d; cy = Math.sin(a)*d;
+      var w = R*(0.34+rnd()*0.32), h2 = R*(0.24+rnd()*0.3);
+      s += '<path d="M'+(cx-w).toFixed(1)+' '+cy.toFixed(1)+
+           'C'+(cx-w*0.6).toFixed(1)+' '+(cy-h2).toFixed(1)+' '+(cx+w*0.4).toFixed(1)+' '+(cy-h2*1.2).toFixed(1)+' '+
+           (cx+w).toFixed(1)+' '+(cy-h2*0.2).toFixed(1)+
+           'C'+(cx+w*0.7).toFixed(1)+' '+(cy+h2*0.9).toFixed(1)+' '+(cx-w*0.3).toFixed(1)+' '+(cy+h2).toFixed(1)+' '+
+           (cx-w).toFixed(1)+' '+cy.toFixed(1)+'Z" fill="'+shade(alt2,-0.10)+'" opacity="0.72"/>';
+    }
+    for(i=0;i<3;i++){                                  // weather
+      a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.8;
+      s += '<ellipse cx="'+(Math.cos(a)*d).toFixed(1)+'" cy="'+(Math.sin(a)*d).toFixed(1)+
+           '" rx="'+(R*(0.26+rnd()*0.24)).toFixed(1)+'" ry="'+(R*0.1).toFixed(1)+
+           '" fill="#ffffff" opacity="'+(0.16+rnd()*0.16).toFixed(2)+'"/>';
+    }
+
+  } else if(sp === 'lava'){
+    s += '<circle r="'+R+'" fill="'+shade(base,-0.66)+'" opacity="0.62"/>';
+    /* Fissures used to be chords right across the disc, which read as a wire
+       cage over a ball rather than cracks in a crust. They are short, kinked
+       and local now, and they branch. */
+    for(i=0;i<6;i++){
+      a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.72;
+      cx = Math.cos(a)*d; cy = Math.sin(a)*d;
+      var ga = rnd()*Math.PI*2, gl = R*(0.22 + rnd()*0.3);
+      var mx = cx + Math.cos(ga)*gl*0.55 + (rnd()-0.5)*R*0.16;
+      var my = cy + Math.sin(ga)*gl*0.55 + (rnd()-0.5)*R*0.16;
+      var ex = cx + Math.cos(ga)*gl, ey = cy + Math.sin(ga)*gl;
+      s += '<path d="M'+cx.toFixed(1)+' '+cy.toFixed(1)+'L'+mx.toFixed(1)+' '+my.toFixed(1)+
+           'L'+ex.toFixed(1)+' '+ey.toFixed(1)+'" fill="none" stroke="'+shade(base,0.62)+
+           '" stroke-width="'+(R*0.07).toFixed(2)+'" opacity="0.9" stroke-linecap="round" '+
+           'stroke-linejoin="round"/>';
+    }
+    for(i=0;i<3;i++){                                  // lakes, molten in the middle
+      a = rnd()*Math.PI*2; d = Math.sqrt(rnd())*R*0.7;
+      cx = Math.cos(a)*d; cy = Math.sin(a)*d; cr = R*(0.11+rnd()*0.13);
+      s += '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+cr.toFixed(1)+
+           '" fill="'+shade(base,0.42)+'" opacity="0.85"/>'+
+           '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(cr*0.5).toFixed(1)+
+           '" fill="'+shade(base,0.85)+'" opacity="0.95"/>';
+    }
+  }
+  return s;
+}
+
+/* A ring system: two arcs and a shadow, tilted, with the near half drawn over
+   the body and the far half behind it. Drawn as a pair so the planet actually
+   sits INSIDE its rings instead of on top of them. */
+function ringSystem(R, col, wide, half){
+  var rx = R*(wide ? 2.05 : 1.72), ry = rx*0.27;
+  var d = half === 'back'
+    ? 'M'+(-rx).toFixed(1)+' 0A'+rx.toFixed(1)+' '+ry.toFixed(1)+' 0 0 1 '+rx.toFixed(1)+' 0'
+    : 'M'+rx.toFixed(1)+' 0A'+rx.toFixed(1)+' '+ry.toFixed(1)+' 0 0 1 '+(-rx).toFixed(1)+' 0';
+  var g = '<g transform="rotate(-18)">';
+  g += '<path d="'+d+'" fill="none" stroke="'+shade(col,0.45)+'" stroke-width="'+(wide?4.6:3.4)+
+       '" opacity="'+(half==='back'?0.34:0.62)+'"/>';
+  g += '<path d="'+d+'" fill="none" stroke="'+shade(col,-0.2)+'" stroke-width="'+(wide?1.6:1.2)+
+       '" opacity="'+(half==='back'?0.4:0.75)+'" stroke-dasharray="'+(wide?'7 3':'5 2.5')+'"/>';
+  return g + '</g>';
+}
+
+/* A burning star. The old one was a flat disc with a white core gradient and
+   twelve spokes, and it read as a badge. This one has a corona that falls off
+   properly, convection cells turning in two directions under a clipped limb,
+   prominences on the edge and a chromosphere that breathes. */
+function starBody(R, base, rnd, rich){
+  var pi = palId(base);
+  var lit = shade(base, 0.7), hot = shade(base, 0.35);
+  var s = '';
+
+  // corona: three gradient discs, tightest and brightest at the limb
+  s += '<circle r="'+(R*3.3).toFixed(0)+'" fill="url(#pg'+pi+')" opacity="0.32"/>';
+  s += '<circle r="'+(R*1.95).toFixed(0)+'" fill="url(#pg'+pi+')" opacity="0.55"/>';
+  s += '<circle r="'+(R*1.28).toFixed(0)+'" fill="url(#pg'+pi+')" opacity="0.85"/>';
+
+  /* Rays. Kept short, faint and irregular — long even spokes at full strength
+     turned the anchor of the system into a clipart sunburst. */
+  var rays = '';
+  for(var ry2=0; ry2<20; ry2++){
+    var ra = ry2*18*Math.PI/180, r1 = R*1.05;
+    var r2 = R*(1.14 + (ry2%3)*0.09 + (ry2%2)*0.06);
+    rays += '<line x1="'+(Math.cos(ra)*r1).toFixed(1)+'" y1="'+(Math.sin(ra)*r1).toFixed(1)+
+            '" x2="'+(Math.cos(ra)*r2).toFixed(1)+'" y2="'+(Math.sin(ra)*r2).toFixed(1)+
+            '" stroke="'+hot+'" stroke-opacity="0.3" stroke-width="1.1" stroke-linecap="round"/>';
+  }
+  s += '<g>'+rays+
+       (rich ? '<animateTransform attributeName="transform" type="rotate" from="0" to="360" '+
+               'dur="160s" repeatCount="indefinite"/>' : '')+'</g>';
+
+  // photosphere
+  s += '<circle r="'+R+'" fill="url(#ps'+pi+')"/>';
+
+  // convection: two counter-rotating sets of soft cells, clipped to the disc
+  if(rich){
+    var cells = ['',''];
+    for(var c=0;c<2;c++){
+      for(var i=0;i<7;i++){
+        var a = rnd()*Math.PI*2, d = Math.sqrt(rnd())*R*0.78;
+        cells[c] += '<circle cx="'+(Math.cos(a)*d).toFixed(1)+'" cy="'+(Math.sin(a)*d).toFixed(1)+
+                    '" r="'+(R*(0.16+rnd()*0.26)).toFixed(1)+'" fill="url(#'+
+                    (c ? 'cellD' : 'cellL')+')"/>';
+      }
+    }
+    s += '<g clip-path="url(#cd'+R+')">'+
+           '<g>'+cells[0]+'<animateTransform attributeName="transform" type="rotate" '+
+             'from="0" to="360" dur="34s" repeatCount="indefinite"/></g>'+
+           '<g>'+cells[1]+'<animateTransform attributeName="transform" type="rotate" '+
+             'from="360" to="0" dur="53s" repeatCount="indefinite"/></g>'+
+         '</g>';
+  }
+
+  // limb darkening, then the chromosphere sitting on top of it
+  s += '<circle r="'+R+'" fill="url(#starLimb)"/>';
+  s += '<circle r="'+R+'" fill="none" stroke="'+lit+'" stroke-width="1.3" opacity="0.9"/>';
+
+  /* Prominences: loops of plasma standing OFF the limb, not scratched across
+     the face of it. They start at 0.99R for that reason — drawn any further
+     in they read as cracks in the disc. */
+  for(var p=0;p<3;p++){
+    var pa = (rnd()*360)|0, ph = R*(0.13 + rnd()*0.16), pw2 = R*(0.16 + rnd()*0.08);
+    // in the star's own colour, not a washed-out white — these are flame
+    s += '<g transform="rotate('+pa+')"><path d="M'+(R*0.98).toFixed(1)+' '+(-pw2).toFixed(1)+
+         'Q'+(R+ph).toFixed(1)+' 0 '+(R*0.98).toFixed(1)+' '+pw2.toFixed(1)+
+         '" fill="none" stroke="'+shade(base,0.22)+'" stroke-width="2.6" opacity="0.75" stroke-linecap="round">'+
+         (rich ? '<animate attributeName="opacity" values="0.18;0.85;0.18" dur="'+
+                 (5+p*2.3).toFixed(1)+'s" repeatCount="indefinite"/>' : '')+
+         '</path></g>';
+  }
+
+  /* The breath is the corona swelling, not a hoop expanding out of it. The
+     hoop version read as a selection ring around the star, which is exactly
+     the one thing on this chart that already means something else. */
+  if(rich){
+    s += '<circle r="'+(R*1.7).toFixed(0)+'" fill="url(#pg'+pi+')" opacity="0.5">'+
+         '<animate attributeName="opacity" values="0.22;0.6;0.22" dur="6.5s" repeatCount="indefinite"/>'+
+         '</circle>';
+  }
+  return s;
+}
 var GATE_ICON = {
   ring:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+
        '<circle cx="12" cy="14" r="6.4"/><path d="M9.4 7l2.6-2.8L14.6 7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -6354,6 +6751,16 @@ function recordPts(n, v){
   if(v > (store.pts[n]||0)){ store.pts[n] = v; save(); }
 }
 function fmt(n){ return (n||0).toLocaleString(); }
+/* Chips are a fixed slot in a tray that has to hold seven controls on a 360px
+   phone, and credits are one per point of score — six figures by the second
+   sector and seven not long after. A chip shows the magnitude; the exact
+   number is on the card that spends it. */
+function fmtChip(n){
+  n = n || 0;
+  if(n < 10000)  return n.toLocaleString();
+  if(n < 1000000) return Math.round(n/1000) + 'k';
+  return (n/1000000).toFixed(1) + 'M';
+}
 var STAR_D = "M0,-8.5 L2.5,-2.6 L8.9,-2.6 L3.8,1.3 L5.7,7.5 L0,3.7 L-5.7,7.5 L-3.8,1.3 L-8.9,-2.6 L-2.5,-2.6 Z";
 
 /* the map's resize handler is registered ONCE — v1 added a fresh listener
@@ -6395,51 +6802,134 @@ function buildMap(){
   var HH = MAP_TOP + top*NODE_GAP + (blocks-1)*BANNER_GAP + 150;
   var defs = '', bg = '', trail = '', banners = '', nodes = '';
 
-  defs += '<filter id="fGlow" x="-80%" y="-80%" width="260%" height="260%">'+
-            '<feGaussianBlur stdDeviation="6" result="b"/>'+
-            '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
-  defs += '<filter id="fSoft" x="-120%" y="-120%" width="340%" height="340%">'+
-            '<feGaussianBlur stdDeviation="16"/></filter>';
-  defs += '<linearGradient id="trackBase" x1="0" y1="0" x2="0" y2="1">'+
-            '<stop offset="0%" stop-color="#101d33"/><stop offset="100%" stop-color="#0a1626"/></linearGradient>';
+  _palIx = {}; _palN = 0; _palDefs = '';
+
+  defs += starFieldDefs();
   defs += '<linearGradient id="coreLive" x1="0" y1="0" x2="0" y2="1">'+
             '<stop offset="0%" stop-color="#5cfff2"/><stop offset="100%" stop-color="#12b9b4"/></linearGradient>';
   /* One light source for the whole chart, upper-left, so no two bodies
      disagree about where the sun is. */
-  defs += '<radialGradient id="limb" cx="0.34" cy="0.30" r="0.78">'+
-            '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.42"/>'+
-            '<stop offset="46%" stop-color="#ffffff" stop-opacity="0.06"/>'+
-            '<stop offset="100%" stop-color="#02040a" stop-opacity="0.62"/></radialGradient>';
-  defs += '<radialGradient id="sunCore" cx="0.5" cy="0.5" r="0.5">'+
-            '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.92"/>'+
-            '<stop offset="55%" stop-color="#ffffff" stop-opacity="0.30"/>'+
+  defs += '<radialGradient id="limb" cx="0.34" cy="0.30" r="0.80">'+
+            '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.26"/>'+
+            '<stop offset="42%" stop-color="#ffffff" stop-opacity="0.03"/>'+
+            '<stop offset="72%" stop-color="#01030a" stop-opacity="0.20"/>'+
+            '<stop offset="100%" stop-color="#01030a" stop-opacity="0.62"/></radialGradient>';
+  /* A star is lit from inside, so its limb darkens evenly rather than from
+     one side — a different gradient, not a reused one. */
+  defs += '<radialGradient id="starLimb" cx="0.5" cy="0.5" r="0.5">'+
+            '<stop offset="0%" stop-color="#000000" stop-opacity="0"/>'+
+            '<stop offset="62%" stop-color="#2a0800" stop-opacity="0.10"/>'+
+            '<stop offset="88%" stop-color="#2a0800" stop-opacity="0.42"/>'+
+            '<stop offset="100%" stop-color="#150300" stop-opacity="0.72"/></radialGradient>';
+  /* Convection cells. Kept quiet: at full strength they bleached the star to a
+     white ball and took its colour with them. */
+  defs += '<radialGradient id="cellL" cx="0.5" cy="0.5" r="0.5">'+
+            '<stop offset="0%" stop-color="#fff4d0" stop-opacity="0.34"/>'+
+            '<stop offset="100%" stop-color="#fff4d0" stop-opacity="0"/></radialGradient>';
+  defs += '<radialGradient id="cellD" cx="0.5" cy="0.5" r="0.5">'+
+            '<stop offset="0%" stop-color="#430e00" stop-opacity="0.52"/>'+
+            '<stop offset="100%" stop-color="#430e00" stop-opacity="0"/></radialGradient>';
+  defs += '<radialGradient id="glint" cx="0.5" cy="0.5" r="0.5">'+
+            '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>'+
             '<stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>';
+  defs += '<radialGradient id="galHalo" cx="0.5" cy="0.5" r="0.5">'+
+            '<stop offset="0%" stop-color="#dfe9ff" stop-opacity="0.5"/>'+
+            '<stop offset="100%" stop-color="#8aa0d0" stop-opacity="0"/></radialGradient>';
+  defs += '<radialGradient id="pgGold" cx="0.5" cy="0.5" r="0.5">'+
+            '<stop offset="0%" stop-color="#ffd34d" stop-opacity="0.75"/>'+
+            '<stop offset="45%" stop-color="#ffd34d" stop-opacity="0.22"/>'+
+            '<stop offset="100%" stop-color="#ffd34d" stop-opacity="0"/></radialGradient>';
+  /* Clip paths in the body's own space, one per radius the chart uses. A
+     clipPath resolves in the user space where it is REFERENCED, so a circle
+     at the origin clips correctly inside every translated node group. */
+  var RADII = [22,25,28,33];
+  for(var rr0=0; rr0<RADII.length; rr0++)
+    defs += '<clipPath id="cd'+RADII[rr0]+'"><circle r="'+RADII[rr0]+'"/></clipPath>';
 
+  /* --- deep field: three tiled star layers over the whole chart --- */
+  bg += '<rect width="'+MAP_W+'" height="'+HH+'" fill="url(#sfA)"/>';
+  bg += '<rect width="'+MAP_W+'" height="'+HH+'" fill="url(#sfB)"/>';
+  bg += '<rect width="'+MAP_W+'" height="'+HH+'" fill="url(#sfC)"/>';
+
+  /* --- nebulae: each sector is a cloud in its own colours --- */
   for(var b=0; b<blocks; b++){
     var t = THEMES[b % THEMES.length];
-    defs += '<radialGradient id="zone'+b+'" cx="0.5" cy="0.5" r="0.5">'+
-              '<stop offset="0%" stop-color="'+t.pal[0]+'" stop-opacity="0.11"/>'+
-              '<stop offset="100%" stop-color="'+t.pal[0]+'" stop-opacity="0"/></radialGradient>';
-    var yTop = blockTop(b), yBot = blockTop(b) + 10*NODE_GAP;
-    bg += '<ellipse cx="'+(MAP_W/2)+'" cy="'+((yTop+yBot)/2).toFixed(0)+'" rx="'+(MAP_W*0.7)+'" ry="'+
-          ((yBot-yTop)*0.45).toFixed(0)+'" fill="url(#zone'+b+')"/>';
+    var nr = mrnd(4001 + b*137);
+    for(var q=0; q<3; q++){
+      var qc = t.pal[q % t.pal.length];
+      /* Kept faint on purpose. At full strength a sector's cloud stopped
+         reading as gas and started reading as a colour cast over the whole
+         screen, which flattened the star field behind it into mud. */
+      defs += '<radialGradient id="neb'+b+'_'+q+'" cx="0.5" cy="0.5" r="0.5">'+
+                '<stop offset="0%" stop-color="'+qc+'" stop-opacity="'+(0.085 - q*0.018).toFixed(3)+'"/>'+
+                '<stop offset="46%" stop-color="'+qc+'" stop-opacity="'+(0.030 - q*0.007).toFixed(3)+'"/>'+
+                '<stop offset="100%" stop-color="'+qc+'" stop-opacity="0"/></radialGradient>';
+      var yTop0 = blockTop(b), yBot0 = yTop0 + 10*NODE_GAP;
+      var ny = yTop0 + (0.16 + nr()*0.7)*(yBot0 - yTop0);
+      var nx = MAP_W*(0.2 + nr()*0.6);
+      var nrx = MAP_W*(0.34 + nr()*0.34), nry = nrx*(0.55 + nr()*0.6);
+      bg += '<ellipse cx="'+nx.toFixed(0)+'" cy="'+ny.toFixed(0)+'" rx="'+nrx.toFixed(0)+
+            '" ry="'+nry.toFixed(0)+'" fill="url(#neb'+b+'_'+q+')" transform="rotate('+
+            ((nr()*60-30)|0)+' '+nx.toFixed(0)+' '+ny.toFixed(0)+')"/>';
+    }
+    // one far galaxy per sector, well off the flight path
+    var gy = blockTop(b) + (2.5 + nr()*5)*NODE_GAP;
+    bg += galaxy(nr() > 0.5 ? MAP_W*0.12 : MAP_W*0.88, gy, 12 + nr()*10,
+                 ((nr()*120)-60)|0, t.pal[1] || t.pal[0]);
   }
 
-  /* the conduit itself: a lit ribbon with beads running down it */
+  /* --- foreground stars, only where you are reading --- */
+  var hb = Math.floor((store.level-1)/10);
+  var hr = mrnd(77021 + hb*911);
+  var hTop = blockTop(hb) - BANNER_GAP, hSpan = 10*NODE_GAP + BANNER_GAP*2;
+  for(var hs=0; hs<14; hs++){
+    var hx = hr()*MAP_W, hy = hTop + hr()*hSpan;
+    // keep them off the track so they never read as a level
+    if(Math.abs(hx - MAP_W/2) < 40) hx += (hx < MAP_W/2 ? -62 : 62);
+    bg += heroStar(hx, hy, 1.1 + hr()*1.5,
+                   hr() > 0.72 ? '#bcd4ff' : '#ffffff', (hs*37 + hb*13)|0);
+  }
+
+  /* One comet, in the sector you are reading, on a long cycle. It is a single
+     animated element on the entire chart — enough to make the field feel like
+     somewhere rather than a wallpaper, cheap enough not to matter. */
+  if(!REDUCED){
+    var cy0 = hTop + hSpan*0.34, cx0 = -60, cx1 = MAP_W + 60;
+    bg += '<g opacity="0">'+
+      '<path d="M0 0L46 17" stroke="url(#cometTail)" stroke-width="2.6" stroke-linecap="round"/>'+
+      '<circle r="2.1" fill="#ffffff"/>'+
+      '<animateTransform attributeName="transform" type="translate" '+
+        'values="'+cx1+','+(cy0-70).toFixed(0)+';'+cx0+','+(cy0+70).toFixed(0)+'" '+
+        'dur="9s" repeatCount="indefinite" begin="4s"/>'+
+      '<animate attributeName="opacity" values="0;0;0.9;0.9;0" keyTimes="0;0.06;0.2;0.8;1" '+
+        'dur="9s" repeatCount="indefinite" begin="4s"/>'+
+    '</g>';
+    defs += '<linearGradient id="cometTail" x1="0" y1="0" x2="1" y2="0">'+
+              '<stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>'+
+              '<stop offset="100%" stop-color="#9fd8ff" stop-opacity="0"/></linearGradient>';
+  }
+
+  /* the conduit itself: an orbital transit line, hairline and dashed ahead of
+     you, solid and lit behind. The lit half used to carry a 16px gaussian blur
+     on a path spanning the WHOLE chart — a filter region tens of thousands of
+     pixels tall, re-rasterised on every scroll tile. It is three stacked
+     strokes now, which is what a blur of a stroke looks like anyway. */
   var d = trailPath(top);
-  /* An orbital transit line, not a pipe: hairline and dashed ahead of you,
-     solid and lit behind. At this zoom a 18px ribbon swamped the bodies. */
   trail += '<path d="'+d+'" fill="none" stroke="#16283f" stroke-width="2" '+
            'stroke-linecap="round" stroke-dasharray="5 9"/>';
   var doneN = Math.min(store.level, top);
   if(doneN > 1){
     var dd = trailPath(doneN);
-    trail += '<path d="'+dd+'" fill="none" stroke="#23e6d9" stroke-opacity="0.18" stroke-width="14" '+
-             'stroke-linecap="round" filter="url(#fSoft)"/>';
+    trail += '<path d="'+dd+'" fill="none" stroke="#23e6d9" stroke-opacity="0.07" stroke-width="15" stroke-linecap="round"/>';
+    trail += '<path d="'+dd+'" fill="none" stroke="#23e6d9" stroke-opacity="0.13" stroke-width="8" stroke-linecap="round"/>';
     trail += '<path d="'+dd+'" fill="none" stroke="url(#coreLive)" stroke-width="3" '+
-             'stroke-linecap="round" stroke-opacity="0.75"/>';
-    trail += '<path d="'+dd+'" fill="none" stroke="#eafffd" stroke-width="3.4" stroke-linecap="round" '+
-             'stroke-dasharray="0 30" filter="url(#fGlow)"/>';
+             'stroke-linecap="round" stroke-opacity="0.8"/>';
+    // beads: one lit waypoint between worlds, drawn rather than blurred
+    for(var bn=1; bn<doneN; bn++){
+      var pa0 = mapPoint(bn), pb0 = mapPoint(bn+1);
+      trail += '<circle cx="'+((pa0.x+pb0.x)/2).toFixed(1)+'" cy="'+((pa0.y+pb0.y)/2).toFixed(1)+
+               '" r="2.2" fill="#eafffd" opacity="0.85"/>';
+    }
   }
 
   /* sector banners sit ON TOP of the track, in their own reserved gap */
@@ -6475,29 +6965,61 @@ function buildMap(){
      shows the trouble accumulating without reading a word. Zoomed out to about
      six levels a screen rather than one and a half, because a map you cannot
      see the shape of is a list.
+
+     DETAIL IS BUDGETED. A world within reading distance of where you are gets
+     its full surface — craters lit on the sunward side, cloud bands, ice caps,
+     lava fissures, turning convection cells if it is a star. Further away it
+     keeps its species colour and its lighting and loses the detail nobody can
+     resolve at that scroll distance. That is what stops a level-200 save from
+     building a five-thousand-element chart every time the map opens.
      ============================================================ */
+  var DETAIL = 16;
   for(var n=1; n<=top; n++){
     var p = levelPlan(n), pt = mapPoint(n), bb = p.block;
     var st = n < store.level ? 'done' : (n === store.level ? 'now' : 'lock');
     var far = (n > store.level + 4);
     var theme = THEMES[bb % THEMES.length];
-    var kind = p.extreme ? 'sun' : (n % 5 === 0 ? 'giant' : (p.hard ? 'ringed' : 'planet'));
-    var R = kind === 'sun' ? 31 : kind === 'giant' ? 26 : kind === 'ringed' ? 23 : 20;
+    var kind = speciesFor(n, p);
+    // must stay in step with RADII above — the clip paths are keyed on it
+    var R = kind === 'star' ? 33 : (n % 5 === 0 ? 28 : p.hard ? 25 : 22);
+    var rich = Math.abs(n - store.level) <= DETAIL;
+    var rnd = mrnd(n*2654435761);
     var g = '<g class="nodeG" data-lv="'+n+'" transform="translate('+pt.x.toFixed(1)+','+pt.y.toFixed(1)+')">';
 
     if(st === 'lock'){
-      /* An unreached world is a body you can see but not visit: outline only,
-         no light on it. Far ones shrink to a survey mark. */
-      var rr = far ? R*0.5 : R*0.82;
+      /* An unreached world used to be a wireframe circle, which next to a lit
+         planet reads as a placeholder rather than a place. It is the SAME body
+         now — same species, same colour, same size — just unlit: a dark disc
+         with a rim of light down its sunward limb, the way a world looks when
+         you are approaching it from the night side. You can see it. You have
+         not been there. Far ones still collapse to a survey mark, because at
+         that scroll distance nothing else survives.  */
+      var lockCol = THEMES[bb % THEMES.length].pal[(n*5 + bb) % 4];
+      var lpi = palId(lockCol);
+      var rr = far ? R*0.5 : R*0.92;
       /* an invisible 44px-ish target, because a survey mark is 10px across and
          a thumb is not */
       g += '<circle r="'+(rr+16).toFixed(1)+'" fill="#000" fill-opacity="0"/>';
-      g += '<circle r="'+(rr+3).toFixed(1)+'" fill="#050b14"/>';
-      g += '<circle r="'+rr.toFixed(1)+'" fill="none" stroke="#22314b" stroke-width="1.6"/>';
-      if(!far){
-        g += '<circle r="'+(rr*0.5).toFixed(1)+'" fill="none" stroke="#1b2942" stroke-width="1.2"/>';
-        g += '<text class="nnum sm" y="'+(rr+15).toFixed(0)+'" fill="#33456a">'+n+'</text>';
+      if(far){
+        g += '<circle r="'+(rr+3).toFixed(1)+'" fill="#050b14"/>';
+        g += '<circle r="'+rr.toFixed(1)+'" fill="none" stroke="#22314b" stroke-width="1.6"/>';
+      } else {
+        if((n % 5 === 0) || p.hard) g += ringSystem(rr, lockCol, n % 5 === 0, 'back');
+        g += '<circle r="'+(rr*1.9).toFixed(0)+'" fill="url(#pg'+lpi+')" opacity="0.28"/>';
+        g += '<circle r="'+rr.toFixed(1)+'" fill="url(#pb'+lpi+')" opacity="0.30"/>';
+        g += '<circle r="'+rr.toFixed(1)+'" fill="#01050d" opacity="0.62"/>';
+        // the crescent: a lit rim from the lower-left up over the top
+        var A0 = 140*Math.PI/180, A1 = 302*Math.PI/180;
+        g += '<path d="M'+(Math.cos(A0)*rr).toFixed(1)+' '+(Math.sin(A0)*rr).toFixed(1)+
+             'A'+rr.toFixed(1)+' '+rr.toFixed(1)+' 0 0 1 '+
+             (Math.cos(A1)*rr).toFixed(1)+' '+(Math.sin(A1)*rr).toFixed(1)+
+             '" fill="none" stroke="'+shade(lockCol,0.55)+'" stroke-width="1.7" '+
+             'opacity="0.5" stroke-linecap="round"/>';
+        if((n % 5 === 0) || p.hard) g += ringSystem(rr, lockCol, n % 5 === 0, 'front');
+        g += '<text class="nnum bod" y="6" fill="#7f93b3" style="paint-order:stroke" '+
+             'stroke="rgba(1,4,12,.7)" stroke-width="3" stroke-linejoin="round">'+n+'</text>';
       }
+      if(far) g += '<text class="nnum sm" y="'+(rr+15).toFixed(0)+'" fill="#33456a">'+n+'</text>';
       g += '<circle class="selRing" r="'+(rr+9).toFixed(1)+'" fill="none" stroke="#8fa8c6" '+
            'stroke-width="2" stroke-dasharray="5 5"/>';
       g += '</g>';
@@ -6506,61 +7028,75 @@ function buildMap(){
     }
 
     var live   = (st === 'now');
-    var accent = theme.pal[0];
-    var lit2   = theme.pal[1] || accent;
+    /* Every world in a sector shares its system's palette, but not its
+       neighbour's colour — which slot of the palette it wears comes off the
+       level number, so a system reads as related places rather than one ball
+       repeated ten times. */
+    var accent = theme.pal[(n*5 + bb) % theme.pal.length];
+    var lit2   = theme.pal[(n*3 + 1) % theme.pal.length];
+    var pi     = palId(accent);
+    var ringed = (n % 5 === 0) || p.hard;
 
-    if(kind === 'sun'){
-      // a star: corona, body, and rays that make it the anchor of the system
-      g += '<circle r="'+(R*2.4).toFixed(0)+'" fill="'+accent+'" opacity="0.13" filter="url(#fSoft)"/>';
-      g += '<circle r="'+(R*1.45).toFixed(0)+'" fill="'+accent+'" opacity="0.20" filter="url(#fSoft)"/>';
-      for(var ry=0; ry<12; ry++){
-        var ra = ry*30*Math.PI/180, r1 = R*1.18, r2 = R*(ry%2 ? 1.62 : 1.40);
-        g += '<line x1="'+(Math.cos(ra)*r1).toFixed(1)+'" y1="'+(Math.sin(ra)*r1).toFixed(1)+'" '+
-                   'x2="'+(Math.cos(ra)*r2).toFixed(1)+'" y2="'+(Math.sin(ra)*r2).toFixed(1)+'" '+
-                   'stroke="'+accent+'" stroke-opacity="0.45" stroke-width="1.4" stroke-linecap="round"/>';
-      }
-      g += '<circle r="'+R+'" fill="'+accent+'"/>';
-      g += '<circle r="'+R+'" fill="url(#sunCore)"/>';
+    if(kind === 'star'){
+      g += starBody(R, accent, rnd, rich && !REDUCED);
     } else {
-      if(kind === 'giant' || kind === 'ringed'){
-        // a ring system, tilted, drawn behind and in front of the body
-        var rx = R*1.95, ryy = R*0.52;
-        g += '<ellipse rx="'+rx.toFixed(1)+'" ry="'+ryy.toFixed(1)+'" fill="none" stroke="'+lit2+
-             '" stroke-opacity="0.55" stroke-width="'+(kind==='giant'?3:2)+'" transform="rotate(-18)"/>';
-      }
-      g += '<circle r="'+(R+7)+'" fill="'+accent+'" opacity="0.11" filter="url(#fSoft)"/>';
-      g += '<circle r="'+R+'" fill="#0a1424"/>';
-      g += '<circle r="'+R+'" fill="'+accent+'" opacity="0.55"/>';
+      // the far half of the ring system goes down first, behind the body
+      if(ringed) g += ringSystem(R, lit2, n % 5 === 0, 'back');
+      g += '<circle r="'+(R*2.15).toFixed(0)+'" fill="url(#pg'+pi+')"/>';
+      g += '<circle r="'+R+'" fill="url(#pb'+pi+')"/>';
+      if(rich) g += '<g clip-path="url(#cd'+R+')">'+planetSkin(kind, R, accent, theme.pal, rnd)+'</g>';
       /* Lit from the upper left, the same side for every body in the chart —
          a planet lit from a different direction to its neighbour reads as a
          mistake even when nobody can say why. */
       g += '<circle r="'+R+'" fill="url(#limb)"/>';
-      g += '<circle r="'+R+'" fill="none" stroke="'+accent+'" stroke-width="1.4" stroke-opacity="0.85"/>';
+      g += '<circle r="'+R+'" fill="url(#pa'+pi+')"/>';   // atmosphere on the limb
+      g += '<circle r="'+R+'" fill="none" stroke="'+shade(accent,0.35)+
+           '" stroke-width="1.1" stroke-opacity="0.7"/>';
+      if(ringed) g += ringSystem(R, lit2, n % 5 === 0, 'front');
     }
 
-    // moons: one per hazard this level carries, out on their own little orbit
+    /* moons: one per hazard this level carries, out on their own little orbit.
+       They are lit from the same side as everything else and they carry a hint
+       of the world's colour bounced back at them. */
     var moons = Math.min(3, p.hazards.length);
     for(var mo=0; mo<moons; mo++){
-      var ma = (-40 + mo*52) * Math.PI/180;
-      var mr = R*1.7 + mo*5;
-      g += '<circle cx="'+(Math.cos(ma)*mr).toFixed(1)+'" cy="'+(Math.sin(ma)*mr*0.62).toFixed(1)+
-           '" r="'+(2.6 - mo*0.3).toFixed(1)+'" fill="#cfe2f5" opacity="0.75"/>';
+      var ma = (-40 + mo*52 + (n*23)%40) * Math.PI/180;
+      var mr = R*1.75 + mo*5.5;
+      var msz = 2.9 - mo*0.35;
+      var mx = Math.cos(ma)*mr, my = Math.sin(ma)*mr*0.6;
+      g += '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="'+msz.toFixed(1)+
+           '" fill="#dce9f7"/>'+
+           '<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="'+msz.toFixed(1)+
+           '" fill="url(#limb)"/>';
     }
 
-    if(live){
-      g += '<circle r="'+(R+6)+'" fill="none" stroke="#8fe8ff" stroke-width="1.4" opacity="0.6">'+
-             '<animate attributeName="r" values="'+(R+6)+';'+(R+20)+';'+(R+6)+'" dur="2.4s" repeatCount="indefinite"/>'+
-             '<animate attributeName="opacity" values="0.6;0;0.6" dur="2.4s" repeatCount="indefinite"/></circle>';
+    /* The "you are here" pulse. It starts outside a star's corona rather than
+       inside it — landing in the middle of the glow it read as part of the
+       star, which is the one place on the chart it must not. */
+    if(live && !REDUCED){
+      var p0 = kind === 'star' ? R+14 : R+6, p1 = p0 + 15;
+      g += '<circle r="'+p0+'" fill="none" stroke="#8fe8ff" stroke-width="1.4" opacity="0.55">'+
+             '<animate attributeName="r" values="'+p0+';'+p1+';'+p0+'" dur="2.4s" repeatCount="indefinite"/>'+
+             '<animate attributeName="opacity" values="0.55;0;0.55" dur="2.4s" repeatCount="indefinite"/></circle>';
     }
 
-    g += '<text class="nnum bod" y="'+(kind==='sun'?7:6)+'" fill="'+
-         (kind==='sun' ? '#04060f' : '#ffffff')+'">'+n+'</text>';
+    /* The number rides on a surface now, not a flat disc, so it carries its
+       own halo — otherwise a crater or a cloud band underneath it eats a digit
+       at exactly the moment you are trying to read which world it is. And the
+       ink follows the world: white on basalt, near-black on an ice cap or a
+       star, decided by the body's own brightness rather than by guessing. */
+    var pale = (kind === 'star') || lum(accent) > 0.62;
+    g += '<text class="nnum bod" y="'+(kind==='star'?7:6)+'" fill="'+
+         (pale ? '#0b1220' : '#ffffff')+'" style="paint-order:stroke" stroke="'+
+         (pale ? 'rgba(255,248,230,.62)' : 'rgba(2,5,14,.62)')+
+         '" stroke-width="3.2" stroke-linejoin="round">'+n+'</text>';
 
     var sc = starsFor(n);
     for(var k=0;k<3;k++){
       g += '<g transform="translate('+((k-1)*13)+','+(R+16)+') scale(0.52)">' +
            (k < sc
-             ? '<path d="'+STAR_D+'" fill="#ffd34d" filter="url(#fGlow)"/>'
+             // the glow is a gradient disc behind the star, not a blur filter on it
+             ? '<circle r="16" fill="url(#pgGold)"/><path d="'+STAR_D+'" fill="#ffd34d"/>'
              : '<path d="'+STAR_D+'" fill="none" stroke="#3a4f6f" stroke-width="2.4" stroke-linejoin="round"/>') +
            '</g>';
     }
@@ -6601,10 +7137,14 @@ function buildMap(){
              '<circle r="4" fill="none" stroke="#22314b" stroke-width="1.5"/>'+
              '<text class="bsub" y="28">DEEPER SYSTEMS AHEAD</text></g>';
 
+  /* _palDefs is only complete once every body has asked for its colour, so the
+     defs block is assembled last even though it is written first. */
   var svg = '<svg id="mapSvg" data-h="'+HH+'" width="'+MAP_W+'" height="'+HH+'" '+
             'viewBox="0 0 '+MAP_W+' '+HH+'" preserveAspectRatio="xMidYMin meet" '+
             'xmlns="http://www.w3.org/2000/svg">'+
-            '<defs>'+defs+'</defs>'+bg+trail+banners+nodes+'</svg>';
+            '<defs>'+defs+_palDefs+'</defs>'+
+            '<rect width="'+MAP_W+'" height="'+HH+'" fill="#02040b"/>'+
+            bg+trail+banners+nodes+'</svg>';
   var path = document.getElementById('mapPath');
   if(!path) return;
   path.innerHTML = svg;
@@ -7528,8 +8068,8 @@ function showMenu(){
   hideHole(); ship.visible = true; shipZ = 0;
   menuScreen.classList.remove('hidden');
   reflow(menuScreen);
-  document.getElementById('menuCredits').textContent = (store.credits||0).toLocaleString();
-  document.getElementById('menuBest').textContent = store.high;
+  document.getElementById('menuCredits').textContent = fmtChip(store.credits);
+  document.getElementById('menuBest').textContent = fmtChip(store.high);
   document.getElementById('starsTotal').textContent = totalStars();
   var dc = document.getElementById('dailyCard');
   var ready = dailyReady();
@@ -7571,8 +8111,8 @@ function showStart(){          // the level map
   startScreen.classList.remove('hidden');
   reflow(startScreen);
   var sp = levelPlan(store.level);
-  document.getElementById('starsStart').textContent = totalStars();
-  document.getElementById('mapCredits').textContent = (store.credits||0).toLocaleString();
+  document.getElementById('starsStart').textContent = fmtChip(totalStars());
+  document.getElementById('mapCredits').textContent = fmtChip(store.credits);
   var sc = document.getElementById('streakCount');
   if(sc) sc.textContent = dailyStreak();
   document.getElementById('mapSector').textContent =
