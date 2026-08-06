@@ -517,6 +517,17 @@ waste a pulse on one.
 
 **"Replay tutorial"** in Settings brings all of it back.
 
+### The flight manual
+
+Separately, the ship carries its own instruction system, reachable from the
+menu, the map and Settings. It is a **console**, not a book: a directory of 24
+files that you browse, and each one is read out to you by **ECHO** — the
+ship's instructor — a line at a time, as if it were being spoken. Tap to skip
+ahead; the index remembers which files you have opened.
+
+Everything in it is generated from the game's own constants, so the manual
+cannot drift out of step with the thing it describes.
+
 ---
 
 ## 24. Settings, and what the game will not let you do

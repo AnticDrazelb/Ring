@@ -41,6 +41,9 @@
     --r-chip:14px; --r-btn:20px; --r-card:22px; --r-pill:999px;
 
     --ui:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
+    /* the console's face. ui-monospace resolves to SF Mono on Apple hardware,
+       which is the closest thing a phone has to a terminal. */
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{
@@ -491,166 +494,195 @@
   #hangarScreen .setScroll{padding-bottom:104px;}
 
   /* ============ THE FLIGHT MANUAL ============
-     Everything that moves here moves on transform/opacity only, so a page turn
-     never touches layout. The leaf that is NOT turning has no will-change and
-     no filter — one promoted layer, not two. */
+     A ship's console, not a book: monospace on phosphor, a directory you
+     browse, and text that arrives at the speed someone is saying it.
+
+     Everything expensive is avoided on purpose. The scanlines are one fixed
+     repeating-gradient layer with no animation. There is no backdrop-filter
+     anywhere — the canvas behind this screen is not being drawn at all while
+     it is open (see the frame budget in the loop), so there is nothing to
+     blur and a filter would only cost. */
   #manualScreen{
     display:flex;flex-direction:column;overflow:hidden;
     background:
-      radial-gradient(120% 48% at 50% 0%,rgba(35,230,217,.10),transparent 60%),
-      radial-gradient(130% 50% at 50% 100%,rgba(255,62,127,.09),transparent 62%),
-      linear-gradient(180deg,#070d1b,#03060d);
+      radial-gradient(120% 70% at 50% 0%,rgba(35,230,217,.09),transparent 62%),
+      linear-gradient(180deg,#04100f,#020806 60%,#010504);
+    font-family:var(--mono);
   }
-  .bookHead{
-    display:flex;align-items:center;gap:8px;flex:0 0 auto;
-    padding:max(12px,env(safe-area-inset-top)) 14px 8px;
+  /* the tube: scanlines, and a corner falloff that suggests curvature */
+  #manualScreen .crt{
+    position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:repeating-linear-gradient(180deg,
+      rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px);
+    box-shadow:inset 0 0 120px rgba(0,0,0,.85), inset 0 0 40px rgba(0,0,0,.5);
   }
-  .bookHead .headMid{flex:1;text-align:center;min-width:0;}
-  .bookTitle{
-    font-size:12px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;
-    color:var(--signal-hi);text-shadow:0 0 18px rgba(35,230,217,.55);
+  body.noFx #manualScreen .crt{background:none;}
+
+  .conHead{
+    position:relative;z-index:4;flex:0 0 auto;
+    display:flex;align-items:center;gap:10px;
+    padding:max(12px,env(safe-area-inset-top)) 14px 10px;
+    border-bottom:1px solid rgba(35,230,217,.22);
   }
-  #bookStage{
-    flex:1;min-height:0;position:relative;margin:2px 12px 0;
-    perspective:1700px;perspective-origin:0% 50%;
-    touch-action:pan-y;
+  .conBack{
+    display:flex;align-items:center;gap:6px;cursor:pointer;
+    height:34px;padding:0 11px;border-radius:6px;
+    background:rgba(35,230,217,.08);border:1px solid rgba(35,230,217,.35);
+    color:var(--signal-hi);font-family:var(--mono);
+    font-size:11px;font-weight:700;letter-spacing:.14em;
   }
-  /* the binding: a lit gutter down the left edge that the leaf turns around */
-  #bookStage::before{
-    content:'';position:absolute;left:-4px;top:8px;bottom:8px;width:6px;
-    border-radius:4px;pointer-events:none;
-    background:linear-gradient(90deg,rgba(35,230,217,.32),rgba(35,230,217,0));
+  .conBack svg{width:13px;height:13px;}
+  .conBack:active{background:rgba(35,230,217,.2);}
+  .conPath{
+    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    color:#4fd6c4;text-shadow:0 0 12px rgba(35,230,217,.5);
   }
-  .leaf{
-    position:absolute;inset:0;border-radius:20px;overflow:hidden;
-    transform-origin:left center;
-    background:linear-gradient(158deg,#0d1a2e 0%,#0a1424 46%,#070f1d 100%);
-    border:1px solid var(--hair-pink);
-    box-shadow:0 18px 44px -18px rgba(0,0,0,.9), inset 1px 0 0 rgba(255,255,255,.05);
+  .conLamp{
+    display:flex;align-items:center;gap:6px;flex:0 0 auto;
+    font-size:10px;font-weight:700;letter-spacing:.2em;color:#3f9c90;
   }
-  .leaf.turning{will-change:transform;backface-visibility:hidden;z-index:3;}
-  .leaf .paper{
+  .conLamp i{
+    width:7px;height:7px;border-radius:50%;background:var(--signal-hi);
+    box-shadow:0 0 8px var(--signal-hi);
+    animation:conBlink 2.4s steps(1) infinite;
+  }
+  @keyframes conBlink{0%,70%{opacity:1}71%,100%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){ .conLamp i{animation:none;} }
+
+  #conBody{position:relative;z-index:2;flex:1;min-height:0;}
+  .conPane{
     position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding:20px 18px calc(40px + env(safe-area-inset-bottom));
-    /* a page edge should fade, not stop dead — and the padding above keeps the
-       last line of text clear of the fade when you are at the bottom */
-    -webkit-mask-image:linear-gradient(180deg,#000 0,#000 97%,transparent 100%);
-    mask-image:linear-gradient(180deg,#000 0,#000 97%,transparent 100%);
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom));
   }
-  .leafShade{
-    position:absolute;inset:0;pointer-events:none;opacity:0;
-    background:linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.18) 34%,rgba(0,0,0,0) 62%);
+  .conPane.hidden{display:none!important;}
+
+  /* ---- the directory ---- */
+  .dirGroup{
+    margin:16px 0 6px;font-size:10px;font-weight:700;letter-spacing:.24em;
+    color:#2f7d73;
+  }
+  .dirGroup:first-child{margin-top:2px;}
+  .dirRow{
+    display:flex;align-items:baseline;gap:9px;width:100%;cursor:pointer;
+    padding:8px 6px;border:0;border-left:2px solid transparent;
+    background:none;text-align:left;font-family:var(--mono);
+  }
+  .dirRow:active{background:rgba(35,230,217,.10);border-left-color:var(--signal-hi);}
+  .dirRow .dn{font-size:11px;color:#2f7d73;flex:0 0 auto;}
+  .dirRow .dt{flex:1;min-width:0;font-size:13.5px;font-weight:700;letter-spacing:.02em;
+              color:#bff3ea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dirRow .dk{font-size:10px;color:#2f7d73;flex:0 0 auto;letter-spacing:.06em;}
+  .dirRow.read .dt{color:#5fa89e;}
+  .dirRow.read .dk::before{content:'\2713 ';color:var(--signal-hi);}
+  .dirHint{
+    margin:22px 0 4px;font-size:11px;line-height:1.6;color:#2f7d73;letter-spacing:.04em;
   }
 
-  /* --- page furniture --- */
+  /* ---- a document ---- */
+  #conText{max-width:640px;margin:0 auto;}
   .pgKick{
-    display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;
-    border-radius:var(--r-pill);margin-bottom:12px;
+    display:inline-block;margin-bottom:10px;padding:3px 8px;
     border:1px solid rgba(35,230,217,.4);color:var(--signal-hi);
-    font-size:9.5px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;
+    font-size:9.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
   }
-  .pgKick.pink{border-color:rgba(255,62,127,.45);color:#ff8fbe;}
-  .pgH{font-size:27px;font-weight:900;letter-spacing:-.02em;color:#fff;line-height:1.05;margin-bottom:4px;}
-  .pgLead{font-size:14px;line-height:1.5;color:#b9cde4;font-weight:600;margin:10px 0 0;}
-  .pgP{font-size:13.5px;line-height:1.55;color:#9fb6d2;font-weight:500;margin:11px 0 0;}
-  .pgP b,.pgLead b{color:#eaf4ff;font-weight:800;}
-  .pgP em{font-style:normal;color:var(--signal-hi);font-weight:700;}
+  .pgKick.pink{border-color:rgba(255,62,127,.5);color:#ff8fbe;}
+  .pgH{
+    font-size:21px;font-weight:700;letter-spacing:.04em;line-height:1.2;
+    color:#dffff8;text-shadow:0 0 16px rgba(35,230,217,.45);
+    margin-bottom:2px;text-transform:uppercase;
+  }
+  .pgLead,.pgP{
+    font-size:13.5px;line-height:1.72;color:#9fd8ce;margin:13px 0 0;
+    letter-spacing:.005em;
+  }
+  .pgLead{color:#cdf3ea;}
+  .pgP b,.pgLead b{color:#eafffb;font-weight:700;}
+  .pgP em,.pgLead em{font-style:normal;color:var(--signal-hi);}
   .pgSub{
-    margin:20px 0 0;font-size:10px;font-weight:900;letter-spacing:.22em;
-    text-transform:uppercase;color:#5f7799;
+    margin:22px 0 0;font-size:10px;font-weight:700;letter-spacing:.24em;
+    text-transform:uppercase;color:#2f7d73;
   }
-  .pgRule{height:1px;margin:16px 0 0;background:linear-gradient(90deg,var(--hair-pink),transparent);}
+  .pgSub::before{content:'> ';}
+  .pgRule{height:1px;margin:18px 0 0;background:linear-gradient(90deg,rgba(35,230,217,.35),transparent);}
   .pgList{margin:10px 0 0;padding:0;list-style:none;}
   .pgList li{
-    position:relative;padding:0 0 0 17px;margin-top:8px;
-    font-size:13px;line-height:1.5;color:#9fb6d2;font-weight:500;
+    position:relative;padding:0 0 0 18px;margin-top:9px;
+    font-size:13px;line-height:1.68;color:#9fd8ce;
   }
-  .pgList li::before{
-    content:'';position:absolute;left:2px;top:8px;width:6px;height:6px;border-radius:2px;
-    background:var(--signal-hi);box-shadow:0 0 8px rgba(92,255,242,.8);
-  }
-  .pgList li b{color:#eaf4ff;font-weight:800;}
-  .pgTable{width:100%;border-collapse:collapse;margin-top:12px;}
+  .pgList li::before{content:'\00BB';position:absolute;left:2px;top:0;color:var(--signal-hi);}
+  .pgList li b{color:#eafffb;font-weight:700;}
+  .pgTable{width:100%;border-collapse:collapse;margin-top:13px;}
   .pgTable th{
-    text-align:left;padding:0 8px 7px 0;font-size:9.5px;font-weight:900;
-    letter-spacing:.18em;text-transform:uppercase;color:#5f7799;
-    border-bottom:1px solid var(--hair-2);
+    text-align:left;padding:0 10px 6px 0;font-size:9.5px;font-weight:700;
+    letter-spacing:.18em;text-transform:uppercase;color:#2f7d73;
+    border-bottom:1px solid rgba(35,230,217,.25);
   }
   .pgTable td{
-    padding:9px 8px 9px 0;font-size:12.5px;line-height:1.4;color:#a8bed8;font-weight:600;
-    border-bottom:1px solid rgba(190,225,255,.07);vertical-align:top;
+    padding:8px 10px 8px 0;font-size:12.5px;line-height:1.55;color:#93cec5;
+    border-bottom:1px solid rgba(35,230,217,.10);vertical-align:top;
   }
   .pgTable td:last-child,.pgTable th:last-child{padding-right:0;}
-  .pgTable td b{color:#eaf4ff;font-weight:800;}
-  .pgTable .num{color:var(--signal-hi);font-weight:900;white-space:nowrap;}
-  .pgTable .key{color:#fff;font-weight:800;white-space:nowrap;}
+  .pgTable td b{color:#eafffb;font-weight:700;}
+  .pgTable .num{color:var(--signal-hi);font-weight:700;white-space:nowrap;}
+  .pgTable .key{color:#dffff8;font-weight:700;white-space:nowrap;}
+  /* ECHO breaking out of the document to say something directly */
   .pgNote{
-    margin-top:16px;padding:12px 13px;border-radius:14px;
-    background:rgba(255,62,127,.07);box-shadow:inset 0 0 0 1px rgba(255,62,127,.24);
-    font-size:12px;line-height:1.5;color:#ffc2d8;font-weight:600;
+    position:relative;margin-top:18px;padding:12px 13px 12px 15px;
+    border-left:2px solid var(--signal-hi);
+    background:rgba(35,230,217,.06);
+    font-size:12.5px;line-height:1.65;color:#a9e6dc;
   }
-  .pgNote b{color:#fff;}
-  .pgNote.calm{background:rgba(35,230,217,.07);box-shadow:inset 0 0 0 1px rgba(35,230,217,.26);color:#9fe9e2;}
+  .pgNote b{color:#eafffb;}
+  .pgNote.calm{border-left-color:#ff8fbe;background:rgba(255,62,127,.06);color:#ffc2d8;}
   .pgFig{
-    display:block;margin:14px auto 0;max-width:100%;height:auto;
-    border-radius:14px;background:rgba(255,255,255,.025);
-    box-shadow:inset 0 0 0 1px rgba(190,225,255,.09);
+    display:block;margin:16px auto 0;max-width:100%;height:auto;
+    border:1px solid rgba(35,230,217,.18);background:rgba(35,230,217,.03);
   }
-  .pgCap{margin-top:7px;text-align:center;font-size:10px;font-weight:800;
-         letter-spacing:.14em;text-transform:uppercase;color:#5f7799;}
+  .pgCap{margin-top:7px;text-align:center;font-size:10px;font-weight:700;
+         letter-spacing:.16em;text-transform:uppercase;color:#2f7d73;}
+  /* a figure waits its turn while the text types, then arrives */
+  .typing .pgFig,.typing .pgCap{opacity:0;}
+  .pgFig,.pgCap{transition:opacity .25s ease;}
+  .pgFig.lit,.pgCap.lit{opacity:1;}
 
-  /* cover */
-  /* the -20px cancels the paper's asymmetric top/bottom padding so a cover
-     centres on the leaf, not on the text column */
-  .pgCover{display:flex;flex-direction:column;align-items:center;justify-content:center;
-           min-height:100%;margin-bottom:-20px;text-align:center;padding:14px 4px;}
-  .pgCover .cvMark{font-size:clamp(34px,11vw,52px);font-weight:900;letter-spacing:.05em;
-    color:#a8f4ff;text-shadow:0 0 22px rgba(60,230,255,.85),0 0 60px rgba(35,200,255,.4);}
-  .pgCover .cvSub{margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.34em;
-    text-transform:uppercase;color:#ff7ab8;text-shadow:0 0 18px rgba(255,62,127,.7);}
-  .pgCover .cvLine{width:64px;height:2px;margin:22px 0;border-radius:2px;
-    background:linear-gradient(90deg,transparent,var(--signal-hi),transparent);}
-  .pgCover .cvKind{font-size:20px;font-weight:900;letter-spacing:.24em;
-    text-transform:uppercase;color:#eaf4ff;}
-  .pgCover .cvFoot{margin-top:26px;font-size:11px;line-height:1.7;font-weight:600;color:#5f7799;
-    letter-spacing:.06em;}
-
-  /* contents */
-  .tocList{margin-top:6px;}
-  .tocRow{
-    display:flex;align-items:baseline;gap:10px;width:100%;cursor:pointer;text-align:left;
-    padding:10px 2px;border-bottom:1px solid rgba(190,225,255,.07);
-    background:none;border-left:0;border-right:0;border-top:0;
+  /* the cursor that follows the text as it arrives */
+  #conText .caret{
+    display:inline-block;width:.62em;height:1.02em;margin-left:1px;
+    vertical-align:-.16em;background:var(--signal-hi);
+    box-shadow:0 0 10px rgba(35,230,217,.8);
+    animation:conCaret .9s steps(1) infinite;
   }
-  .tocRow:active{opacity:.6;}
-  .tocRow .tn{font-size:11px;font-weight:900;color:#4d648a;min-width:20px;letter-spacing:.06em;}
-  .tocRow .tt{flex:1;font-size:14px;font-weight:700;color:#d5e5f7;}
-  .tocRow .tp{font-size:11px;font-weight:900;color:var(--signal-hi);letter-spacing:.1em;}
+  @keyframes conCaret{0%,55%{opacity:1}56%,100%{opacity:0}}
 
-  .bookFoot{
-    flex:0 0 auto;display:flex;align-items:center;gap:12px;
-    padding:12px 14px max(12px,env(safe-area-inset-bottom));
+  .conFoot{
+    position:relative;z-index:4;flex:0 0 auto;
+    display:flex;align-items:center;gap:8px;
+    padding:9px 14px max(10px,env(safe-area-inset-bottom));
+    border-top:1px solid rgba(35,230,217,.22);
   }
-  .navBtn{
-    width:52px;height:52px;flex:0 0 auto;border-radius:18px;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;color:var(--signal-hi);
-    background:rgba(255,255,255,.05);border:1px solid var(--hair-pink);
+  .conKey{
+    min-width:46px;height:40px;padding:0 12px;cursor:pointer;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(35,230,217,.07);border:1px solid rgba(35,230,217,.32);
+    color:var(--signal-hi);font-family:var(--mono);
+    font-size:11px;font-weight:700;letter-spacing:.14em;
   }
-  .navBtn svg{width:22px;height:22px;}
-  .navBtn:active{transform:scale(.94);}
-  .navBtn[disabled]{opacity:.28;color:#5f7799;pointer-events:none;}
-  .pageMeter{flex:1;min-width:0;}
-  .pmBar{height:4px;border-radius:2px;background:rgba(255,255,255,.09);overflow:hidden;}
-  .pmBar i{display:block;height:100%;width:0;border-radius:2px;
-    background:linear-gradient(90deg,var(--signal-hi),#8ad8ff);
-    box-shadow:0 0 12px rgba(92,255,242,.8);transition:width .22s ease;}
-  .pmLab{margin-top:7px;text-align:center;font-size:10px;font-weight:900;
-    letter-spacing:.2em;text-transform:uppercase;color:#5f7799;}
-
-  @media (max-height:620px){
-    .pgH{font-size:23px;}
-    .bookHead{padding-bottom:4px;}
-    .navBtn{width:46px;height:46px;}
+  .conKey svg{width:16px;height:16px;}
+  .conKey:active{background:rgba(35,230,217,.2);}
+  .conKey[disabled]{opacity:.25;pointer-events:none;}
+  .conStat{
+    flex:1;min-width:0;text-align:right;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.16em;
+    color:#2f7d73;
+  }
+  /* The status text is the only thing here that may shrink. INDEX is the way
+     back to the directory and hiding it below 360px left that width with no
+     visible way out of a file at all. */
+  @media (max-width:360px){
+    .conFoot{gap:6px;padding-left:10px;padding-right:10px;}
+    .conKey{min-width:42px;padding:0 9px;}
+    .pgH{font-size:18px;}
   }
 
   /* ============ HANGAR ============ */
@@ -1705,37 +1737,36 @@
        the DOM at any moment — the one you are reading and the one turning —
        and a page's markup is built the first time it is opened and then cached,
        so a 22-page manual costs two elements and one string. -->
+  <!-- ===================== FLIGHT MANUAL =====================
+       Not a book. It is the console you would actually have in front of you:
+       a directory on the ship's instruction system, and a voice reading it
+       out. Two panes that swap, because a phone has no room for a sidebar. -->
   <div id="manualScreen" class="overlay screen hidden">
-    <div class="bookHead">
-      <button class="iconBtn" id="manBack" aria-label="Back">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+    <div class="crt" aria-hidden="true"></div>
+
+    <div class="conHead">
+      <button class="conBack" id="manBack" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+        <span>ESC</span>
       </button>
-      <div class="headMid"><div class="bookTitle">Flight manual</div></div>
-      <button class="iconBtn" id="manToc" aria-label="Contents">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-      </button>
+      <div class="conPath" id="conPath">CONDUIT&#8203;/MANUAL</div>
+      <div class="conLamp"><i></i>ECHO</div>
     </div>
 
-    <div id="bookStage">
-      <div class="leaf" id="leafA"><div class="paper" id="paperA"></div></div>
-      <div class="leaf turning hidden" id="leafB">
-        <div class="paper" id="paperB"></div>
-        <div class="leafShade" id="leafShade"></div>
-      </div>
+    <div id="conBody">
+      <div id="conDir" class="conPane"></div>
+      <div id="conDoc" class="conPane hidden"><div id="conText"></div></div>
     </div>
 
-    <div class="bookFoot">
-      <button class="navBtn" id="manPrev" aria-label="Previous page">
+    <div class="conFoot">
+      <button class="conKey" id="manPrev">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
-      <div class="pageMeter">
-        <div class="pmBar"><i id="pmFill"></i></div>
-        <div class="pmLab" id="pmLab">Page 1 of 1</div>
-      </div>
-      <button class="navBtn" id="manNext" aria-label="Next page">
+      <button class="conKey wide" id="manToc">INDEX</button>
+      <div class="conStat" id="conStat">SELECT A FILE</div>
+      <button class="conKey" id="manNext">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
       </button>
@@ -1787,7 +1818,7 @@
 
       <div class="setGroup">
         <div class="setGroupHead">Progress</div>
-        <label class="setRow"><span>Flight manual<small>every mechanic, every control</small></span>
+        <label class="setRow"><span>Flight manual<small>ECHO reads you the ship&rsquo;s files</small></span>
           <button class="miniBtn" id="manualBtn" style="background:rgba(35,230,217,.14);box-shadow:inset 0 0 0 1px rgba(35,230,217,.4);color:var(--signal)">Read</button></label>
         <label class="setRow"><span>Replay the tutorial</span>
           <button class="miniBtn" id="tutBtn" style="background:rgba(35,230,217,.14);box-shadow:inset 0 0 0 1px rgba(35,230,217,.4);color:var(--signal)">Replay</button></label>
@@ -1796,7 +1827,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 3.0 &middot; spiralling streaks</div>
+      <div class="setVer">Ringshift &middot; version 3.1 &middot; ECHO console</div>
     </div>
 
     <div class="setFoot">
@@ -5473,14 +5504,20 @@ window.addEventListener('keydown', function(e){
   /* The book owns the keyboard while it is open — arrows turn pages instead of
      steering a ship that is not being drawn, and Escape closes it. */
   if(state === S_MANUAL){
-    if(e.code==='ArrowRight' || e.code==='ArrowDown' || e.code==='Space' || e.code==='PageDown'){
-      e.preventDefault(); audio(); manGo(manPage + 1); return;
+    if(e.code==='Space'){ e.preventDefault(); if(typeNodes) finishTyping(); return; }
+    if(e.code==='ArrowRight' || e.code==='ArrowDown' || e.code==='PageDown'){
+      e.preventDefault(); manGo(manDoc + 1); return;
     }
     if(e.code==='ArrowLeft' || e.code==='ArrowUp' || e.code==='PageUp'){
-      e.preventDefault(); audio(); manGo(manPage - 1); return;
+      e.preventDefault(); manGo(manDoc - 1); return;
     }
-    if(e.code==='Escape'){ e.preventDefault(); audio(); closeManual(); return; }
-    if(e.code==='Home'){ e.preventDefault(); manGo(0); return; }
+    // Escape steps out of a file first, then out of the manual
+    if(e.code==='Escape'){
+      e.preventDefault(); audio();
+      if(manDoc >= 0) showDir(); else closeManual();
+      return;
+    }
+    if(e.code==='Home'){ e.preventDefault(); audio(); showDir(); return; }
     if(e.code==='End'){ e.preventDefault(); manGo(MANUAL.length-1); return; }
     return;
   }
@@ -7947,7 +7984,7 @@ function fig(key, build){
 
 function figScreen(){
   return fig('screen', function(){
-    var F = 'font-family="system-ui,-apple-system,sans-serif"';
+    var F = 'font-family="ui-monospace,SFMono-Regular,Menlo,monospace"';
     return '<svg class="pgFig" viewBox="0 0 260 168" role="img" aria-label="Screen halves">'+
       '<rect x="14" y="8" width="232" height="152" rx="20" fill="#050c17" stroke="#1e3350"/>'+
       '<line x1="130" y1="14" x2="130" y2="154" stroke="#27405f" stroke-dasharray="4 6"/>'+
@@ -8003,10 +8040,10 @@ function figRing(){
     // callouts
     s += '<line x1="34" y1="158" x2="56" y2="118" stroke="#5f7799" stroke-width="1"/>'+
          '<text x="32" y="172" text-anchor="middle" fill="#8fa8c6" font-size="9" font-weight="800" '+
-           'font-family="system-ui,sans-serif">GAP</text>';
+           'font-family="ui-monospace,SFMono-Regular,Menlo,monospace">GAP</text>';
     s += '<line x1="184" y1="42" x2="166" y2="56" stroke="#5f7799" stroke-width="1"/>'+
          '<text x="192" y="36" text-anchor="middle" fill="#8fa8c6" font-size="9" font-weight="800" '+
-           'font-family="system-ui,sans-serif">WEDGE</text>';
+           'font-family="ui-monospace,SFMono-Regular,Menlo,monospace">WEDGE</text>';
     return s + '</svg>';
   });
 }
@@ -8024,7 +8061,7 @@ function figGlyphs(){
       var x = 40 + i*60;
       s += '<g transform="translate('+x+',36)" fill="'+set[i].c+'" fill-opacity="0.9">'+set[i].d+'</g>';
       s += '<text x="'+x+'" y="74" text-anchor="middle" fill="#8fa8c6" font-size="8.5" '+
-           'font-weight="800" letter-spacing="1" font-family="system-ui,sans-serif">'+set[i].n+'</text>';
+           'font-weight="800" letter-spacing="1" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">'+set[i].n+'</text>';
     }
     return s + '</svg>';
   });
@@ -8035,16 +8072,16 @@ function figFlip(){
     return '<svg class="pgFig" viewBox="0 0 260 108" role="img" aria-label="Inverted stretch">'+
       '<rect x="12" y="30" width="18" height="48" rx="4" fill="#ff3e5a" fill-opacity="0.85"/>'+
       '<text x="21" y="94" text-anchor="middle" fill="#ff8f8f" font-size="8" font-weight="900" '+
-        'font-family="system-ui,sans-serif">RED</text>'+
+        'font-family="ui-monospace,SFMono-Regular,Menlo,monospace">RED</text>'+
       '<rect x="230" y="30" width="18" height="48" rx="4" fill="#3cff9a" fill-opacity="0.85"/>'+
       '<text x="239" y="94" text-anchor="middle" fill="#8affc4" font-size="8" font-weight="900" '+
-        'font-family="system-ui,sans-serif">GREEN</text>'+
+        'font-family="ui-monospace,SFMono-Regular,Menlo,monospace">GREEN</text>'+
       '<line x1="38" y1="54" x2="222" y2="54" stroke="#ff3e7f" stroke-opacity="0.5" '+
         'stroke-width="2" stroke-dasharray="6 6"/>'+
       '<text x="130" y="44" text-anchor="middle" fill="#ff8fbe" font-size="10" font-weight="900" '+
-        'letter-spacing="2" font-family="system-ui,sans-serif">GLYPH LOCKED</text>'+
+        'letter-spacing="2" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">GLYPH LOCKED</text>'+
       '<text x="130" y="72" text-anchor="middle" fill="#8fa8c6" font-size="9" font-weight="700" '+
-        'font-family="system-ui,sans-serif">colour advances +1 on every match</text>'+
+        'font-family="ui-monospace,SFMono-Regular,Menlo,monospace">colour advances +1 on every match</text>'+
     '</svg>';
   });
 }
@@ -8052,554 +8089,666 @@ function figFlip(){
 /* --- pages. Every one is a function so nothing is built until it is read,
        and numbers are pulled from the live constants so the book cannot drift
        out of step with the game it describes. --- */
+/* --- the files. Written as ECHO reads them out: an instructor who has flown
+       this conduit, likes you, and is not going to waste your time. Numbers
+       come from the live constants so the briefing cannot drift from the
+       thing it is briefing you on. --- */
 var MANUAL = [
-{ toc:false, t:'Cover', build:function(){
-  return '<div class="pgCover">'+
-    '<div class="cvMark">RINGSHIFT</div>'+
-    '<div class="cvSub">Shift the signal</div>'+
-    '<div class="cvLine"></div>'+
-    '<div class="cvKind">Flight manual</div>'+
-    '<div class="cvFoot">Everything the conduit contains.<br>Swipe, or use the arrows, to turn a page.</div>'+
-  '</div>';
-}},
 
-{ toc:false, t:'Contents', build:function(){
-  var s = '<div class="pgKick">Index</div><div class="pgH">Contents</div>'+
-          '<div class="pgLead">Twenty-four pages. Tap a line to jump.</div><div class="tocList">';
-  for(var i=0;i<MANUAL.length;i++){
-    if(MANUAL[i].toc === false) continue;
-    s += '<button class="tocRow" data-pg="'+i+'">'+
-           '<span class="tn">'+String(i-1).padStart(2,'0')+'</span>'+
-           '<span class="tt">'+MANUAL[i].t+'</span>'+
-           '<span class="tp">P'+(i+1)+'</span>'+
-         '</button>';
-  }
-  return s + '</div>';
-}},
-
-{ t:'The idea', build:function(){
-  return '<div class="pgKick">Chapter one</div><div class="pgH">The idea</div>'+
-    '<div class="pgLead">You are flying down a tunnel. Rings come at you out of the dark, and '+
-      'each ring is a circle cut into coloured slices with a gap or two in it.</div>'+
-    '<div class="pgP">To get through a ring you must either <b>line up a gap</b> with your ship, or '+
-      '<b>be wearing the same colour</b> as the slice you meet. You do both with one thumb: '+
-      '<em>drag to turn the tunnel, tap to change your colour</em>.</div>'+
-    '<div class="pgP">Every ring you pass makes you faster. The whole game is the argument between '+
-      '&ldquo;take the safe gap&rdquo; and &ldquo;take the colour, because the colour is worth points&rdquo;.</div>'+
-    '<div class="pgSub">On screen</div>'+
+{ group:'FLIGHT BASICS', t:'Orientation', file:'00_orientation.txt', kb:'2.1', build:function(){
+  return '<div class="pgKick">First contact</div><div class="pgH">Orientation</div>'+
+    '<div class="pgLead">I&rsquo;m ECHO. I ride in your hull and I read the conduit for you. '+
+      'You&rsquo;re about to fly down it, so let me tell you what that means.</div>'+
+    '<div class="pgP">Rings come out of the dark. Each one is a circle cut into coloured '+
+      'slices, with a gap or two if the sector is feeling generous. There are exactly two '+
+      'ways through: <b>wear the colour of the slice you meet</b>, or <b>line a gap up with '+
+      'your hull</b>. Anything else and we stop being a ship.</div>'+
+    '<div class="pgP">One thumb does both. <em>Drag to turn the conduit. Tap to change what '+
+      'you&rsquo;re wearing.</em> Every ring you clear makes us faster, and everything else in '+
+      'these files is a consequence of that.</div>'+
+    '<div class="pgSub">Your instruments</div>'+
     '<ul class="pgList">'+
-      '<li><b>The tunnel.</b> Walls, glowing rails to the vanishing point, drifting debris. Its colour scheme changes every ten levels.</li>'+
-      '<li><b>Your ship.</b> Bottom-centre, always. It never moves left or right &mdash; the world turns around it.</li>'+
-      '<li><b>SIGNAL</b>, top left: your score this run.</li>'+
-      '<li><b>Your velocity</b>, top centre, as a fraction of the speed of light (<b>c</b>). It climbs with '+
-        'the level and with overdrive, wanders by about a hundredth as the conduit breathes, and '+
-        'scrubs off <b>0.005</b> for as long as you are turning. It drops hard when you coast a '+
-        '<b>gate</b>, and when an event horizon opens in front of you it goes where anything falling '+
-        'into one goes &mdash; then dumps you out the far side.</li>'+
-      '<li><b>LV n &nbsp;x/y</b>, top right: the level and rings cleared of the target. Tap it to pause.</li>'+
-      '<li><b>The thin bar</b> along the bottom: your resonance charge.</li>'+
-    '</ul>';
-}},
-
-{ t:'Controls', build:function(){
-  return '<div class="pgKick">Chapter two</div><div class="pgH">Controls</div>'+
-    '<div class="pgLead">The whole game is one thumb.</div>'+
-    figScreen()+
-    '<table class="pgTable"><tr><th>You do</th><th>It does</th></tr>'+
-      '<tr><td class="key">Drag anywhere</td><td>Rotates the tunnel around your ship. This is how you line up a gap or bring a colour to you.</td></tr>'+
-      '<tr><td class="key">Tap the LEFT half</td><td>Changes your colour to the next one.</td></tr>'+
-      '<tr><td class="key">Tap the RIGHT half</td><td>Fires resonance.</td></tr>'+
-      '<tr><td class="key">Arrows / A &middot; D</td><td>Steer, on a desktop.</td></tr>'+
-    '</table>'+
-    '<div class="pgP">A drag and a tap are told apart by <b>distance, not time</b> &mdash; if your thumb '+
-      'moved more than '+TAP_SLOP+' pixels it was a drag, otherwise it was a tap. There is no press-and-hold '+
-      'anywhere in the game.</div>'+
-    '<div class="pgNote calm">You can swap which half does what, and invert the drag direction, in Settings.</div>';
-}},
-
-{ t:'The two verbs', build:function(){
-  return '<div class="pgKick">Chapter three</div><div class="pgH">The two verbs</div>'+
-    '<div class="pgLead">Everything in the game is built out of these two, and the whole design rests '+
-      'on them having separate jobs.</div>'+
-    '<ul class="pgList">'+
-      '<li><b>Colour is how you score.</b> Matching a slice pays; taking a gap barely does.</li>'+
-      '<li><b>Position is how you survive.</b> Turning the tunnel is what lets you choose what you meet.</li>'+
+      '<li><b>SIGNAL</b>, top left. Your score this run. It is the only number anyone else will ever see.</li>'+
+      '<li><b>Velocity</b>, top centre, as a fraction of light. It climbs with the sector, it '+
+        'dips when you turn, and it does something spectacular near a horizon.</li>'+
+      '<li><b>LV n &nbsp;x/y</b>, top right. Where we are and how much of it is left. Tap it and I&rsquo;ll hold everything.</li>'+
+      '<li><b>The thin bar</b> along the bottom. Resonance charge. File 08.</li>'+
     '</ul>'+
-    '<div class="pgP">Exactly one mechanic in the game swaps those jobs over, and it is deliberately '+
-      'rare &mdash; see <b>Inversion</b>.</div>'+
+    '<div class="pgNote">Your hull never moves left or right. It sits at the bottom of the lane '+
+      'and holds its lane. <b>The world turns around you.</b> Get that straight now and the rest '+
+      'of it will make sense.</div>';
+}},
+
+{ group:'FLIGHT BASICS', t:'Controls', file:'01_controls.txt', kb:'1.6', build:function(){
+  return '<div class="pgKick">Hands on</div><div class="pgH">Controls</div>'+
+    '<div class="pgLead">All of it is one thumb. I designed it that way so the other hand can '+
+      'hold the coffee.</div>'+
+    figScreen()+
+    '<table class="pgTable"><tr><th>You</th><th>Me</th></tr>'+
+      '<tr><td class="key">Drag, anywhere</td><td>I turn the conduit around you. This is how you '+
+        'reach a gap, or bring a colour to meet you.</td></tr>'+
+      '<tr><td class="key">Tap the LEFT half</td><td>I shift you to the next colour.</td></tr>'+
+      '<tr><td class="key">Tap the RIGHT half</td><td>I fire resonance.</td></tr>'+
+      '<tr><td class="key">Arrows / A &middot; D</td><td>Steering, if you&rsquo;re flying from a desk.</td></tr>'+
+    '</table>'+
+    '<div class="pgP">I tell a drag from a tap by <b>distance, not time</b>. Move more than '+
+      TAP_SLOP + ' pixels and I read it as a turn; otherwise it&rsquo;s a tap. There is nothing in '+
+      'this ship you have to hold down.</div>'+
+    '<div class="pgNote">If the halves are the wrong way round for your hands, swap them in '+
+      'Settings. You can invert the steering there too. I won&rsquo;t take it personally.</div>';
+}},
+
+{ group:'FLIGHT BASICS', t:'The two verbs', file:'02_two_verbs.txt', kb:'1.9', build:function(){
+  return '<div class="pgKick">Doctrine</div><div class="pgH">The two verbs</div>'+
+    '<div class="pgLead">Everything we do out there is built out of two actions, and the whole '+
+      'thing works because they have <b>separate jobs</b>.</div>'+
+    '<ul class="pgList">'+
+      '<li><b>Colour is how you score.</b> Matching a slice pays. Taking a gap barely does.</li>'+
+      '<li><b>Position is how you survive.</b> Turning the conduit is how you choose what you meet.</li>'+
+    '</ul>'+
+    '<div class="pgP">Keep those apart in your head and you will always know which problem '+
+      'you&rsquo;re solving. Exactly one thing in this campaign swaps them over, and I&rsquo;ve given '+
+      'it a file of its own so you can&rsquo;t say you weren&rsquo;t told.</div>'+
     '<div class="pgRule"></div>'+
-    '<div class="pgSub">Anatomy of a ring</div>'+
+    '<div class="pgSub">A ring, pulled apart</div>'+
     figRing()+
-    '<div class="pgCap">Eight wedges, one gap, one ship</div>';
+    '<div class="pgCap">Eight wedges, one gap, one of us</div>';
 }},
 
-{ t:'Colour and shape', build:function(){
-  return '<div class="pgKick">Chapter four</div><div class="pgH">Colour &amp; shape</div>'+
-    '<div class="pgLead">Levels use <b>three colours</b> up to level '+(COLOUR4_FROM-1)+
-      ' and <b>four</b> from level '+COLOUR4_FROM+' on. '+
-      'Each colour also owns a shape, stamped on every wedge that wears it.</div>'+
+{ group:'FLIGHT BASICS', t:'Colour and glyph', file:'03_colour_glyph.txt', kb:'1.7', build:function(){
+  return '<div class="pgKick">Recognition</div><div class="pgH">Colour and glyph</div>'+
+    '<div class="pgLead">Three colours to start with, four from level ' + COLOUR4_FROM +
+      '. Each one owns a shape, and I stamp it on every wedge that wears it.</div>'+
     figGlyphs()+
-    '<div class="pgP">The shapes are not decoration. Roughly one man in twelve has some red-green '+
-      'colour deficiency, and several of the sector palettes are exactly the pairs that collapse.</div>'+
-    '<div class="pgNote">So the shapes are <b>forced on for the first ten levels</b> no matter what the '+
-      'setting says. A player who switches them off in the first hour has thrown away the only channel '+
-      'that still works before learning what any of the shapes mean. After level 10 the toggle does what it says.</div>';
+    '<div class="pgP">The shapes are not decoration. About one man in twelve has some '+
+      'red-green deficiency, and several of the sector palettes are precisely the pairs that '+
+      'collapse for them.</div>'+
+    '<div class="pgNote">So I keep the glyphs on for your first ten levels whatever the setting '+
+      'says. Switch them off in your first hour and you throw away the only channel that still '+
+      'works before you&rsquo;ve learned what any of the shapes mean. After ten, it&rsquo;s your call.</div>';
 }},
 
-{ t:'The rings &mdash; I', build:function(){
-  return '<div class="pgKick">Chapter five</div><div class="pgH">The rings you will meet</div>'+
-    '<table class="pgTable"><tr><th>Ring</th><th>What it is</th></tr>'+
+{ group:'THE RINGS', t:'Standard rings', file:'04_rings_standard.txt', kb:'1.8', build:function(){
+  return '<div class="pgKick">Recognition</div><div class="pgH">Standard rings</div>'+
+    '<table class="pgTable"><tr><th>Contact</th><th>What I know about it</th></tr>'+
       '<tr><td class="key">Standard</td><td>Coloured wedges, one or more dark gaps. Match a colour or take a gap.</td></tr>'+
       '<tr><td class="key">Gap</td><td>The dark slices. Always safe, always passable, worth almost nothing.</td></tr>'+
-      '<tr><td class="key">Bonus <i style="color:#fff">(white)</i></td><td>No colour to match, cannot hurt you, pays well. Free money.</td></tr>'+
-      '<tr><td class="key">Gate</td><td>Mostly gaps. Just an easy ring &mdash; nothing new to learn.</td></tr>'+
-      '<tr><td class="key">Spinning</td><td>Every ring rotates slowly. From level 4 you also meet ones that spin much faster, so you lead them like a moving target.</td></tr>'+
+      '<tr><td class="key">Bonus <i style="color:#eafffb">(white)</i></td><td>Nothing to match, cannot hurt us, pays well. Free money. Take it.</td></tr>'+
+      '<tr><td class="key">Gate</td><td>Mostly gaps. A breather. I&rsquo;ll ease off the throttle through one.</td></tr>'+
+      '<tr><td class="key">Spinning</td><td>They all rotate a little. From level 4 some of them rotate a lot, and you&rsquo;ll have to lead them.</td></tr>'+
     '</table>'+
-    '<div class="pgNote calm">There is <b>always at least one route</b> through a ring. The game guarantees '+
-      'it, and guarantees you have time to turn far enough to reach it.</div>';
+    '<div class="pgNote"><b>There is always a way through.</b> I guarantee at least one route on '+
+      'every ring, and I guarantee you have time to turn far enough to reach it. If you didn&rsquo;t '+
+      'make it, you could have. That&rsquo;s not comfort, it&rsquo;s information.</div>';
 }},
 
-{ t:'The rings &mdash; II', build:function(){
-  return '<div class="pgKick">Chapter five</div><div class="pgH">The awkward ones</div>'+
-    '<table class="pgTable"><tr><th>Ring</th><th>What it is</th></tr>'+
-      '<tr><td class="key">Phasing <i style="color:#c56bff">(purple hoop)</i></td><td>Its colours swap around as it travels toward you. What you saw at a distance is not what arrives.</td></tr>'+
-      '<tr><td class="key">Hardened <i style="color:#ff5a5a">(red hoop)</i></td><td>Resonance will not rewrite it. Match it or find a gap. Firing at one wastes the charge, and it throws a <b>RESISTED</b> message so you know it refused rather than glitched.</td></tr>'+
-      '<tr><td class="key">Boss</td><td>The last ring of every fifth level. <b>No gaps at all</b> &mdash; the only way through is to wear the colour of the wedge you meet. It reverses your steering while it is on screen, and arrives a beat late so you can read it.</td></tr>'+
-      '<tr><td class="key">Red door</td><td>Solid, unbroken. Cannot kill you, scores nothing. Turns the world upside down.</td></tr>'+
+{ group:'THE RINGS', t:'Hostile rings', file:'05_rings_hostile.txt', kb:'2.0', build:function(){
+  return '<div class="pgKick pink">Threat board</div><div class="pgH">Hostile rings</div>'+
+    '<table class="pgTable"><tr><th>Contact</th><th>What I know about it</th></tr>'+
+      '<tr><td class="key">Phasing <i style="color:#c56bff">(purple hoop)</i></td><td>Its colours '+
+        'swap as it travels. What you read at distance is not what arrives. Read it late.</td></tr>'+
+      '<tr><td class="key">Hardened <i style="color:#ff5a5a">(red hoop)</i></td><td>Resonance will '+
+        'not rewrite it. Match it or find a gap. Fire at one and you waste the charge &mdash; '+
+        'I&rsquo;ll flag <b>RESISTED</b> so you know it refused rather than glitched.</td></tr>'+
+      '<tr><td class="key">Boss</td><td>Last ring of every fifth level. <b>No gaps at all.</b> The '+
+        'only way through is to be wearing the right colour. It reverses your steering while '+
+        'it&rsquo;s on screen and it arrives a beat late, so you get a moment to read it. That '+
+        'moment is a courtesy. Use it.</td></tr>'+
+      '<tr><td class="key">Red door</td><td>Solid, unbroken. Can&rsquo;t kill you, scores nothing, '+
+        'turns the world over. File 15.</td></tr>'+
       '<tr><td class="key">Green door</td><td>The same, and turns it back.</td></tr>'+
     '</table>';
 }},
 
-{ t:'Scoring', build:function(){
-  return '<div class="pgKick">Chapter six</div><div class="pgH">Scoring</div>'+
-    '<table class="pgTable"><tr><th>Event</th><th>Points</th></tr>'+
-      '<tr><td>Take a gap</td><td class="num">'+PTS_GAP+'</td></tr>'+
-      '<tr><td>Match a colour</td><td class="num">'+PTS_MATCH+'</td></tr>'+
-      '<tr><td>Match on the <b>edge</b> of a wedge (a razor)</td><td class="num">'+PTS_RAZOR+'</td></tr>'+
+{ group:'THE RINGS', t:'Scoring', file:'06_scoring.txt', kb:'1.7', build:function(){
+  return '<div class="pgKick">Accounting</div><div class="pgH">Scoring</div>'+
+    '<table class="pgTable"><tr><th>What you did</th><th>Signal</th></tr>'+
+      '<tr><td>Took a gap</td><td class="num">'+PTS_GAP+'</td></tr>'+
+      '<tr><td>Matched a colour</td><td class="num">'+PTS_MATCH+'</td></tr>'+
+      '<tr><td>Matched on the <b>edge</b> of a wedge &mdash; a razor</td><td class="num">'+PTS_RAZOR+'</td></tr>'+
       '<tr><td>Bonus ring</td><td class="num">'+PTS_BONUS+'</td></tr>'+
       '<tr><td>Boss ring</td><td class="num">'+PTS_BOSS+'</td></tr>'+
     '</table>'+
-    '<div class="pgP">Everything except the gap is multiplied by your chain multiplier. A gap is always '+
-      'worth '+PTS_GAP+' whatever your multiplier is &mdash; that is the point of it. All of it doubles '+
-      'while Overdrive is burning.</div>'+
-    '<div class="pgP"><b>A razor</b> is a match made within a whisker of the boundary between two wedges. '+
-      'It is worth two and a half times a normal match and it is entirely a skill payment &mdash; you get '+
-      'it for cutting it fine.</div>'+
-    '<div class="pgNote">Rings you rewrote with resonance pay <b>45% less</b>. You made that one easy, '+
-      'so it pays like it.</div>';
+    '<div class="pgP">Everything except the gap is multiplied by your chain. A gap is worth '+
+      PTS_GAP + ' whatever your multiplier is &mdash; that is the entire point of a gap. All of '+
+      'it doubles while Overdrive burns.</div>'+
+    '<div class="pgP">A <b>razor</b> is a match made within a whisker of the boundary between two '+
+      'wedges. Two and a half times a normal match, and it is paid purely for skill. I can&rsquo;t '+
+      'help you with those.</div>'+
+    '<div class="pgNote">Rings you rewrote with resonance pay <b>45% less</b>. You made that one '+
+      'easy. It pays like it.</div>';
 }},
 
-{ t:'Chain &amp; multiplier', build:function(){
-  return '<div class="pgKick">Chapter six</div><div class="pgH">Chain &amp; multiplier</div>'+
-    '<div class="pgLead">Every ring you <b>match</b> adds to your chain. Every '+MULT_EVERY+' links adds '+
-      '+1 to your multiplier, up to <b>x'+MULT_CAP+'</b>. Dying resets it to nothing.</div>'+
-    '<div class="pgP">A gap neither grows the chain nor breaks it &mdash; it <em>holds</em>. That is exactly '+
-      'what makes it the safe option: you can always take one without losing what you have built, but you '+
-      'cannot build anything with it either.</div>'+
-    '<div class="pgP">Every tenth link fires a small celebration and a rising three-note sting.</div>'+
-    '<div class="pgNote">The <b>HALO</b> hull is the one exception, and it breaks your chain on a gap '+
-      'deliberately.</div>';
+{ group:'THE RINGS', t:'Chain and multiplier', file:'07_chain.txt', kb:'1.4', build:function(){
+  return '<div class="pgKick">Accounting</div><div class="pgH">Chain and multiplier</div>'+
+    '<div class="pgLead">Every ring you <b>match</b> adds a link. Every ' + MULT_EVERY +
+      ' links adds +1 to your multiplier, up to <b>x' + MULT_CAP + '</b>. Dying takes all of it.</div>'+
+    '<div class="pgP">A gap neither grows the chain nor breaks it. It <em>holds</em>. That is what '+
+      'makes it the safe option &mdash; you can always take one without losing what you&rsquo;ve '+
+      'built, and you can never build anything with it.</div>'+
+    '<div class="pgP">Every tenth link I&rsquo;ll give you a little celebration and a rising '+
+      'three-note sting. You&rsquo;ve earned it and I like the sound.</div>'+
+    '<div class="pgNote">The <b>HALO</b> hull is the exception and it is deliberate: on HALO, gaps '+
+      'break your chain. No safety net, no free passes.</div>';
 }},
 
-{ t:'Resonance', build:function(){
-  return '<div class="pgKick">Chapter seven</div><div class="pgH">Resonance</div>'+
-    '<div class="pgLead">Every other game in this shape is purely defensive: the world is fixed and hostile '+
-      'and you survive it. Resonance is the thing RINGSHIFT does that they do not &mdash; you can reach '+
-      'forward and <b>rewrite the world</b>.</div>'+
-    '<div class="pgP">Tap the right half of the screen and you fire a pulse up the tunnel. It travels forward, '+
-      'and for the next <b>three rings</b> it repaints the wedge at your contact point into <em>your</em> colour. '+
-      'Those rings become guaranteed matches.</div>'+
+{ group:'SHIP SYSTEMS', t:'Resonance', file:'08_resonance.txt', kb:'2.2', build:function(){
+  return '<div class="pgKick">Offensive</div><div class="pgH">Resonance</div>'+
+    '<div class="pgLead">Everything else in a conduit is something happening to you. This is the '+
+      'one thing you do back.</div>'+
+    '<div class="pgP">Tap the right half and I fire a pulse up the conduit. It travels ahead of '+
+      'us, and for the next <b>three rings</b> it repaints the wedge at your contact point into '+
+      '<em>your</em> colour. Those rings become guaranteed matches.</div>'+
     '<ul class="pgList">'+
-      '<li>It costs about <b>'+Math.round(PULSE_COST*100)+'%</b> of your charge meter per shot.</li>'+
-      '<li>Charge is earned by playing: a match gives a little, a razor more than twice as much, a bonus ring more again. <b>Taking gaps earns nothing.</b></li>'+
-      '<li>It does not work on hardened rings.</li>'+
-      '<li>It is unavailable during Overdrive, because the meter is already being spent.</li>'+
+      '<li>It costs about <b>' + Math.round(PULSE_COST*100) + '%</b> of your charge per shot.</li>'+
+      '<li>Charge is earned by flying well: a match gives a little, a razor more than twice as '+
+        'much, a bonus ring more again. <b>Gaps earn nothing.</b></li>'+
+      '<li>It will not touch a hardened ring.</li>'+
+      '<li>You can&rsquo;t fire it during Overdrive. The meter is already being spent.</li>'+
     '</ul>'+
-    '<div class="pgNote calm">Different ships change its reach, width, speed and cost &mdash; see <b>Ships</b>.</div>';
+    '<div class="pgNote">Honest advice: banking charge for Overdrive scores better than spending '+
+      'it on pulses, almost always. Resonance is what you reach for when you&rsquo;d rather be '+
+      'alive than clever. Different hulls change its reach, width, speed and cost &mdash; file 18.</div>';
 }},
 
-{ t:'Overdrive', build:function(){
-  return '<div class="pgKick">Chapter seven</div><div class="pgH">Overdrive</div>'+
-    '<div class="pgLead">Fill the charge meter completely and it ignites by itself.</div>'+
-    '<div class="pgP">For <b>'+OVER_SECS+' seconds</b>: everything scores <b>double</b>, the rings come faster, '+
-      'the music switches to a wobbling bass line, and the screen edges glow amber. You cannot fire resonance '+
-      'while it burns.</div>'+
-    '<div class="pgP">It is a meter, not a one-shot: it charges, fires, drains and recharges, so a long run has '+
-      'a rhythm you can keep riding.</div>'+
-    '<div class="pgRule"></div>'+
-    '<div class="pgSub">Shield orbs</div>'+
-    '<div class="pgP">A gold orb occasionally drifts down the tunnel. Line it up with your ship and fly through '+
-      'it and you gain a <b>shield</b>, which absorbs exactly one hit that would otherwise have killed you. '+
-      'You will see <b>SHIELD BURNED</b> when it saves you.</div>';
+{ group:'SHIP SYSTEMS', t:'Overdrive', file:'09_overdrive.txt', kb:'1.3', build:function(){
+  return '<div class="pgKick">Offensive</div><div class="pgH">Overdrive</div>'+
+    '<div class="pgLead">Fill the charge meter and it lights itself. You don&rsquo;t have to do '+
+      'anything.</div>'+
+    '<div class="pgP">For <b>' + OVER_SECS + ' seconds</b> everything scores <b>double</b>, the '+
+      'rings come faster, the music drops into a wobbling bass line and the edges of your screen '+
+      'go amber. No resonance while it burns.</div>'+
+    '<div class="pgP">It&rsquo;s a meter, not a one-shot. It charges, fires, drains and recharges, '+
+      'so a long run has a rhythm you can ride. Learn where yours falls and you can aim it at the '+
+      'expensive part of a level.</div>';
 }},
 
-{ t:'Dying', build:function(){
-  return '<div class="pgKick">Chapter eight</div><div class="pgH">Dying</div>'+
-    '<div class="pgLead">You die by meeting a wedge whose colour is not yours.</div>'+
-    '<div class="pgP">The game tells you exactly what happened in <b>shapes, not colours</b> &mdash; '+
-      '<em>&ldquo;you hit the triangle wearing the circle&rdquo;</em> &mdash; so the explanation works for a '+
-      'colour-blind player too.</div>'+
-    '<div class="pgP">The death itself is a full sequence: the world nearly stops, the camera shakes, the ship '+
-      'comes apart into fragments that tumble past you, and the sound falls away into four clipped blips like a '+
-      'signal being lost. The game is about a signal; losing is losing the signal.</div>'+
-    '<div class="pgSub">Continuing</div>'+
+{ group:'SHIP SYSTEMS', t:'Shields', file:'10_shields.txt', kb:'0.9', build:function(){
+  return '<div class="pgKick">Defensive</div><div class="pgH">Shields</div>'+
+    '<div class="pgLead">A gold orb drifts down the conduit now and then. Line it up and fly '+
+      'through it.</div>'+
+    '<div class="pgP">That&rsquo;s a shield. It absorbs exactly one hit that would otherwise have '+
+      'ended us. You&rsquo;ll see <b>SHIELD BURNED</b> when it does, and then it&rsquo;s gone.</div>'+
+    '<div class="pgNote">The <b>WRAITH</b> hull launches with one and grows another every 20 '+
+      'rings. If you are finding the deep sectors unkind, that is not a bad place to start.</div>';
+}},
+
+{ group:'WHEN IT GOES WRONG', t:'Losing the signal', file:'11_loss.txt', kb:'1.5', build:function(){
+  return '<div class="pgKick pink">Casualty</div><div class="pgH">Losing the signal</div>'+
+    '<div class="pgLead">You die by meeting a wedge whose colour isn&rsquo;t yours. That is the '+
+      'only way.</div>'+
+    '<div class="pgP">When it happens I&rsquo;ll tell you exactly what you hit, in <b>shapes, not '+
+      'colours</b> &mdash; <em>you hit the triangle wearing the circle</em>. Said that way it '+
+      'works for everyone, including the pilots the palette was never going to serve.</div>'+
+    '<div class="pgP">The rest of it isn&rsquo;t information, it&rsquo;s just what happens: the world '+
+      'nearly stops, the camera shakes, the hull comes apart into pieces that tumble past you, and '+
+      'the sound falls away into four clipped blips. This whole thing is about a signal. Losing is '+
+      'losing the signal.</div>'+
+    '<div class="pgNote">I don&rsquo;t take deaths personally and neither should you. Retry is free '+
+      'and unlimited, and I remember everything.</div>';
+}},
+
+{ group:'WHEN IT GOES WRONG', t:'Checkpoints and continues', file:'12_recovery.txt', kb:'1.6', build:function(){
+  return '<div class="pgKick">Recovery</div><div class="pgH">Checkpoints and continues</div>'+
     '<table class="pgTable"><tr><th>Option</th><th>Cost</th></tr>'+
-      '<tr><td><b>Retry</b> &mdash; start the level again. If you have banked a checkpoint it offers to restart from there instead.</td><td class="num">Free</td></tr>'+
-      '<tr><td><b>Continue this run</b> &mdash; keeps your score and chain. Three per run maximum.</td><td class="num">150, doubling</td></tr>'+
-    '</table>';
-}},
-
-{ t:'Clearing &amp; stars', build:function(){
-  return '<div class="pgKick">Chapter nine</div><div class="pgH">Clearing a level</div>'+
-    '<div class="pgLead">Clear the level&rsquo;s ring target and you get one to three stars.</div>'+
-    '<table class="pgTable"><tr><th>Stars</th><th>Requirement</th></tr>'+
-      '<tr><td class="num">&#9733;</td><td>Clear the level at all</td></tr>'+
-      '<tr><td class="num">&#9733;&#9733;</td><td>Match (rather than gap) <b>'+Math.round(STAR2_RATE*100)+'%</b> of the rings</td></tr>'+
-      '<tr><td class="num">&#9733;&#9733;&#9733;</td><td>Match <b>'+Math.round(STAR3_RATE*100)+'%</b> of the rings</td></tr>'+
+      '<tr><td><b>Retry</b> &mdash; run the level again. If I&rsquo;ve banked a checkpoint I&rsquo;ll '+
+        'offer to put you back there instead.</td><td class="num">Free</td></tr>'+
+      '<tr><td><b>Continue this run</b> &mdash; keeps your score and your chain. Three per run, '+
+        'and the price doubles each time.</td><td class="num">150+</td></tr>'+
     '</table>'+
-    '<div class="pgP">So the safe, gap-only line always clears a level and always scores exactly one star. '+
-      'Stars measure how <em>well</em> you flew, not whether you survived.</div>'+
-    '<div class="pgNote">A level cleared from a checkpoint <b>caps at two stars</b>, because three has to keep '+
-      'meaning &ldquo;in one line&rdquo;.</div>'+
+    '<div class="pgSub">Checkpoints</div>'+
+    '<div class="pgP">On levels of <b>' + CP_MIN + ' rings or more</b> I bank your progress every '+
+      '<b>' + CP_EVERY + ' rings</b>. Die after that and Retry restarts from the banked ring with '+
+      'your score, your chain and your history intact.</div>'+
+    '<div class="pgP">That exists so what a death <em>costs</em> you stops growing as levels get '+
+      'longer. A resumed clear still counts &mdash; but it caps at two stars, because three has to '+
+      'keep meaning <em>in one line</em>.</div>';
+}},
+
+{ group:'THE RUN', t:'Clearing a level', file:'13_clearing.txt', kb:'2.0', build:function(){
+  return '<div class="pgKick">Objective</div><div class="pgH">Clearing a level</div>'+
+    '<div class="pgLead">Hit the ring target and you&rsquo;re through. How well you flew decides '+
+      'the stars.</div>'+
+    '<table class="pgTable"><tr><th>Stars</th><th>What it took</th></tr>'+
+      '<tr><td class="num">&#9733;</td><td>You cleared it.</td></tr>'+
+      '<tr><td class="num">&#9733;&#9733;</td><td>You matched, rather than gapped, <b>'+Math.round(STAR2_RATE*100)+'%</b> of the rings.</td></tr>'+
+      '<tr><td class="num">&#9733;&#9733;&#9733;</td><td>You matched <b>'+Math.round(STAR3_RATE*100)+'%</b>.</td></tr>'+
+    '</table>'+
+    '<div class="pgP">So the careful gap-only line always clears and always scores exactly one '+
+      'star. Stars measure how you flew, not whether you survived. Both are worth having &mdash; '+
+      'they&rsquo;re just not the same question.</div>'+
     '<div class="pgSub">The send-off</div>'+
-    '<div class="pgP">Clearing a level does not just stop. The camera coasts to a halt while your ship keeps '+
-      'going &mdash; accelerating away down the axis into an <b>event horizon</b> that opens at the vanishing '+
-      'point. A real gravitational lens: the tunnel bends around it, an accretion disc turns with a bright '+
-      'doppler-lit edge, the shadow is absolutely black, and a thin photon ring marks the last orbit before '+
-      'the fall.</div>';
+    '<div class="pgP">When it&rsquo;s done I stop the camera and let you keep going. You accelerate '+
+      'away down the axis, off your lane, into an <b>event horizon</b> that opens at the vanishing '+
+      'point. The conduit bends around it, the disc turns with a bright doppler-lit edge, the '+
+      'shadow is absolutely black, and a thin photon ring marks the last orbit before the fall.</div>'+
+    '<div class="pgP">You cross it, there&rsquo;s one hard flash, and then I hand you your numbers. '+
+      'I could just fade to a card. I&rsquo;d rather not.</div>';
 }},
 
-{ t:'The campaign', build:function(){
-  return '<div class="pgKick">Chapter ten</div><div class="pgH">The campaign</div>'+
-    '<div class="pgLead"><b>246 distinct levels</b> before anything repeats.</div>'+
-    '<div class="pgP">Levels are grouped in <b>sectors of ten</b>, each with its own colour scheme and '+
-      'tunnel style:</div>'+
-    '<div class="pgP" style="color:#5cfff2;font-weight:800;letter-spacing:.08em">'+
+{ group:'THE RUN', t:'The slipstream', file:'14_slipstream.txt', kb:'1.8', build:function(){
+  return '<div class="pgKick">Transit</div><div class="pgH">The slipstream</div>'+
+    '<div class="pgLead">Every <b>' + JUMP_EVERY + ' rings</b> a small horizon opens at the '+
+      'vanishing point. Everything still in flight goes into it, we go through, and a fresh set '+
+      'comes at us on the far side.</div>'+
+    '<div class="pgSub">It cannot rob you</div>'+
+    '<ul class="pgList">'+
+      '<li>Rings caught in it are <b>swallowed, not missed</b>. They can&rsquo;t hurt you and they don&rsquo;t count against your clear.</li>'+
+      '<li>A pulse in flight is <b>refunded</b>. It was aimed at rings that stopped existing.</li>'+
+      '<li>The far side always gives you a full lead-in. You will never land on a ring you can&rsquo;t reach.</li>'+
+    '</ul>'+
+    '<div class="pgP">You can&rsquo;t read past a jump. Whatever&rsquo;s on the other side, you meet '+
+      'it cold. That is the point &mdash; it resets the tension every ten rings and stops a long '+
+      'level being one flat stream.</div>'+
+    '<div class="pgNote">Watch the velocity readout on the way through. I have never got tired of it.</div>';
+}},
+
+{ group:'THE RUN', t:'Inversion', file:'15_inversion.txt', kb:'2.4', build:function(){
+  return '<div class="pgKick pink">Anomaly</div><div class="pgH">Inversion</div>'+
+    '<div class="pgLead">A handful of levels contain a stretch where the whole thing turns over. '+
+      'You pass a <b>solid red door</b>, and then:</div>'+
+    figFlip()+
+    '<ul class="pgList">'+
+      '<li><b>Your colour stops being yours to choose.</b> Tapping does nothing.</li>'+
+      '<li>Instead it <b>advances by one every time you match</b>.</li>'+
+      '<li>It <b>holds</b> if you take a gap.</li>'+
+      '<li>So the only way to meet the colour you&rsquo;ve been handed is to <b>turn the conduit</b> '+
+        'until the right wedge is in front of you.</li>'+
+    '</ul>'+
+    '<div class="pgP">Colour becomes the thing happening <em>to</em> you and position becomes the '+
+      'thing you score with. The two verbs have swapped jobs. A <b>solid green door</b> later in '+
+      'the level gives them back.</div>'+
+    '<div class="pgSub">Why this is fair</div>'+
+    '<ul class="pgList">'+
+      '<li>The advance is <b>+1 and never random</b>. You can always know what you&rsquo;ll be wearing next.</li>'+
+      '<li><b>Every ring in the stretch carries every colour.</b> I will never ask you to match something that isn&rsquo;t there.</li>'+
+      '<li><b>A gap holds your colour.</b> First time in the campaign the safe option is a plan rather than a retreat.</li>'+
+    '</ul>'+
+    '<div class="pgP">Resonance inverts with it. Normally you spend charge to rewrite the world to '+
+      'match you; in here you spend the same charge to <b>rewrite yourself</b> to match the world. '+
+      'Same price, opposite direction.</div>';
+}},
+
+{ group:'THE CAMPAIGN', t:'Sectors and length', file:'16_sectors.txt', kb:'1.9', build:function(){
+  return '<div class="pgKick">Chart</div><div class="pgH">Sectors and length</div>'+
+    '<div class="pgLead"><b>246 levels</b>, and no two of them are the same level.</div>'+
+    '<div class="pgP">They come in <b>sectors of ten</b>, and each sector is a system with its own '+
+      'palette and its own architecture:</div>'+
+    '<div class="pgP" style="color:#5cfff2;letter-spacing:.08em">'+
       THEMES.map(function(t){ return t.name; }).join(' &middot; ')+'</div>'+
-    '<div class="pgP">Within each sector the difficulty climbs, dips slightly, then spikes: <b>position 8 is a '+
-      'HARD level</b> and <b>position 10 is EXTREME</b>, so every ten levels has a shape to it rather than being '+
-      'a flat ramp.</div>'+
-    '<div class="pgP">Levels get longer as you go &mdash; 12 rings at the start, 32 by level 23, and slowly up to '+
-      'a ceiling of <b>'+TARGET_CAP+'</b>, about 35 seconds of flying.</div>'+
-    '<div class="pgNote">Length is capped on purpose. Dying 50 rings into a 200-ring level converts difficulty '+
-      'into tolerance for repetition.</div>';
+    '<div class="pgP">Inside a sector the difficulty climbs, dips, then spikes. Position <b>8 is '+
+      'HARD</b> and position <b>10 is EXTREME</b>, so every ten levels has a shape rather than '+
+      'being a ramp.</div>'+
+    '<div class="pgP">Levels get longer too &mdash; 12 rings at the start, 32 by level 23, and up '+
+      'to a ceiling of <b>' + TARGET_CAP + '</b>, which is about 35 seconds of flying.</div>'+
+    '<div class="pgNote">The ceiling is deliberate. Dying fifty rings into a two-hundred-ring level '+
+      'isn&rsquo;t difficulty, it&rsquo;s a test of your patience, and I&rsquo;m not going to run one '+
+      'on you.</div>';
 }},
 
-{ t:'Hazards, in order', build:function(){
-  /* Built from the schedule itself rather than typed out beside it. A manual
-     that can disagree with the game eventually does. */
+{ group:'THE CAMPAIGN', t:'The hazard schedule', file:'17_hazards.txt', kb:'2.6', build:function(){
   var BLURB = {
-    spin:     'Some rings spin far quicker than the ones you have been reading',
+    spin:     'Some of them turn far quicker than the ones you&rsquo;ve been reading',
     fadein:   'Wedges arrive blank and colour up as they close',
-    phase:    'Purple rings swap their colours as they travel',
+    phase:    'Purple rings swap their colours in transit',
     shear:    'Rings change direction mid-flight',
-    dissolve: 'Colour drains out of the wedges &mdash; read them early',
-    flip:     'The two verbs swap jobs. See <b>Inversion</b>',
-    twin:     'Rings arrive in twos, too close to solve separately',
-    strobe:   'The wedges flicker; what you saw is still what is there',
+    dissolve: 'Colour drains out of the wedges. Read them early',
+    flip:     'The two verbs swap jobs. File 15',
+    twin:     'They arrive in twos, too close to solve separately',
+    strobe:   'The wedges flicker. What you saw is still what is there',
     hardened: 'Resonance will not rewrite them',
-    blackout: 'The lights go out in waves; the rings stay lit',
-    drift:    'The whole tunnel slowly turns under you',
-    inverted: 'The conduit turns the opposite way for a whole level'
+    blackout: 'The conduit lights go out in waves. The rings stay lit',
+    drift:    'The whole conduit turns slowly under you',
+    inverted: 'Steering runs backwards for a whole level'
   };
   var rows = [];
-  for(var i=0;i<HAZARDS.length;i++)
-    rows.push([HAZARDS[i].from, HAZARDS[i].lab, BLURB[HAZARDS[i].k] || '']);
-  // the beats that are not hazards but arrive on their own schedule
-  rows.push([5, 'Boss ring', 'Sealed ring at the end of every 5th level, steering reversed']);
-  rows.push([COLOUR4_FROM, 'A fourth colour', 'The tap cycle gets longer, and every ring gets harder to solve']);
-  rows.push([29, 'Checkpoints', 'Progress banks every ' + CP_EVERY + ' rings']);
-  rows.sort(function(a,b){ return a[0] - b[0]; });
+  for(var i=0;i<HAZARDS.length;i++) rows.push([HAZARDS[i].from, HAZARDS[i].lab, BLURB[HAZARDS[i].k]||'']);
+  rows.push([5, 'Boss ring', 'Sealed ring at the end of every fifth level, steering reversed']);
+  rows.push([COLOUR4_FROM, 'A fourth colour', 'The tap cycle gets longer and every ring gets harder']);
+  rows.push([29, 'Checkpoints', 'I start banking your progress every ' + CP_EVERY + ' rings']);
+  rows.sort(function(a,b){ return a[0]-b[0]; });
 
-  var s = '<div class="pgKick pink">Chapter ten</div><div class="pgH">The hazards</div>'+
-    '<div class="pgLead">In the order you meet them. The last of them arrives on level '+
-      HAZARDS[HAZARDS.length-1].from + ' &mdash; there is no point in the campaign where you '+
-      'have seen everything it has.</div>'+
+  var s = '<div class="pgKick pink">Chart</div><div class="pgH">The hazard schedule</div>'+
+    '<div class="pgLead">In the order you&rsquo;ll meet them. I introduce each one once, on the '+
+      'level it arrives, and then I stop talking about it.</div>'+
     '<table class="pgTable"><tr><th>From</th><th>What arrives</th></tr>';
   for(i=0;i<rows.length;i++)
     s += '<tr><td class="num">L'+rows[i][0]+'</td><td><b>'+rows[i][1]+'</b><br>'+rows[i][2]+'</td></tr>';
   return s + '</table>'+
-    '<div class="pgP">After a hazard has been introduced it joins a pool, and every level draws from '+
-      'that pool rather than carrying all of it: how many depends on where the level sits in its sector, '+
-      'which ones is fixed per level and never changes. So the first level of a sector is a breather '+
-      'however deep you are, and no two levels in the same position carry the same set.</div>'+
-    '<div class="pgNote calm"><b>Fast pairs</b> deserve a note. The second ring of a pair arrives too soon to '+
-      'solve on its own terms, and it is not supposed to be &mdash; it is built to be reachable from wherever the '+
-      'first one leaves you. Take the first cleanly and the second is already lined up.</div>';
+    '<div class="pgP">The last new thing arrives on level <b>' + HAZARDS[HAZARDS.length-1].from +
+      '</b>. There is no point in this campaign where you have seen everything it has.</div>'+
+    '<div class="pgP">After a hazard is introduced it joins a pool, and every level draws from it '+
+      'rather than carrying all of it. How many depends on where the level sits in its sector; '+
+      'which ones is fixed for that level and never changes. So the first level of a sector is a '+
+      'breather however deep we are, and no two levels in the same position are the same.</div>'+
+    '<div class="pgNote"><b>Fast pairs</b> deserve a word. The second ring of a pair arrives too '+
+      'soon to solve on its own terms, and it isn&rsquo;t meant to be &mdash; it is built to be '+
+      'reachable from wherever the first one leaves you. Take the first cleanly and the second is '+
+      'already lined up.</div>';
 }},
 
-{ t:'Inversion', build:function(){
-  return '<div class="pgKick pink">Chapter eleven</div><div class="pgH">Inversion</div>'+
-    '<div class="pgLead">A handful of levels contain a stretch where the whole game turns over. You pass '+
-      'through a <b>solid red door</b>, and:</div>'+
-    figFlip()+
-    '<ul class="pgList">'+
-      '<li><b>Your colour is no longer yours to choose.</b> Tapping does nothing.</li>'+
-      '<li>Instead, your colour <b>advances by one every time you match a ring</b>.</li>'+
-      '<li>It <b>holds</b> if you take a gap.</li>'+
-      '<li>So the only way to meet the colour you have been given is to <b>turn the tunnel</b> until the right wedge is in front of you.</li>'+
-    '</ul>'+
-    '<div class="pgP">Colour becomes the thing happening <em>to</em> you, and position becomes the thing you '+
-      'score with. A <b>solid green door</b> later in the level hands it back.</div>'+
-    '<div class="pgSub">Why it is fair</div>'+
-    '<ul class="pgList">'+
-      '<li>The advance is <b>+1 and never random</b>, so you always know what you will be wearing next.</li>'+
-      '<li><b>Every ring in the stretch carries every colour</b>, so you are never told to match something that is not there.</li>'+
-      '<li><b>Taking a gap holds your colour.</b> This is the first time in the game that the safe option is a <em>plan</em>.</li>'+
-    '</ul>'+
-    '<div class="pgP">Resonance inverts with it: normally you spend charge to rewrite the world to match you; '+
-      'inverted, you spend the same charge to <b>rewrite yourself</b> to match the world. Same cost, opposite '+
-      'direction.</div>';
-}},
-
-{ t:'The slipstream', build:function(){
-  return '<div class="pgKick">Chapter twelve</div><div class="pgH">The slipstream</div>'+
-    '<div class="pgLead">Every <b>'+JUMP_EVERY+' rings</b>, a miniature event horizon opens at the vanishing '+
-      'point. Everything still in flight is drawn into it, you are thrown through, and a fresh set of rings '+
-      'comes at you on the far side.</div>'+
-    '<div class="pgSub">It can never rob you</div>'+
-    '<ul class="pgList">'+
-      '<li>Rings caught in it are <b>swallowed, not missed</b> &mdash; they cannot kill you and they do not count against your clear.</li>'+
-      '<li>A resonance pulse in flight is <b>refunded</b>, because it was aimed at rings that stopped existing.</li>'+
-      '<li>The far side always gives you a full lead-in, so you never land on a ring you cannot reach.</li>'+
-    '</ul>'+
-    '<div class="pgP">You cannot read past a jump. Whatever is on the far side, you meet cold. That is the '+
-      'point &mdash; it resets the tension every ten rings and stops a long level being one flat stream.</div>'+
-    '<div class="pgSub">Checkpoints</div>'+
-    '<div class="pgP">On levels of <b>'+CP_MIN+' rings or more</b>, the game banks your progress every '+
-      '<b>'+CP_EVERY+' rings</b>. Die after that and Retry offers to restart from the banked ring with your '+
-      'score, chain and run history intact. What a death <em>costs you</em> stops growing as levels get longer.</div>';
-}},
-
-{ t:'Ships', build:function(){
-  var s = '<div class="pgKick">Chapter thirteen</div><div class="pgH">Ships</div>'+
-    '<div class="pgLead">Six hulls, unlocked with total stars earned. They are side-grades, not upgrades.</div>'+
-    '<table class="pgTable"><tr><th>Hull</th><th>Stars</th><th>What it changes</th></tr>';
+{ group:'THE CAMPAIGN', t:'Hulls', file:'18_hulls.txt', kb:'2.3', build:function(){
+  var s = '<div class="pgKick">Hangar</div><div class="pgH">Hulls</div>'+
+    '<div class="pgLead">Six of them, unlocked with total stars. They are side-grades, not '+
+      'upgrades &mdash; every one of them gives something up.</div>'+
+    '<table class="pgTable"><tr><th>Hull</th><th>Stars</th><th>Trade</th></tr>';
   for(var i=0;i<HULLS.length;i++)
     s += '<tr><td class="key">'+HULLS[i].name+'</td><td class="num">'+HULLS[i].need+'</td><td>'+HULLS[i].blurb+'</td></tr>';
   return s + '</table>'+
-    '<div class="pgNote">HALO is the interesting one: it starts you at a x2 multiplier but takes away the free '+
-      'safety of gaps, so it is a pure aggression build.</div>';
+    '<div class="pgP">Three stars a level is the maximum, so going back for a third star on a '+
+      'level you cleared with one is the intended way to pull any of these closer. That is what '+
+      'stars are <em>for</em>.</div>'+
+    '<div class="pgNote">HALO is the interesting one. It opens at x2 and takes away the free '+
+      'safety of gaps &mdash; a pure aggression build, and not a beginner&rsquo;s hull whatever '+
+      'the star count suggests.</div>';
 }},
 
-{ t:'Credits &amp; the daily', build:function(){
-  return '<div class="pgKick">Chapter fourteen</div><div class="pgH">Credits &amp; the daily</div>'+
-    '<div class="pgLead">You earn <b>one credit per point of score</b> when you clear a level.</div>'+
-    '<div class="pgP">Credits pay for continuing a run after a death, and are the reward for daily missions. '+
-      'Nothing else costs money and there is nothing to buy with real currency.</div>'+
+{ group:'THE CAMPAIGN', t:'Credits and the daily', file:'19_credits.txt', kb:'1.7', build:function(){
+  return '<div class="pgKick">Logistics</div><div class="pgH">Credits and the daily</div>'+
+    '<div class="pgLead">You earn <b>one credit per point of signal</b> when you clear a level.</div>'+
+    '<div class="pgP">Credits pay for continuing a run after a death, and they are what daily '+
+      'missions reward. Nothing else costs anything, and there is nothing to buy with real money. '+
+      'There is no shop. There was never going to be.</div>'+
     '<div class="pgSub">The daily conduit</div>'+
-    '<div class="pgP">One extra level a day, the <b>same for everybody</b>, generated from the date itself so no '+
-      'server is needed. <b>'+DAILY_RINGS+' rings, one attempt, no retries and no continues.</b> Miss it and it '+
-      'is gone. You get a star rating, a score, a <b>day streak</b> if you played yesterday too, and a shareable '+
-      'card of its own.</div>'+
+    '<div class="pgP">One extra level a day, <b>the same for everybody</b>, generated from the '+
+      'date itself so it needs no server. <b>' + DAILY_RINGS + ' rings, one attempt, no retries '+
+      'and no continues.</b> Miss it and it&rsquo;s gone. You get a star rating, a score, a '+
+      '<b>day streak</b> if you flew yesterday too, and a card of its own.</div>'+
     '<div class="pgSub">Daily missions</div>'+
-    '<div class="pgP">Separately there are <b>'+DAILY_GOAL+' daily missions</b> &mdash; clear some levels, thread '+
-      'some rings, reach a chain of a certain length. Completing all '+DAILY_GOAL+' pays '+
-      '<b>'+DAILY_REWARD+' credits</b>. They are announced once when you complete them, not every run.</div>';
+    '<div class="pgP">Separately there are <b>' + DAILY_GOAL + '</b> of them &mdash; clear some '+
+      'levels, thread some rings, hold a chain. All three pays <b>' + DAILY_REWARD + ' credits</b>. '+
+      'I announce them once when you finish them, not every run. You&rsquo;re welcome.</div>';
 }},
 
-{ t:'How the game teaches', build:function(){
-  return '<div class="pgKick">Chapter fifteen</div><div class="pgH">How it teaches you</div>'+
-    '<div class="pgLead">The game is mechanically heavy and gets heavier for two hundred levels, so every '+
-      'mechanic is introduced <b>exactly once</b>, at the moment it first appears, and never mentioned again.</div>'+
+{ group:'SHIP RECORDS', t:'How I teach you', file:'20_teaching.txt', kb:'1.6', build:function(){
+  return '<div class="pgKick">Protocol</div><div class="pgH">How I teach you</div>'+
+    '<div class="pgLead">This conduit is mechanically heavy and it keeps getting heavier for two '+
+      'hundred levels. So I introduce every mechanic <b>exactly once</b>, at the moment it first '+
+      'appears, and then I leave you alone.</div>'+
     '<ul class="pgList">'+
-      '<li><b>A briefing card, which stops the world.</b> Used for rules you would otherwise have to die to '+
-        'learn: the inverted stretch, hardened rings, the boss, the slipstream, overdrive, checkpoints, '+
-        'reversed steering, fast pairs. Time freezes completely &mdash; nothing can reach you while you read. '+
-        'There are eight of these in the entire campaign.</li>'+
-      '<li><b>A named band on the lead-in, which does not pause.</b> Used for hazards that explain themselves '+
-        'once you can see them: spinning rings, phasing colour, blackouts, drift, the shield orb, the bonus ring.</li>'+
+      '<li><b>A briefing card, which stops the world.</b> For rules you would otherwise have to '+
+        'die to learn: inversion, hardened rings, the boss, the slipstream, overdrive, '+
+        'checkpoints, reversed steering, fast pairs. Time freezes completely &mdash; nothing can '+
+        'reach you while you read. There are eight of these in the whole campaign.</li>'+
+      '<li><b>A band on the lead-in, which doesn&rsquo;t pause.</b> For hazards that explain '+
+        'themselves the moment you can see them.</li>'+
     '</ul>'+
-    '<div class="pgP">Briefings appear when the thing <em>arrives</em>, not when it bites you &mdash; a hardened '+
-      'ring is explained the first time one enters the tunnel, not the first time you waste a pulse on one.</div>'+
-    '<div class="pgNote calm"><b>Replay tutorial</b> in Settings brings all of it back. This manual is always '+
-      'here too.</div>';
+    '<div class="pgP">Briefings land when the thing <em>arrives</em>, not when it bites you. I '+
+      'explain a hardened ring the first time one enters the conduit, not the first time you waste '+
+      'a pulse on it.</div>'+
+    '<div class="pgNote">If you want it all again, <b>Replay tutorial</b> is in Settings. And I&rsquo;m '+
+      'always here.</div>';
 }},
 
-{ t:'Settings', build:function(){
-  return '<div class="pgKick">Chapter sixteen</div><div class="pgH">Settings</div>'+
+{ group:'SHIP RECORDS', t:'Settings', file:'21_settings.txt', kb:'1.5', build:function(){
+  return '<div class="pgKick">Configuration</div><div class="pgH">Settings</div>'+
     '<ul class="pgList">'+
-      '<li><b>Sound effects</b> and <b>Music</b> &mdash; independent volume sliders, 0&ndash;100. Zero reads as <em>Off</em>.</li>'+
-      '<li><b>Haptics</b> &mdash; vibration on and off.</li>'+
-      '<li><b>Bloom &amp; effects</b> &mdash; the full post-processing chain. The game turns this off by itself if it detects a device that cannot hold a frame rate, and says so.</li>'+
-      '<li><b>Flicker reduction</b> &mdash; for photosensitivity. Removes the strobing.</li>'+
-      '<li><b>Screen shake</b> &mdash; off if you find it uncomfortable.</li>'+
+      '<li><b>Sound effects</b> and <b>Music</b> &mdash; separate sliders, 0&ndash;100. Zero reads as off.</li>'+
+      '<li><b>Haptics</b> &mdash; on or off.</li>'+
+      '<li><b>Bloom and effects</b> &mdash; the whole post chain. I&rsquo;ll turn it down myself if '+
+        'I catch your hardware struggling, and I&rsquo;ll tell you when I do.</li>'+
+      '<li><b>Flicker reduction</b> &mdash; for photosensitivity. Removes the strobing entirely.</li>'+
+      '<li><b>Screen shake</b> &mdash; off, if you&rsquo;d rather.</li>'+
       '<li><b>Colour-blind glyphs</b> &mdash; shapes on every wedge. Forced on for levels 1&ndash;10.</li>'+
       '<li><b>Drag sensitivity</b> &mdash; 40% to 200%.</li>'+
-      '<li><b>Invert steering</b> and <b>Swap tap sides</b>.</li>'+
+      '<li><b>Invert steering</b> and <b>swap tap sides</b>.</li>'+
     '</ul>'+
-    '<div class="pgNote calm"><b>Reduced motion</b> is respected automatically if your device asks for it.</div>'+
-    '<div class="pgSub">Sound</div>'+
-    '<div class="pgP">There is a music bed whose tempo, layers and density all climb with difficulty and with '+
-      'your chain, so the music tells you how well you are doing. Underneath it is a layer driven by the ship '+
-      'rather than triggered by events: a thrust drone that rides your speed, air noise over the hull, a whoosh '+
-      'panned to whichever side you just turned, and a sub-bass swell whenever an event horizon is open.</div>';
+    '<div class="pgNote calm">If your device asks for <b>reduced motion</b>, I honour it without '+
+      'being asked twice.</div>'+
+    '<div class="pgSub">What you&rsquo;re hearing</div>'+
+    '<div class="pgP">The music climbs with the difficulty and with your chain, so the track is '+
+      'telling you how well you&rsquo;re doing. Under it is a layer driven by the hull rather than '+
+      'by events: a thrust drone riding your speed, air over the plating, a whoosh panned to '+
+      'whichever way you just turned, and a sub-bass swell whenever a horizon is open. None of it '+
+      'is triggered. It is simply always there, saying how fast we are going.</div>';
 }},
 
-{ t:'The shareable card', build:function(){
-  return '<div class="pgKick">Chapter seventeen</div><div class="pgH">The card</div>'+
-    '<div class="pgLead">Hit <b>Share</b> on any result and the game renders a three-second animated GIF '+
-      'that replays your run.</div>'+
-    '<div class="pgP">The heart of it is <b>the strip</b>: a grid of tiles, one per ring you met, in the order '+
-      'you met them. It is a picture of <em>how</em> you cleared the level, not just what you scored. Each tile '+
-      'is the colour you were actually wearing at that ring, and carries that colour&rsquo;s shape.</div>'+
+{ group:'SHIP RECORDS', t:'The card', file:'22_card.txt', kb:'2.1', build:function(){
+  return '<div class="pgKick">Transmission</div><div class="pgH">The card</div>'+
+    '<div class="pgLead">Hit <b>Share</b> on any result and I&rsquo;ll render a three-second '+
+      'animated replay of your run.</div>'+
+    '<div class="pgP">The heart of it is <b>the strip</b>: one tile per ring you met, in order. It '+
+      'is a picture of <em>how</em> you flew, not just what you scored. Each tile is the colour you '+
+      'were actually wearing at that ring, and carries that colour&rsquo;s shape.</div>'+
     '<table class="pgTable"><tr><th>Tile</th><th>Meaning</th></tr>'+
       '<tr><td class="key">Coloured + shape</td><td>A ring you matched, in the colour you wore</td></tr>'+
-      '<tr><td class="key">Gold border</td><td>A razor &mdash; you cut it fine</td></tr>'+
+      '<tr><td class="key">Gold border</td><td>A razor. You cut it fine</td></tr>'+
       '<tr><td class="key">Green bar</td><td>A ring you rewrote with resonance</td></tr>'+
       '<tr><td class="key">Dark + dash</td><td>A gap you took</td></tr>'+
       '<tr><td class="key">White</td><td>A bonus ring</td></tr>'+
       '<tr><td class="key">Red</td><td>A boss ring</td></tr>'+
       '<tr><td class="key">Purple</td><td>A shield of yours burned here</td></tr>'+
-      '<tr><td class="key">&#10005;</td><td>Where you died</td></tr>'+
+      '<tr><td class="key">&#10005;</td><td>Where we stopped</td></tr>'+
     '</table>'+
-    '<div class="pgP">Two footer lines. The first is this run &mdash; chain, peak multiplier, razors. The second '+
-      'is the level&rsquo;s <b>lifetime record</b> on your save: how many times you have cleared it, which attempt '+
-      'first beat it, and the total time you have spent inside it across your whole save, including runs you quit '+
-      'halfway through. That second line is the part worth arguing about with a friend.</div>';
+    '<div class="pgP">Two footer lines. The first is this run. The second is the level&rsquo;s '+
+      '<b>lifetime record</b> on your save &mdash; how many times you have cleared it, which '+
+      'attempt first beat it, and every minute you have spent inside it, including the runs you '+
+      'walked away from.</div>'+
+    '<div class="pgNote">That second line is the one worth arguing about with a friend. I keep it '+
+      'because somebody should.</div>';
 }},
 
-{ t:'What is saved', build:function(){
-  return '<div class="pgKick">Chapter eighteen</div><div class="pgH">What is saved</div>'+
-    '<div class="pgLead">Everything lives in your browser&rsquo;s local storage on this device. There is no '+
-      'account, no server and no network access of any kind &mdash; the whole game is a single file.</div>'+
-    '<div class="pgP">Saved: your level, best level, stars per level, best score, best chain, credits, chosen '+
-      'ship, every setting, which briefings you have seen, the daily&rsquo;s state and streak, and the lifetime '+
-      'ledger per level.</div>'+
-    '<div class="pgNote calm">A corrupted or hand-edited save cannot break the game &mdash; it is checked and '+
-      'repaired on load. At worst you lose progress; you never lose the game.</div>'+
+{ group:'SHIP RECORDS', t:'Your save', file:'23_save.txt', kb:'1.2', build:function(){
+  return '<div class="pgKick">Archive</div><div class="pgH">Your save</div>'+
+    '<div class="pgLead">Everything lives in this browser, on this device. No account, no server, '+
+      'no network of any kind. The entire ship is one file.</div>'+
+    '<div class="pgP">I keep your level, your best level, stars per level, best score, best chain, '+
+      'credits, chosen hull, every setting, which briefings you&rsquo;ve read, the daily&rsquo;s '+
+      'state and streak, and the lifetime ledger for every level you have ever entered.</div>'+
+    '<div class="pgNote calm">A corrupted or hand-edited save can&rsquo;t break me &mdash; I check '+
+      'and repair it on load. At worst you lose progress. You never lose the ship.</div>'+
     '<div class="pgRule"></div>'+
-    '<div class="pgCover" style="min-height:auto;padding-top:26px">'+
-      '<div class="cvSub">End of manual</div>'+
-      '<div class="cvLine"></div>'+
-      '<div class="cvFoot">Shift the signal.</div>'+
-    '</div>';
+    '<div class="pgP" style="color:#5fa89e">End of manual. Go and fly it.</div>';
 }}
 ];
 
-/* --- the reader --- */
-var manPage = 0, manTurning = false, manCache = [], manReturn = 'menu';
-var manSetReturn = 'menu', manPrevState = S_MENU;
+/* ============================================================
+   THE READER
 
-function manRender(el, i){
-  if(manCache[i] === undefined) manCache[i] = MANUAL[i].build();
-  el.innerHTML = manCache[i];
-  el.scrollTop = 0;
-}
-function manChrome(){
-  document.getElementById('manPrev').disabled = (manPage === 0);
-  document.getElementById('manNext').disabled = (manPage === MANUAL.length - 1);
-  document.getElementById('pmFill').style.width =
-    ((manPage + 1) / MANUAL.length * 100).toFixed(1) + '%';
-  document.getElementById('pmLab').textContent =
-    'Page ' + (manPage + 1) + ' of ' + MANUAL.length;
-}
+   A directory and a document, in two panes that swap — a phone has no room
+   for a sidebar, and swapping is what browsing a directory feels like anyway.
 
-/* One rotateY on one promoted layer. No layout, no paint of the page beneath —
-   it was already there before the turn started. */
-function manGo(to, instant){
-  if(manTurning || to < 0 || to >= MANUAL.length || to === manPage) return;
-  var A = document.getElementById('leafA'), B = document.getElementById('leafB');
-  var pA = document.getElementById('paperA'), pB = document.getElementById('paperB');
-  var sh = document.getElementById('leafShade');
-  var fwd = to > manPage;
+   THE TYPEWRITER. Text arrives at the speed someone is saying it, which means
+   revealing characters through markup that already exists. The naive version
+   rebuilds innerHTML every tick and is O(document) per frame; this renders the
+   document once, walks it for text nodes, empties them, and then refills them
+   in order — one string assignment a frame, whatever the document's size.
 
-  if(instant || REDUCED){
-    manPage = to; manRender(pA, to); manChrome(); return;
+   Two things stop it costing layout. The paper's height is measured while the
+   full text is still in it and pinned as a min-height, so nothing reflows
+   underneath the words as they arrive. And figures are recorded as zero-length
+   stops in the same sequence, so they light up when the voice reaches them
+   rather than all appearing at the end.
+   ============================================================ */
+var manDoc = -1, manReturn = 'menu', manSetReturn = 'menu', manPrevState = S_MENU;
+var manCache = [], manRead = {};
+var typeNodes = null, typeAt = 0, typeChar = 0, typeTotal = 0, typeRaf = 0;
+/* Characters a second. Fast enough that reading straight through 24 files is
+   not a waiting game, slow enough that you can see it happening — a page lands
+   in a little over two seconds, and a tap anywhere finishes it instantly. */
+var TYPE_CPS = 520;
+
+function manEl(id){ return document.getElementById(id); }
+
+/* ---- the directory ---- */
+function buildDir(){
+  var out = '', group = '';
+  for(var i=0;i<MANUAL.length;i++){
+    var d = MANUAL[i];
+    if(d.group !== group){
+      group = d.group;
+      out += '<div class="dirGroup">' + group + '</div>';
+    }
+    out += '<button class="dirRow' + (manRead[i] ? ' read' : '') + '" data-doc="' + i + '">'+
+             '<span class="dn">' + String(i).padStart(2,'0') + '</span>'+
+             '<span class="dt">' + d.t + '</span>'+
+             '<span class="dk">' + d.kb + 'K</span>'+
+           '</button>';
   }
+  out += '<div class="dirHint">' + MANUAL.length + ' files. Read them in any order &mdash; '+
+         'or none of them, and find out the hard way. I would start at the top.</div>';
+  manEl('conDir').innerHTML = out;
+}
 
-  manTurning = true;
+function showDir(){
+  manDoc = -1;
+  stopTyping();
+  buildDir();
+  manEl('conDir').classList.remove('hidden');
+  manEl('conDoc').classList.add('hidden');
+  manEl('conDir').scrollTop = 0;
+  manEl('conPath').textContent = 'CONDUIT​/MANUAL';
+  manEl('conStat').textContent = 'SELECT A FILE';
+  manEl('manPrev').disabled = true;
+  manEl('manNext').disabled = true;
+}
+
+/* ---- typing ---- */
+function stopTyping(){
+  if(typeRaf){ cancelAnimationFrame(typeRaf); typeRaf = 0; }
+  typeNodes = null;
+}
+/* Fill everything in immediately: end of the line, or the reader tapped. */
+function finishTyping(){
+  if(!typeNodes) return;
+  for(var i=typeAt; i<typeNodes.length; i++){
+    var it = typeNodes[i];
+    if(it.node) it.node.data = it.text; else if(it.el) it.el.classList.add('lit');
+  }
+  stopTyping();
+  var t = manEl('conText');
+  // the reserved height has done its job; a short file should not leave a hole
+  t.style.minHeight = '';
+  t.classList.remove('typing');
+  var c = t.querySelector('.caret'); if(c) c.parentNode.removeChild(c);
+  manEl('conStat').textContent = 'END OF FILE';
+}
+function startTyping(){
+  var host = manEl('conText');
+  /* Pin the height the finished document will occupy, so the page does not
+     grow under the words while they arrive. */
+  host.style.minHeight = '';
+  var full = host.scrollHeight;
+  host.style.minHeight = full + 'px';
+
+  typeNodes = []; typeAt = 0; typeChar = 0; typeTotal = 0;
+  (function walk(n){
+    for(var c = n.firstChild; c; c = c.nextSibling){
+      if(c.nodeType === 3){
+        if(!c.data) continue;
+        typeNodes.push({node:c, text:c.data});
+        typeTotal += c.data.length;
+        c.data = '';
+      } else if(c.nodeType === 1){
+        var tag = c.tagName.toLowerCase();
+        // a figure is an atom: it does not type, it arrives
+        if(tag === 'svg' || c.classList.contains('pgFig') || c.classList.contains('pgCap')){
+          typeNodes.push({el:c});
+        } else walk(c);
+      }
+    }
+  })(host);
+
+  host.classList.add('typing');
+  var caret = document.createElement('span');
+  caret.className = 'caret';
+  host.appendChild(caret);
+
+  if(REDUCED){ finishTyping(); return; }
+  var last = performance.now(), budget = 0;
+  (function tick(now){
+    typeRaf = 0;
+    if(!typeNodes) return;
+    budget += (now - last) / 1000 * TYPE_CPS;
+    last = now;
+    var steps = Math.floor(budget);
+    budget -= steps;
+    while(steps > 0 && typeAt < typeNodes.length){
+      var it = typeNodes[typeAt];
+      if(it.el){ it.el.classList.add('lit'); typeAt++; continue; }
+      var left = it.text.length - typeChar;
+      if(left <= 0){ typeAt++; typeChar = 0; continue; }
+      var take = Math.min(steps, left);
+      typeChar += take; steps -= take;
+      it.node.data = it.text.slice(0, typeChar);
+      if(typeChar >= it.text.length){ typeAt++; typeChar = 0; }
+    }
+    if(typeAt >= typeNodes.length){ finishTyping(); return; }
+    typeRaf = requestAnimationFrame(tick);
+  })(last);
+}
+
+/* ---- opening a document ---- */
+function openDoc(i){
+  if(i < 0 || i >= MANUAL.length) return;
+  stopTyping();
+  manDoc = i;
+  manRead[i] = true;
+  var d = MANUAL[i];
+  if(manCache[i] === undefined) manCache[i] = d.build();
+  var host = manEl('conText');
+  host.style.minHeight = '';
+  host.innerHTML = manCache[i];
+  manEl('conDoc').scrollTop = 0;
+  manEl('conDir').classList.add('hidden');
+  manEl('conDoc').classList.remove('hidden');
+  manEl('conPath').textContent = 'CONDUIT​/MANUAL/' + d.file;
+  manEl('conStat').textContent = 'READING…';
+  manEl('manPrev').disabled = (i === 0);
+  manEl('manNext').disabled = (i === MANUAL.length - 1);
   sfxPage();
-  var DUR = 380;
-  if(fwd){
-    manRender(pB, manPage);            // the leaf that flies away shows the old page
-    manRender(pA, to);                 // the new page is already underneath it
-    B.classList.remove('hidden');
-    B.style.transition = 'none';
-    B.style.transform = 'rotateY(0deg)';
-    sh.style.transition = 'none';
-    sh.style.opacity = '0';
-    void B.offsetWidth;
-    B.style.transition = 'transform ' + DUR + 'ms cubic-bezier(.4,.02,.3,1)';
-    sh.style.transition = 'opacity ' + DUR + 'ms ease-in';
-    B.style.transform = 'rotateY(-172deg)';
-    sh.style.opacity = '1';
-  } else {
-    manRender(pB, to);                 // the leaf flies IN carrying the older page
-    manRender(pA, manPage);
-    B.classList.remove('hidden');
-    B.style.transition = 'none';
-    B.style.transform = 'rotateY(-172deg)';
-    sh.style.transition = 'none';
-    sh.style.opacity = '1';
-    void B.offsetWidth;
-    B.style.transition = 'transform ' + DUR + 'ms cubic-bezier(.4,.02,.3,1)';
-    sh.style.transition = 'opacity ' + DUR + 'ms ease-out';
-    B.style.transform = 'rotateY(0deg)';
-    sh.style.opacity = '0';
-  }
-  manPage = to;
-  manChrome();
-  setTimeout(function(){
-    manRender(pA, manPage);
-    B.classList.add('hidden');
-    B.style.transition = 'none';
-    B.style.transform = 'rotateY(0deg)';
-    /* Emptied, not just hidden. A leaf left holding a page is a second copy of
-       every element on it — including the contents page's buttons, which a
-       delegated click would then be able to find twice. */
-    pB.innerHTML = '';
-    manTurning = false;
-  }, DUR + 20);
+  startTyping();
+}
+
+function manGo(to){
+  if(to < 0 || to >= MANUAL.length) return;
+  audio();
+  openDoc(to);
 }
 
 function showManual(from){
   manReturn = from || 'menu';
-  /* Settings is reachable from a live pause, so opening the book from there and
-     closing it must land back on the same settings screen with the same idea of
-     where IT came from — otherwise reading the manual mid-run quietly abandons
-     the run. */
+  /* Settings is reachable from a live pause, so opening this from there and
+     closing it must land back on the same settings screen with the same idea
+     of where IT came from — otherwise reading mid-run abandons the run. */
   manSetReturn = setReturn;
   manPrevState = state;
   state = S_MANUAL;
   hideAllScreens();
   setTunnel(false);
-  var scr = document.getElementById('manualScreen');
+  var scr = manEl('manualScreen');
   scr.classList.remove('hidden');
   reflow(scr);
-  manRender(document.getElementById('paperA'), manPage);
-  manChrome();
+  if(manDoc >= 0) openDoc(manDoc); else showDir();
 }
 function closeManual(){
+  stopTyping();
   if(manReturn === 'settings'){ state = manPrevState; showSettings(manSetReturn); }
   else if(manReturn === 'map') showStart();
   else showMenu();
 }
 
-/* swipe: horizontal only, and only if it clearly beat the vertical scroll */
-(function bindBook(){
-  var stage = document.getElementById('bookStage');
-  if(!stage) return;
-  var sx = 0, sy = 0, live = false;
-  stage.addEventListener('pointerdown', function(e){
-    if(manTurning) return;
-    live = true; sx = e.clientX; sy = e.clientY;
+(function bindConsole(){
+  var body = manEl('conBody');
+  if(!body) return;
+  /* One listener for every row in the directory, and the same one lets a tap
+     anywhere in a document skip the rest of the typing. */
+  body.addEventListener('click', function(e){
+    var row = e.target.closest && e.target.closest('.dirRow');
+    if(row){ audio(); openDoc(parseInt(row.getAttribute('data-doc'), 10)); return; }
+    if(manDoc >= 0 && typeNodes) finishTyping();
   });
-  stage.addEventListener('pointerup', function(e){
+  // swipe between files, the way you would flick through a listing
+  var sx = 0, sy = 0, live = false;
+  body.addEventListener('pointerdown', function(e){ live = true; sx = e.clientX; sy = e.clientY; });
+  body.addEventListener('pointercancel', function(){ live = false; });
+  body.addEventListener('pointerup', function(e){
     if(!live) return;
     live = false;
+    if(manDoc < 0) return;
     var dx = e.clientX - sx, dy = e.clientY - sy;
-    if(Math.abs(dx) < 46 || Math.abs(dx) < Math.abs(dy)*1.4) return;
-    audio();
-    manGo(manPage + (dx < 0 ? 1 : -1));
-  });
-  stage.addEventListener('pointercancel', function(){ live = false; });
-  /* the contents page jumps, delegated so the 24 rows cost one listener */
-  stage.addEventListener('click', function(e){
-    var row = e.target.closest && e.target.closest('.tocRow');
-    if(!row) return;
-    audio();
-    manGo(parseInt(row.getAttribute('data-pg'), 10));
+    if(Math.abs(dx) < 52 || Math.abs(dx) < Math.abs(dy)*1.4) return;
+    manGo(manDoc + (dx < 0 ? 1 : -1));
   });
 })();
 
@@ -9144,10 +9293,10 @@ bindBtn('dailyClose',  function(){ document.getElementById('dailyScreen').classL
 bindBtn('menuManual',  function(){ showManual('menu'); });
 bindBtn('mapManual',   function(){ showManual('map'); });
 bindBtn('manualBtn',   function(){ showManual('settings'); });
-bindBtn('manBack',     function(){ closeManual(); });
-bindBtn('manToc',      function(){ manGo(1); });
-bindBtn('manPrev',     function(){ manGo(manPage - 1); });
-bindBtn('manNext',     function(){ manGo(manPage + 1); });
+bindBtn('manBack',     function(){ if(manDoc >= 0) showDir(); else closeManual(); });
+bindBtn('manToc',      function(){ showDir(); });
+bindBtn('manPrev',     function(){ manGo(manDoc - 1); });
+bindBtn('manNext',     function(){ manGo(manDoc + 1); });
 bindBtn('playBtn',     function(){
   var t = mapTarget();
   if(t > store.level){ toast('Level ' + t + ' is locked'); return; }
