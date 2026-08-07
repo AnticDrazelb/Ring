@@ -380,6 +380,14 @@ for a very long time. One entry a sector, given to you at the crossing and
 kept in **the ship's log** in the console — the only file in the manual that
 is not finished, with the sectors ahead of you listed and not recovered.
 
+**The crossing card** that delivers each entry is a card, like every other
+card in the game — the sector's name, the two distances with the old one
+struck through, the entry itself, and a Continue. It used to be a column of
+text floating on an empty black screen with a 68px glowing button attached to
+the bottom and a third of the display empty underneath; nothing said where the
+thing began or ended, and the button was the loudest object in the game
+because it had nothing around it to be louder than.
+
 It runs in four movements, and the shape of the writing moves with them, not
 just the temperature:
 
@@ -681,6 +689,15 @@ count, its star requirements, and every hazard it contains, named. It is not
 pre-filled — it appears when you pick a world, and it describes *that* world,
 so it is never quietly out of date with the button underneath it.
 
+**The sky belongs to the screen, not to the chart.** The star field used to be
+painted by the chart's own SVG, which is only as tall as the levels it holds —
+so it had edges, and the map read as a rectangular card of space lying on a
+screen that was not space, sliding up and down as you scrolled. The finest
+star layer is now fixed to the viewport and the chart is transparent over it.
+Two consequences: space is edge to edge wherever you scroll, and the far field
+holds still while the near field slides past it, which is how a window on
+space behaves.
+
 The chart is 5,500 SVG nodes and takes ~160ms to assemble, which on a
 mid-range phone is half a second of frozen screen between the tap and anything
 happening. It is built one paint *after* the screen appears, so the header and
@@ -715,10 +732,18 @@ waste a pulse on one.
 ### The flight manual
 
 Separately, the ship carries its own instruction system, reachable from the
-menu, the map and Settings. It is a **console**, not a book: a directory of 24
-files that you browse, and each one is read out to you by **ECHO** — the
-ship's instructor — a line at a time, as if it were being spoken. Tap to skip
-ahead; the index remembers which files you have opened.
+menu, the map and Settings. Twenty-six chapters in eight sections, each one
+read out to you by **ECHO** — the ship's instructor — a line at a time, as if
+it were being spoken. Tap to skip ahead; the contents list remembers which you
+have opened and ticks them off.
+
+It used to be dressed as a 1990s file manager — monospace throughout, green on
+black, behind scanlines, with every row ending in a file size. That is a
+costume, and it was wearing the whole screen. The manual is a screen in a game
+now: the same type, the same grouped list rows, the same buttons as Settings.
+What is left of the costume is the part that carries meaning — the ECHO lamp
+in the corner, the section names in tracked capitals, and the fact that a
+chapter types itself in rather than simply appearing.
 
 Everything in it is generated from the game's own constants, so the manual
 cannot drift out of step with the thing it describes.

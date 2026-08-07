@@ -341,7 +341,23 @@
   .miniBar i.on{background:var(--signal-hi);box-shadow:0 0 8px rgba(92,255,242,.8);}
 
   /* ============ LEVEL MAP ============ */
-  .overlay.map{display:block;padding:0;touch-action:pan-y;}
+  /* The map is a window on space, so its ground is space — the same deep
+     black the chart used to paint on itself, with only a breath of colour at
+     the edges. It used to inherit the menus' blue-grey wash, which is why the
+     chart read as a card lying on a different surface. */
+  .overlay.map{
+    display:block;padding:0;touch-action:pan-y;
+    background:
+      radial-gradient(125% 42% at 50% 0%,rgba(35,230,217,.07),transparent 64%),
+      radial-gradient(135% 38% at 50% 100%,rgba(255,62,127,.05),transparent 64%),
+      radial-gradient(110% 62% at 50% 44%,#040a16 0%,#02060f 52%,#01030a 100%);
+  }
+  #mapSky{
+    position:absolute;top:0;right:0;bottom:0;left:0;z-index:0;pointer-events:none;
+    background-repeat:repeat;background-position:center top;
+  }
+  /* one static frame of the field is enough; it must not repaint on scroll */
+  body.noFx #mapSky{opacity:.75;}
   .mapHead{
     position:relative;z-index:6;pointer-events:auto;
     padding:1px 0 76px;text-align:center;
@@ -613,45 +629,44 @@
      anywhere — the canvas behind this screen is not being drawn at all while
      it is open (see the frame budget in the loop), so there is nothing to
      blur and a filter would only cost. */
+  /* THE MANUAL IS A SCREEN IN A GAME, NOT A TERMINAL EMULATOR.
+
+     It was set in monospace end to end, over a green-black wash, behind
+     scanlines, with rows that ended in a file size. That is a 1994 file
+     manager with lore written on it. The IDEA — the ship's own document, read
+     out by ECHO — is worth keeping; the costume was not.
+
+     What is left of the costume is deliberate and small: the ECHO lamp, the
+     section names in tracked capitals, and the fact that a document types
+     itself in. Everything else is the same type, the same surfaces and the
+     same buttons as every other screen. */
   #manualScreen{
     display:flex;flex-direction:column;overflow:hidden;
     background:
-      radial-gradient(120% 70% at 50% 0%,rgba(35,230,217,.09),transparent 62%),
-      linear-gradient(180deg,#04100f,#020806 60%,#010504);
-    font-family:var(--mono);
+      radial-gradient(120% 55% at 50% 0%,rgba(35,230,217,.10),transparent 62%),
+      radial-gradient(130% 55% at 50% 100%,rgba(255,62,127,.06),transparent 62%),
+      radial-gradient(80% 50% at 50% 45%,#081426 0%,#050a14 55%,#03060d 100%);
+    font-family:var(--ui);
   }
   /* the tube: scanlines, and a corner falloff that suggests curvature */
-  #manualScreen .crt{
-    position:absolute;top:0;right:0;bottom:0;left:0;z-index:3;pointer-events:none;
-    background:repeating-linear-gradient(180deg,
-      rgba(0,0,0,0) 0 2px, rgba(0,0,0,.22) 2px 3px);
-    box-shadow:inset 0 0 120px rgba(0,0,0,.85), inset 0 0 40px rgba(0,0,0,.5);
-  }
-  body.noFx #manualScreen .crt{background:none;}
+  /* the scanline overlay is gone, along with the element that carried it */
 
   .conHead{
     position:relative;z-index:4;flex:0 0 auto;
     display:flex;align-items:center;gap:10px;
-    padding:max(12px,env(safe-area-inset-top)) 14px 10px;
-    border-bottom:1px solid rgba(35,230,217,.22);
+    padding:max(14px,env(safe-area-inset-top)) 14px 10px;
   }
-  .conBack{
-    display:flex;align-items:center;gap:6px;cursor:pointer;
-    height:var(--h-ctl);padding:0 13px;border-radius:var(--r-term);
-    background:rgba(35,230,217,.08);border:1px solid var(--edge-on);
-    color:var(--signal-hi);font-family:var(--mono);
-    font-size:var(--t-fine);font-weight:700;letter-spacing:.14em;
-  }
-  .conBack svg{width:13px;height:13px;}
-  .conBack:active{background:rgba(35,230,217,.2);}
   .conPath{
-    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    font-size:var(--t-fine);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
-    color:#4fd6c4;text-shadow:0 0 12px rgba(35,230,217,.5);
+    min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:var(--t-xl);font-weight:800;letter-spacing:-.01em;color:#fff;
   }
+  .conHead .headMid{flex:1;text-align:center;min-width:0;}
+  .conHead .iconBtn{background:none;border:none;color:#dfeaf7;}
+  /* the one piece of costume left in the header: ECHO is listening */
   .conLamp{
-    display:flex;align-items:center;gap:6px;flex:0 0 auto;
-    font-size:var(--t-tiny);font-weight:700;letter-spacing:.2em;color:#3f9c90;
+    display:flex;align-items:center;gap:6px;flex:0 0 auto;min-width:var(--h-ctl);
+    justify-content:flex-end;
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.2em;color:#5f8ea8;
   }
   .conLamp i{
     width:7px;height:7px;border-radius:50%;background:var(--signal-hi);
@@ -664,58 +679,74 @@
   #conBody{position:relative;z-index:2;flex:1;min-height:0;}
   .conPane{
     position:absolute;top:0;right:0;bottom:0;left:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    padding:14px 16px calc(18px + env(safe-area-inset-bottom));
+    padding:2px 16px calc(18px + env(safe-area-inset-bottom));
   }
+  #conDir > *{max-width:520px;margin-left:auto;margin-right:auto;}
   .conPane.hidden{display:none!important;}
 
   /* ---- the directory ---- */
+  /* Grouped list rows on a card — the shape the settings screen already uses,
+     so the two read as the same application. */
   .dirGroup{
-    margin:16px 0 6px;font-size:var(--t-tiny);font-weight:700;letter-spacing:.24em;
-    color:#2f7d73;
+    padding:18px 4px 9px;text-align:center;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--neon-hi);
   }
-  .dirGroup:first-child{margin-top:2px;}
+  .dirCard{
+    border-radius:var(--r-card);overflow:hidden;
+    background:rgba(255,255,255,.045);border:1px solid var(--edge-2);
+  }
   .dirRow{
-    display:flex;align-items:center;gap:9px;width:100%;cursor:pointer;
-    min-height:var(--h-ctl);padding:4px 6px;border:0;border-left:2px solid transparent;
-    background:none;text-align:left;font-family:var(--mono);
+    display:flex;align-items:center;gap:12px;width:100%;cursor:pointer;
+    min-height:var(--h-row);padding:0 14px;border:0;background:none;text-align:left;
+    font-family:var(--ui);box-shadow:inset 0 -1px 0 rgba(255,255,255,.055);
   }
-  .dirRow:active{background:rgba(35,230,217,.10);border-left-color:var(--signal-hi);}
-  .dirRow .dn{font-size:var(--t-fine);color:#2f7d73;flex:0 0 auto;}
-  .dirRow .dt{flex:1;min-width:0;font-size:var(--t-sm);font-weight:700;letter-spacing:.02em;
-              color:#bff3ea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .dirRow .dk{font-size:var(--t-tiny);color:#2f7d73;flex:0 0 auto;letter-spacing:.06em;}
-  .dirRow.read .dt{color:#5fa89e;}
-  .dirRow.read .dk::before{content:'\2713 ';color:var(--signal-hi);}
+  .dirCard > .dirRow:last-child{box-shadow:none;}
+  .dirRow:active{background:rgba(35,230,217,.10);}
+  .dirRow .dn{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:var(--r-pill);
+    background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px var(--edge-2);
+    font-size:var(--t-tiny);font-weight:800;color:var(--dim);
+    font-variant-numeric:tabular-nums;
+  }
+  .dirRow .dt{flex:1;min-width:0;font-size:var(--t-md);font-weight:600;letter-spacing:-.01em;
+              color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dirRow .dck{width:17px;height:17px;flex:0 0 auto;color:var(--signal);}
+  .dirRow .dgo{width:18px;height:18px;flex:0 0 auto;color:var(--dim-2);}
+  .dirRow.read .dn{background:rgba(35,230,217,.13);color:var(--signal-hi);
+                   box-shadow:inset 0 0 0 1px var(--edge-on);}
+  .dirRow.read .dt{color:var(--dim);}
   .dirHint{
-    margin:22px 0 4px;font-size:var(--t-fine);line-height:1.6;color:#2f7d73;letter-spacing:.04em;
+    margin:22px auto 4px;max-width:400px;text-align:center;
+    font-size:var(--t-sm);line-height:1.6;color:var(--dim-2);
   }
 
   /* ---- a document ---- */
   #conText{max-width:640px;margin:0 auto;}
   .pgKick{
-    display:inline-block;margin-bottom:10px;padding:3px 8px;
+    display:inline-flex;align-items:center;height:var(--h-tag);margin-bottom:12px;padding:0 11px;
+    border-radius:var(--r-pill);
     border:1px solid var(--edge-on);color:var(--signal-hi);
-    font-size:var(--t-micro);font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;text-transform:uppercase;
   }
   .pgKick.pink{border-color:rgba(255,62,127,.5);color:#ff8fbe;}
   .pgH{
-    font-size:var(--t-xl);font-weight:700;letter-spacing:.04em;line-height:1.2;
-    color:#dffff8;text-shadow:0 0 16px rgba(35,230,217,.45);
-    margin-bottom:2px;text-transform:uppercase;
+    font-size:var(--t-2xl);font-weight:800;letter-spacing:-.02em;line-height:1.15;
+    color:#fff;margin-bottom:2px;
   }
   .pgLead,.pgP{
-    font-size:var(--t-sm);line-height:1.72;color:#9fd8ce;margin:13px 0 0;
-    letter-spacing:.005em;
+    font-size:var(--t-md);line-height:1.68;color:#a9c2dc;margin:14px 0 0;
+    letter-spacing:-.005em;
   }
-  .pgLead{color:#cdf3ea;}
-  .pgP b,.pgLead b{color:#eafffb;font-weight:700;}
+  .pgLead{color:#d3e4f6;}
+  .pgP b,.pgLead b{color:#fff;font-weight:700;}
   .pgP em,.pgLead em{font-style:normal;color:var(--signal-hi);}
   .pgSub{
-    margin:22px 0 0;font-size:var(--t-tiny);font-weight:700;letter-spacing:.24em;
-    text-transform:uppercase;color:#2f7d73;
+    margin:26px 0 0;font-size:var(--t-tiny);font-weight:800;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--neon-hi);
   }
-  .pgSub::before{content:'> ';}
-  .pgRule{height:1px;margin:18px 0 0;background:linear-gradient(90deg,rgba(35,230,217,.35),transparent);}
+  .pgRule{height:1px;margin:20px 0 0;background:linear-gradient(90deg,var(--edge),transparent);}
   /* The log's per-sector heading: index, place, distance, on one console row. */
   .logHead{
     display:flex;align-items:baseline;gap:9px;margin:14px 0 4px;
@@ -781,17 +812,17 @@
   .conFoot{
     position:relative;z-index:4;flex:0 0 auto;
     display:flex;align-items:center;gap:8px;
-    padding:9px 14px max(10px,env(safe-area-inset-bottom));
-    border-top:1px solid rgba(35,230,217,.22);
+    padding:10px 14px max(12px,env(safe-area-inset-bottom));
+    border-top:1px solid var(--edge-2);
   }
   .conKey{
-    min-width:var(--h-ctl);height:var(--h-ctl);padding:0 12px;cursor:pointer;flex:0 0 auto;
+    min-width:var(--h-ctl);height:var(--h-ctl);padding:0 16px;cursor:pointer;flex:0 0 auto;
     display:flex;align-items:center;justify-content:center;
-    border-radius:var(--r-term);
-    background:rgba(35,230,217,.07);border:1px solid var(--edge-on);
-    color:var(--signal-hi);font-family:var(--mono);
-    font-size:var(--t-fine);font-weight:700;letter-spacing:.14em;
+    border-radius:var(--r-ctl);
+    background:rgba(255,255,255,.05);border:1px solid var(--edge);
+    color:#cfe2f5;font-size:var(--t-sm);font-weight:700;letter-spacing:-.01em;
   }
+  .conKey.wide{background:rgba(35,230,217,.10);border-color:var(--edge-on);color:var(--signal-hi);}
   /* the two chevrons are one key wide and identical to each other */
   #manPrev,#manNext{width:var(--h-ctl);padding:0;}
   .conKey svg{width:16px;height:16px;}
@@ -799,9 +830,9 @@
   .conKey[disabled]{opacity:.25;pointer-events:none;}
   .conStat{
     flex:1;min-width:0;text-align:center;padding:0 6px;
-    overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;font-size:var(--t-tiny);font-weight:700;letter-spacing:.14em;
-    color:#2f7d73;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--dim-2);font-variant-numeric:tabular-nums;
   }
   /* The status text is the only thing here that may shrink. INDEX is the way
      back to the directory and hiding it below 360px left that width with no
@@ -1289,24 +1320,46 @@
     background:
       radial-gradient(120% 58% at 50% 10%,rgba(35,230,217,.11),transparent 62%),
       linear-gradient(180deg,#040814,#02040c);
-    align-items:center;justify-content:center;overflow-y:auto;
+    display:flex;align-items:center;justify-content:center;
+    padding:16px 0;overflow-y:auto;
   }
-  .secWrap{width:min(420px,90%);margin:auto;padding:32px 0;text-align:center;}
+/* THE CROSSING CARD IS A CARD.
+
+     It was a column of text floating on a black screen with a 68px glowing
+     button attached to the bottom of it and a third of the display empty
+     underneath — nothing said where the thing began or ended, and the button
+     was the loudest object in the game because it had nothing around it to be
+     louder than. Same content, on the same surface every other card in the
+     game uses. */
+  .secWrap{
+    width:min(420px,92%);margin:auto;padding:26px 22px 22px;text-align:center;
+    border-radius:var(--r-sheet);background:rgba(16,22,36,.72);
+    border:1px solid var(--edge);
+    -webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.9);
+    animation:cardIn .32s cubic-bezier(.2,.9,.3,1.2) both;
+  }
+  /* the glow belongs on a button sitting in a card, not on a button sitting
+     in a void — and this one is a "read it and move on", not the hero CTA */
+  .secWrap .btn{margin-top:22px;min-height:var(--h-btn-2);font-size:var(--t-xl);}
+  .secWrap .btn.primary{box-shadow:0 0 0 1px rgba(150,255,255,.5),
+                                  0 0 26px -10px rgba(35,220,255,.8),
+                                  0 10px 26px -12px rgba(0,0,0,.9);}
   .secKick{
     font-size:var(--t-micro);font-weight:800;letter-spacing:.44em;text-transform:uppercase;
     color:var(--dim-2);
   }
   .secName{
-    margin-top:14px;font-size:clamp(25px,7.4vw,36px);font-weight:900;line-height:1.1;
-    letter-spacing:.05em;color:var(--signal-hi);
-    text-shadow:0 0 34px rgba(92,255,242,.42);
+    margin-top:12px;font-size:clamp(25px,7.4vw,36px);font-weight:900;line-height:1.1;
+    letter-spacing:.04em;color:var(--signal-hi);
+    text-shadow:0 0 30px rgba(92,255,242,.35);
   }
   .secSub{
     margin-top:7px;font-size:var(--t-tiny);font-weight:800;letter-spacing:.3em;
     text-transform:uppercase;color:var(--dim-2);
   }
   .secRule{
-    margin:20px auto;width:min(54%,200px);height:1px;
+    margin:18px auto;width:min(54%,200px);height:1px;
     background:linear-gradient(90deg,transparent,var(--hair),transparent);
   }
   .secDist{
@@ -1321,14 +1374,14 @@
     text-transform:uppercase;color:var(--dim-2);
   }
   .secLog{
-    margin:26px auto 0;max-width:370px;text-align:left;
-    font-size:var(--t-md);line-height:1.7;font-weight:500;color:#cfe0f4;
+    margin:22px auto 0;max-width:370px;text-align:left;
+    font-size:var(--t-md);line-height:1.62;font-weight:500;color:#cfe0f4;
   }
   .secLog p{margin:0 0 13px;}
   .secLog p:last-child{margin-bottom:0;}
   .secSig{
-    margin:16px auto 26px;max-width:370px;text-align:left;
-    font-size:var(--t-tiny);font-weight:800;letter-spacing:.28em;color:var(--signal);
+    margin:14px auto 0;max-width:370px;text-align:left;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.22em;color:var(--signal);
   }
 
   /* ============ THE LOGBOOK ============
@@ -2209,6 +2262,8 @@
 
   <!-- ===================== LEVEL MAP ===================== -->
   <div id="startScreen" class="overlay map hidden">
+    <!-- the sky is the screen, not the chart: fixed, full-bleed, behind everything -->
+    <div id="mapSky" aria-hidden="true"></div>
     <div class="mapHead">
       <div class="topTray">
         <button class="iconBtn" id="mapBack2" aria-label="Back">
@@ -2301,15 +2356,12 @@
        a directory on the ship's instruction system, and a voice reading it
        out. Two panes that swap, because a phone has no room for a sidebar. -->
   <div id="manualScreen" class="overlay screen hidden">
-    <div class="crt" aria-hidden="true"></div>
-
     <div class="conHead">
-      <button class="conBack" id="manBack" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
-             stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
-        <span>ESC</span>
+      <button class="iconBtn" id="manBack" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>
       </button>
-      <div class="conPath" id="conPath">CONDUIT&#8203;/MANUAL</div>
+      <div class="headMid"><div class="conPath" id="conPath">Flight manual</div></div>
       <div class="conLamp"><i></i>ECHO</div>
     </div>
 
@@ -2323,8 +2375,8 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
-      <button class="conKey wide" id="manToc">INDEX</button>
-      <div class="conStat" id="conStat">SELECT A FILE</div>
+      <button class="conKey wide" id="manToc">Contents</button>
+      <div class="conStat" id="conStat">26 chapters</div>
       <button class="conKey" id="manNext">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
@@ -2386,7 +2438,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.5 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.6 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -8436,6 +8488,27 @@ function starFieldDefs(){
   return out;
 }
 
+/* The fixed sky behind the chart. Same generator, same seed, same tile size
+   as the sfA pattern the chart used to paint — so the far field is literally
+   the same material, it simply belongs to the screen instead of to the
+   drawing, and it does not scroll. One 170px tile, repeated by the browser. */
+var _skyURI = null;
+function skyTileURI(){
+  if(_skyURI) return _skyURI;
+  var SZ = 170, N = 30, r = mrnd(9173), body = '';
+  for(var i=0;i<N;i++){
+    var tint = r();
+    var col = tint > 0.88 ? '%23bcd4ff' : tint > 0.74 ? '%23ffdfb4' : '%23ffffff';
+    body += '<circle cx="'+(r()*SZ).toFixed(1)+'" cy="'+(r()*SZ).toFixed(1)+
+            '" r="'+(0.26 + r()*0.62).toFixed(2)+'" fill="'+col+
+            '" opacity="'+(0.16 + r()*0.42).toFixed(2)+'"/>';
+  }
+  _skyURI = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' " +
+            "width='"+SZ+"' height='"+SZ+"'%3E" + body.replace(/</g,'%3C').replace(/>/g,'%3E') +
+            "%3C/svg%3E\")";
+  return _skyURI;
+}
+
 /* A bright foreground star with the four-point glint a camera puts on one.
    These are placed by hand near where you are reading, and they are the only
    things in the field that twinkle. */
@@ -8820,8 +8893,11 @@ function buildMap(){
   for(var rr0=0; rr0<RADII.length; rr0++)
     defs += '<clipPath id="cd'+RADII[rr0]+'"><circle r="'+RADII[rr0]+'"/></clipPath>';
 
-  /* --- deep field: three tiled star layers over the whole chart --- */
-  bg += '<rect width="'+MAP_W+'" height="'+HH+'" fill="url(#sfA)"/>';
+  /* --- near field: the two coarser layers only -------------------------
+     sfA — the finest, most numerous stars — is painted by #mapSky instead,
+     which is fixed to the viewport. So the far field holds still while the
+     near field slides past it, which is how a window on space behaves, and
+     the screen is never anything but space no matter where you scroll. */
   bg += '<rect width="'+MAP_W+'" height="'+HH+'" fill="url(#sfB)"/>';
   bg += '<rect width="'+MAP_W+'" height="'+HH+'" fill="url(#sfC)"/>';
 
@@ -9154,7 +9230,13 @@ function buildMap(){
             '<defs>'+defs+_palDefs+'</defs>'+
             // the orbit keyframes, one per radius the chart actually uses
             '<style>'+_orbCss+'</style>'+
-            '<rect width="'+MAP_W+'" height="'+HH+'" fill="#02040b"/>'+
+            /* NO GROUND RECT HERE. The chart used to paint an opaque
+               #02040b rectangle exactly its own size, and since the chart is
+               only as tall as the levels it holds and only 340 units wide,
+               that rectangle had visible edges — a card of space sitting on a
+               screen that was not space, sliding up and down as you scrolled.
+               The sky is the SCREEN's now (#mapSky), and the chart is
+               transparent over it. */
             bg+trail+banners+nodes+'</svg>';
   var path = document.getElementById('mapPath');
   if(!path) return;
@@ -10083,17 +10165,30 @@ function buildDir(){
   for(var i=0;i<MANUAL.length;i++){
     var d = MANUAL[i];
     if(d.group !== group){
+      if(group) out += '</div>';
       group = d.group;
-      out += '<div class="dirGroup">' + group + '</div>';
+      out += '<div class="dirGroup">' + group + '</div><div class="dirCard">';
     }
+    /* The row used to end in a file size — "2.1K" — which is a thing a 1994
+       file manager says and a thing no player has ever wanted to know. What
+       belongs on the right of a list row you can tap is whether you have read
+       it and where tapping goes. */
     out += '<button class="dirRow' + (manRead[i] ? ' read' : '') + '" data-doc="' + i + '">'+
-             '<span class="dn">' + String(i).padStart(2,'0') + '</span>'+
+             '<span class="dn">' + String(i + 1) + '</span>'+
              '<span class="dt">' + d.t + '</span>'+
-             '<span class="dk">' + (d.kb ? d.kb + 'K' : 'LIVE') + '</span>'+
+             (manRead[i]
+               ? '<svg class="dck" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+                 'stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">' +
+                 '<path d="M5 12.5l4.5 4.5L19 7"/></svg>'
+               : '') +
+             '<svg class="dgo" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+             'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+             '<path d="M9 5l7 7-7 7"/></svg>'+
            '</button>';
   }
-  out += '<div class="dirHint">' + MANUAL.length + ' files. Read them in any order &mdash; '+
-         'or none of them, and find out the hard way. I would start at the top.</div>';
+  if(group) out += '</div>';
+  out += '<div class="dirHint">Read them in any order &mdash; or none of them, and find '+
+         'out the hard way. I would start at the top.</div>';
   manEl('conDir').innerHTML = out;
 }
 
@@ -10104,8 +10199,8 @@ function showDir(){
   manEl('conDir').classList.remove('hidden');
   manEl('conDoc').classList.add('hidden');
   manEl('conDir').scrollTop = 0;
-  manEl('conPath').textContent = 'CONDUIT​/MANUAL';
-  manEl('conStat').textContent = 'SELECT A FILE';
+  manEl('conPath').textContent = 'Flight manual';
+  manEl('conStat').textContent = MANUAL.length + ' chapters';
   manEl('manPrev').disabled = true;
   manEl('manNext').disabled = true;
 }
@@ -10128,7 +10223,7 @@ function finishTyping(){
   t.style.minHeight = '';
   t.classList.remove('typing');
   var c = t.querySelector('.caret'); if(c) c.parentNode.removeChild(c);
-  manEl('conStat').textContent = 'END OF FILE';
+  manEl('conStat').textContent = (manDoc + 1) + ' of ' + MANUAL.length;
 }
 function startTyping(){
   var host = manEl('conText');
@@ -10199,8 +10294,11 @@ function openDoc(i){
   manEl('conDoc').scrollTop = 0;
   manEl('conDir').classList.add('hidden');
   manEl('conDoc').classList.remove('hidden');
-  manEl('conPath').textContent = 'CONDUIT​/MANUAL/' + d.file;
-  manEl('conStat').textContent = 'READING…';
+  /* the header carries the chapter's name and the footer says where you are
+     in the book — "CONDUIT/MANUAL/07_chain.txt" and "READING…" were a
+     file path and a modem light, neither of which a player needs */
+  manEl('conPath').textContent = d.t;
+  manEl('conStat').textContent = (i + 1) + ' of ' + MANUAL.length;
   manEl('manPrev').disabled = (i === 0);
   manEl('manNext').disabled = (i === MANUAL.length - 1);
   sfxPage();
@@ -10442,6 +10540,9 @@ function showStart(){          // the level map
   setTunnel(false);
   clearBoard();
   startScreen.classList.remove('hidden');
+  /* painted once, on the element that never scrolls */
+  var sky = document.getElementById('mapSky');
+  if(sky && !sky.style.backgroundImage) sky.style.backgroundImage = skyTileURI();
   reflow(startScreen);
   var sp = levelPlan(store.level);
   document.getElementById('starsStart').textContent = fmtChip(totalStars());
