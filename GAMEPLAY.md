@@ -61,6 +61,32 @@ wedges — six, eight, ten or twelve of them depending on the sector.
 
 ---
 
+## 2a. The countdown
+
+Every run opens stopped. Not slow — **stopped**. The conduit does not scroll,
+the stars are points rather than streaks, the engine is silent, and the
+velocity readout says **0.000**, because it is telling you the truth.
+
+Over that, three numbers and a heartbeat. One pulse per number, the tunnel
+breathing faintly with it, and nothing else on the screen at all: the side
+labels and everything else wait their turn.
+
+Then **GO!**, and everything arrives at once — the music starts, the pace
+climbs to what the level asked for over about a second and a half, and the
+stars draw out into streaks as you gather speed. Nothing in the launch is
+animated by hand. The tunnel, the streaks, the drone and the readout were all
+reading your speed the whole time; the only thing that changes at GO is that
+your speed stops being zero.
+
+After that you get a few seconds of empty conduit before the first ring, so
+the acceleration is something you watch rather than something you survive.
+
+Pausing on the line resumes to the line. A mechanic that has to be explained
+before you launch stops the count where it is, and it picks up where it left
+off — you never lose a beat of it to reading.
+
+---
+
 ## 3. Controls
 
 The whole game is one thumb.
@@ -280,6 +306,14 @@ bends and winds around it, an accretion disc turns with a bright doppler-lit
 edge, the shadow is absolutely black, and a thin photon ring marks the last
 orbit before the fall. Your ship crosses it, there is one hard flash, and the
 result card arrives.
+
+**The same horizon opens once more, before you have played anything.** The
+studio card at boot does not cross-fade into the menu — it falls in. The
+horizon opens behind it, the card's black drops away to reveal it, and the mark
+spirals down into the disc while the menu rises through the collapse. It is not
+a boot-time imitation of the effect: it is the effect, the same disc, the same
+shader, the same lens bending the same conduit. A cross-fade is the one
+transition that says nothing about where you have been or where you are going.
 
 ---
 
@@ -554,6 +588,11 @@ There is a music bed — a four-on-the-floor techno track whose tempo, layers an
 density all climb with difficulty and with your chain, so the music tells you
 how well you are doing. A sidechain duck makes the whole bed breathe under the
 kick.
+
+It starts on **GO**, and nowhere else. Through the countdown the only thing you
+can hear is a heartbeat — a real lub-dub, one per number, with a riser climbing
+under the last of them. There is exactly one moment in the game where a conduit
+goes live, and everything you hear is on one side of it or the other.
 
 Underneath that is a continuous layer that is **driven by the ship rather than
 triggered by events**: a thrust drone whose pitch and filter ride your speed,

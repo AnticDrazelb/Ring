@@ -1144,6 +1144,79 @@
     background:linear-gradient(270deg,rgba(255,62,127,.07),transparent 72%);}
   #zoneHint .zhSplit{width:1px;align-self:stretch;margin:16vh 0;
     background:linear-gradient(180deg,transparent,var(--hair),transparent);}
+  /* ============ THE COUNTDOWN ============
+     Centred on the vanishing point, because that is where the ship is going
+     and where the eye already is. Everything here is transform and opacity so
+     the compositor carries it — the main thread on the first frames of a run
+     is busy seeding a level, and a number that stutters while the world holds
+     perfectly still would be the only thing moving badly on screen.
+
+     The number is LIGHT, not heavy. Every other number in this game is 900
+     weight and shouting; this one is the calm before, and the weight is doing
+     that work. GO! is the one that shouts. */
+  #countdown{
+    position:absolute;top:0;right:0;bottom:0;left:0;z-index:21;
+    pointer-events:none;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    opacity:0;transition:opacity .28s ease;
+  }
+  #countdown.show{opacity:1;}
+  #countNum{
+    font-size:clamp(88px,29vw,196px);font-weight:200;line-height:1;
+    letter-spacing:.02em;color:var(--ink);
+    font-variant-numeric:tabular-nums;
+    text-shadow:0 0 42px rgba(35,230,217,.55),0 0 100px rgba(35,230,217,.22);
+    animation:cdTick var(--cd-step,.92s) cubic-bezier(.16,1,.3,1) both;
+  }
+  #countCap{
+    margin-top:20px;font-size:11px;font-weight:800;letter-spacing:.42em;
+    text-transform:uppercase;color:var(--dim-2);
+  }
+  /* the pulse itself — one ring per heartbeat, out and gone */
+  #countRing{
+    position:absolute;width:min(52vw,240px);height:min(52vw,240px);
+    border-radius:50%;border:1px solid var(--signal);
+    animation:cdPulse var(--cd-step,.92s) cubic-bezier(.22,.7,.3,1) both;
+  }
+  @keyframes cdTick{
+    0%  {opacity:0;transform:scale(1.34);}
+    22% {opacity:1;transform:scale(1);}
+    78% {opacity:1;transform:scale(1);}
+    100%{opacity:.42;transform:scale(.965);}
+  }
+  @keyframes cdPulse{
+    0%  {opacity:.55;transform:scale(.42);}
+    100%{opacity:0;transform:scale(1.5);}
+  }
+  /* GO! — the shout. Bigger ring, harder note, and the caption changes job
+     from telling you to wait to telling you that you are away. */
+  #countdown.go #countNum{
+    font-weight:900;letter-spacing:.14em;color:var(--signal-hi);
+    font-size:clamp(62px,20vw,132px);
+    text-shadow:0 0 46px rgba(92,255,242,.72),0 0 120px rgba(35,230,217,.35);
+    animation:cdGo .62s cubic-bezier(.16,1,.3,1) both;
+  }
+  #countdown.go #countRing{
+    border-color:var(--signal-hi);border-width:2px;
+    animation:cdGoRing .62s cubic-bezier(.2,.8,.3,1) both;
+  }
+  #countdown.go #countCap{color:var(--signal);opacity:.85;}
+  @keyframes cdGo{
+    0%  {opacity:0;transform:scale(.62);}
+    30% {opacity:1;transform:scale(1.06);}
+    72% {opacity:1;transform:scale(1);}
+    100%{opacity:0;transform:scale(1.16);}
+  }
+  @keyframes cdGoRing{
+    0%  {opacity:.8;transform:scale(.5);}
+    100%{opacity:0;transform:scale(2.4);}
+  }
+  /* Reduced motion keeps the count and loses the pulse: the number is the
+     information, the ring is the flourish. */
+  @media (prefers-reduced-motion: reduce){
+    #countRing{display:none;}
+    #countNum,#countdown.go #countNum{animation:none;}
+  }
   #tutHint{
     position:absolute;left:50%;top:12%;transform:translate(-50%,-14px);
     z-index:22;pointer-events:none;opacity:0;transition:opacity .3s ease,transform .3s ease;
@@ -1337,6 +1410,42 @@
   #nds-splash.nds-out{ opacity:0; }
   #nds-splash.nds-gone{ display:none; }
 
+  /* THE FALL. Two separate timings on one element, which is the whole trick:
+     the BACKGROUND goes first and fast, so the horizon that has been opening
+     behind the card since 0ms is revealed while the mark is still solid and
+     still playing; then the whole card — mark, rule and the neon behind them —
+     collapses toward the vanishing point and winds up as it goes.
+
+     Rotating positive is clockwise on screen, which is the direction the
+     accretion disc turns in the scene. A logo spiralling one way into a disc
+     spiralling the other reads as two effects rather than one.
+
+     Not `opacity` on the card: that would take the mark down with the
+     background and there would be nothing left to swallow. */
+  #nds-splash.nds-warp{
+    background-color:transparent;
+    transition:background-color 300ms linear;
+    transform-origin:50% 50%;
+    animation:ndsFall 1200ms cubic-bezier(.42,0,.82,.46) 300ms both;
+  }
+  @keyframes ndsFall{
+    0%  { transform:scale(1)     rotate(0deg);   opacity:1; }
+    50% { transform:scale(.44)   rotate(52deg);  opacity:.94; }
+    100%{ transform:scale(.012)  rotate(232deg); opacity:0; }
+  }
+  /* The menu comes up through the collapse rather than being there all along.
+     Held out for the first 45% — the horizon is at its widest then and the
+     menu's own dimming gradient over the top of it would be a waste of it. */
+  #menuScreen.warpin{ animation:ndsArrive 1650ms cubic-bezier(.2,.9,.3,1) both; }
+  @keyframes ndsArrive{
+    0%,45%{ opacity:0; transform:scale(1.14); }
+    100%  { opacity:1; transform:none; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    #nds-splash.nds-warp{ animation:none; opacity:0; transition:opacity 500ms linear; }
+    #menuScreen.warpin{ animation:none; }
+  }
+
   /* the neon behind the bug — breathing on the same 2.9s period as the mark's
      own loop, so the glow and the animation stay in step */
   #nds-splash::before{
@@ -1466,11 +1575,32 @@
        loop that nothing is ever going to release. */
     window.__ndsDone = true;
     s.style.pointerEvents = 'none';
-    s.classList.add('nds-out');
-    // hand the thread back at the START of the fade, not the end: the menu has
-    // to be alive underneath as the card goes
-    if(window.__ndsGone) window.__ndsGone();
-    setTimeout(function(){ s.classList.add('nds-gone'); }, 1000);
+    /* THE CARD DOES NOT FADE, IT FALLS IN.
+       A cross-fade is the one transition that says nothing about the thing it
+       is leaving or the thing it is arriving at. The game already owns an
+       event horizon — the one a cleared level flies into — so the card goes
+       into that instead: the horizon opens behind it, the card's background
+       drops out to reveal it, and the mark spirals down into the disc while
+       the menu comes up through the collapse.
+
+       The order matters. The game is told first so the horizon has the
+       background's 300ms head start and is already open by the time anything
+       can see through; the fall itself waits that 300ms out in CSS.
+
+       Reduced motion gets the fade. Spiralling a logo into a hole is exactly
+       the kind of thing that setting is asking us not to do. */
+    var calm = window.matchMedia &&
+               window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // hand the thread back at the START, not the end: the menu has to be alive
+    // underneath as the card goes
+    if(window.__ndsGone) window.__ndsGone(!calm);
+    s.classList.add(calm ? 'nds-out' : 'nds-warp');
+    var menu = document.getElementById('menuScreen');
+    if(menu && !calm){
+      menu.classList.add('warpin');
+      setTimeout(function(){ menu.classList.remove('warpin'); }, 2000);
+    }
+    setTimeout(function(){ s.classList.add('nds-gone'); }, calm ? 1000 : 1700);
   }
   function start(){
     if(started) return;
@@ -1541,6 +1671,11 @@
     <div class="zh zhL"><b id="zhLeft">Shift</b><span>tap</span></div>
     <div class="zhSplit"></div>
     <div class="zh zhR"><b id="zhRight">Pulse</b><span>tap</span></div>
+  </div>
+  <div id="countdown" aria-live="polite">
+    <div id="countRing"></div>
+    <div id="countNum">3</div>
+    <div id="countCap">hold</div>
   </div>
   <div id="tutHint">
     <div class="tutBig" id="tutBig">MATCH THE COLOUR</div>
@@ -1834,7 +1969,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 3.2 &middot; ECHO console</div>
+      <div class="setVer">Ringshift &middot; version 3.3 &middot; three, two, one</div>
     </div>
 
     <div class="setFoot">
@@ -2714,6 +2849,42 @@ function sfxCross(){
   tone(1320, 0.30, 'sine', 0.15, 90);          // the horizon takes it
   tone(60, 1.10, 'sine', 0.34, 24);
   noiseSweep(0.70, 0.26, 4200, 120);
+}
+/* THE HEARTBEAT, one per number of the countdown. A real lub-dub, not a
+   metronome: two thumps 160ms apart with the second softer and lower, which
+   is the difference between a clock counting you down and a pilot sitting
+   still. Well below the music's kick in level and above it in pitch decay, so
+   when the bed does start there is no moment where they sound like the same
+   drum. */
+function heartThump(t, vol, f0){
+  var a=audio(); if(!a) return;
+  try{
+    var o=a.createOscillator(), g=a.createGain(), lp=a.createBiquadFilter();
+    lp.type='lowpass'; lp.frequency.value=220;
+    o.type='sine';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f0*0.55, t+0.13);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(vol, t+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.26);
+    o.connect(lp); lp.connect(g); g.connect(sfxBus);
+    o.start(t); o.stop(t+0.30);
+  }catch(e){}
+}
+function sfxHeart(){
+  if(!sfxOn()) return;
+  var a=audio(); if(!a) return;
+  heartThump(a.currentTime,        0.34, 74);
+  heartThump(a.currentTime + 0.16, 0.20, 62);
+}
+/* THE LAUNCH. Not a sting either — the riser has been climbing since ONE and
+   this is the thing it was climbing to, so all it has to do is land: a low
+   hit under it and one bright note over the top, then the bed takes over. */
+function sfxLaunch(){
+  if(!sfxOn()) return;
+  tone(52,  0.85, 'sine',     0.34, 30);
+  tone(660, 0.34, 'triangle', 0.13, 1320);
+  noiseSweep(0.55, 0.20, 300, 5200);
 }
 /* The primer's arrival. Deliberately not a sting: two soft rising notes that
    read as "hold on a moment", because the world has just stopped and the last
@@ -4564,6 +4735,7 @@ function resetRun(){
   slowmo=1; flash=0; shakeMag=0; hueDrift=0; bankRoll=0;
   clearT=0; shipZ=0; clearFlow=0; crossed=false;
   jumpT=0; u_jumpPull=0;
+  cdArm();                    // three seconds of stillness, then the bed starts
   ship.visible = true; hideHole();
   over.on=false; over.t=0; pendingDeath=0; deathCause='';
   charge=0; runLog=[]; runCols=[]; runCreditsPaid=0; revivesUsed=0; reviveCost=150;
@@ -4593,7 +4765,14 @@ function resetRun(){
    settle before anything can kill you. After that the normal cadence takes
    over seamlessly — sinceSpawn is pre-loaded so ring two lands exactly one
    spawn-gap after ring one rather than bunching up behind it. */
-var LEAD_IN = 5.0;                  // seconds before the first ring arrives
+/* Was 5.0, when the lead-in was the whole of a run's opening and had to do the
+   settling on its own. The countdown does that now, and does it better, so
+   this is only the gap between GO and the first thing that can kill you. It
+   plays LONGER than it reads: the pace eases up over the first second and a
+   half rather than starting at it, so the ring covers the last of that
+   distance faster than the first of it — about three and a half seconds of
+   accelerating empty tunnel, from a 2.6 written here. */
+var LEAD_IN = 2.6;                  // seconds before the first ring arrives
 function seedPipeline(){
   var spd = paceAt(diff()).speed;               // the speed update() will settle on
   var lead = LEAD_IN + ((plan.n === 1 && !store.tutSeen) ? 1.5 : 0);
@@ -5420,7 +5599,7 @@ function doRevive(){
   slowmo=0.3; flash=0.5; hitStop=0;
   state = S_PLAY;
   document.getElementById('sysBtns').classList.remove('hidden');
-  startMusic();
+  if(!cdHeld()) startMusic();
   popup('CONTINUE', '#ffd34d', 36);
   toast('Shield granted · keep the chain');
   sfxShield(); buzz([0,30,40,60]);
@@ -5715,6 +5894,100 @@ function speedDip(amount){ spdDip = Math.max(spdDip, amount); }
    deliberate turn pays the full price and only a hair of drift pays less. */
 var V_TURN = 0.005, spdTurn = 0;
 
+/* ============================================================
+   THE COUNTDOWN — three seconds of nothing, on purpose.
+
+   A run used to open at full pace with five seconds of empty tunnel, which
+   reads as dead air rather than as calm: the world is already moving, so the
+   quiet is just a gap before the game starts. This makes the quiet the start.
+
+   Everything stops. The tunnel does not scroll, the streaks are points rather
+   than lines, the drone is silent, the beat is not running and the readout
+   says 0.000, because none of those are cosmetic — they are all derived from
+   `speed`, and `speed` is zero. The only thing on the soundtrack is a
+   heartbeat, one per number.
+
+   Then GO, and every one of those comes back at once: the music starts, the
+   pace eases up to what the level asked for, and the stars draw out into
+   streaks because that is what they do when you move. Nothing about the
+   launch is animated by hand — it is the same code that was already reading
+   `speed`, being handed a `speed` that is climbing.
+   ============================================================ */
+var CD_STEP  = 0.92;    // seconds a number holds — a resting pulse, about 65bpm
+var CD_GO    = 0.62;    // how long GO! stays up after the ship is released
+var CD_RAMP  = 1.75;    // how hard the pace comes in; higher is snappier
+var cdT = 0;            // seconds left in the whole sequence, GO! included
+var cdNum = -9;         // the number last painted, so each one is drawn once
+var cdLast = 0;         // performance.now() at the last tick; 0 means not started
+/* 0 while held, 1 at pace. Multiplies the level's speed rather than replacing
+   it, so a launch at level 200 is as fast as level 200 always was. */
+var spdRamp = 1;
+
+function cdArm(){
+  cdT = CD_STEP*3 + CD_GO; cdNum = -9; spdRamp = 0; cdLast = 0;
+  /* The pulse animations are timed off the same constant the count is, so the
+     ring finishes exactly as the next number lands rather than nearly. */
+  var el = document.getElementById('countdown');
+  if(el) el.style.setProperty('--cd-step', CD_STEP + 's');
+}
+function cdHeld(){ return cdT > CD_GO; }        // still stopped: no music, no pace
+function cdBusy(){ return cdT > 0; }            // the count still owns the middle of the screen
+
+/* The side labels wait for the count to be completely off the screen, GO!
+   included — they sit at mid-height on both sides and GO! is centred and wide
+   enough to land straight on top of them. Their two and a half seconds start
+   when they appear, so nothing is lost by holding them; the run just gets one
+   thing at a time, which is the point of the calm. */
+function zonesUp(){
+  var zh = document.getElementById('zoneHint');
+  if(zh && zoneT > 0) zh.classList.add('show');
+}
+
+/* GO. The one place a run begins. Nothing that opens a run starts the bed any
+   more — beginRun, beginDaily and every path that comes BACK to S_PLAY mid-run
+   all defer to this, so there is exactly one moment in the code where a
+   conduit goes live. `spdRamp` is left to update() to ease up: the ship
+   leaving the line is a consequence of the pace arriving, not a separate
+   animation of it. */
+function launchRun(){
+  startMusic();
+  sfxLaunch();
+  buzz([0, 18]);
+  flash = Math.max(flash, 0.30);
+  flashCol.r = 0.42; flashCol.g = 0.96; flashCol.b = 0.92;
+  beatPulse = 1;
+}
+
+/* Called from the top of update() rather than only from the countdown branch,
+   because everything that takes the screen away from a run — a pause, a
+   primer, a death — has to take the number with it, and each of those is a
+   different code path that would otherwise need to remember. */
+function cdPaint(){
+  var el = document.getElementById('countdown');
+  if(!el) return;
+  var live = (state === S_PLAY) && !teachHold && cdT > 0;
+  el.classList.toggle('show', live);
+  if(!live) return;
+  var n = cdHeld() ? Math.ceil((cdT - CD_GO) / CD_STEP) : 0;
+  if(n === cdNum) return;
+  cdNum = n;
+  var num = document.getElementById('countNum');
+  num.textContent = n > 0 ? String(n) : 'GO!';
+  document.getElementById('countCap').textContent = n > 0 ? 'hold' : 'conduit live';
+  el.classList.toggle('go', n === 0);
+  /* Re-arm the two animations. reflow() drops an inline animation:none, forces
+     layout and takes it off again, which is the only way to restart a CSS
+     animation — and it has to be done on each animated element, because the
+     inline property does not reach descendants. Four times a run. */
+  reflow(num);
+  reflow(document.getElementById('countRing'));
+  if(n > 0){
+    sfxHeart();
+    beatPulse = Math.max(beatPulse, 0.45);   // the tunnel breathes with it
+    if(n === 1) riserAt(CD_STEP);            // starts on ONE, lands on GO
+  }
+}
+
 function lightSpeed(){
   var s01 = Math.max(0, Math.min(1, (speed - 32) / 63));
   var d01 = Math.min(1, (plan.n - 1) / 245);   // the whole campaign, so it never plateaus
@@ -5732,7 +6005,13 @@ function lightSpeed(){
 
   v -= V_TURN * spdTurn;              // banking the conduit scrubs speed off
   if(spdDip > 0.001) v *= (1 - spdDip);
-  v = Math.max(0.001, v);
+
+  /* HELD ON THE LINE. The countdown is a real standstill and the readout has
+     to be able to say so, so the 0.001 floor only applies once the ship is
+     actually under way — otherwise the one number on screen that means "you
+     are not moving yet" would sit there insisting you are. */
+  v *= spdRamp;
+  v = Math.max(spdRamp >= 1 ? 0.001 : 0, v);
 
   /* Both kinds of horizon: `holeAmt` is the one at the end of a level and the
      one a slipstream opens, `u_jumpPull` is how far through the fall you are.
@@ -5837,8 +6116,8 @@ function showZones(){
   document.getElementById('zhRight').textContent = swap ? 'Shift' : 'Pulse';
   zh.querySelector('.zhL').style.color = swap ? 'var(--flare)' : 'var(--signal)';
   zh.querySelector('.zhR').style.color = swap ? 'var(--signal)' : 'var(--flare)';
-  zh.classList.add('show');
   zoneT = (store.level||1) <= 3 ? 4.2 : 2.6;
+  if(!cdBusy()) zh.classList.add('show');   // otherwise the count hands over
 }
 function showTutorial(step){
   var t = TUT[step-1];
@@ -5990,7 +6269,9 @@ function dismissPrimer(){
   teachHold = false;
   primerKey = '';
   document.getElementById('primer').classList.remove('show');
-  if(state === S_PLAY) startMusic();
+  /* A primer taught on the lead-in is read WHILE the count is held, so the bed
+     is not owed back yet — GO still owns that. */
+  if(state === S_PLAY && !cdHeld()) startMusic();
   /* Time was frozen, not skipped: every ring is exactly where it was, so the
      player gets back the same situation they were given time to look at. */
 }
@@ -8348,7 +8629,33 @@ var MANUAL = [
       'keep meaning <em>in one line</em>.</div>';
 }},
 
-{ group:'THE RUN', t:'Clearing a level', file:'13_clearing.txt', kb:'2.0', build:function(){
+{ group:'THE RUN', t:'The launch', file:'13_launch.txt', kb:'1.4', build:function(){
+  return '<div class="pgKick">On the line</div><div class="pgH">The launch</div>'+
+    '<div class="pgLead">Every conduit opens the same way: <b>stopped</b>. Not slow. Stopped. '+
+      'I hold us on the line for three seconds before I give you the throttle, and I do it on '+
+      'purpose.</div>'+
+    '<div class="pgP">Look at the readout while we wait. It says <b>0.000</b>, and it is not '+
+      'being modest — nothing is moving. The walls don&rsquo;t scroll, the stars are points '+
+      'rather than streaks, and the engine is silent, because all of those are just the ship&rsquo;s '+
+      'speed wearing different clothes. There is no speed yet.</div>'+
+    '<div class="pgP">What you can hear is me, keeping time. One pulse a second, three of them. '+
+      'Use them. Settle the conduit where you want it — <b>steering works on the line</b>, and '+
+      'it is the only thing that does.</div>'+
+    '<table class="pgTable"><tr><th>Count</th><th>What I&rsquo;m doing</th></tr>'+
+      '<tr><td class="key">THREE</td><td>Holding. Nothing out there can reach you.</td></tr>'+
+      '<tr><td class="key">TWO</td><td>Still holding. Pick your line.</td></tr>'+
+      '<tr><td class="key">ONE</td><td>Spooling up. You&rsquo;ll hear it.</td></tr>'+
+      '<tr><td class="key">GO</td><td>Everything at once.</td></tr>'+
+    '</table>'+
+    '<div class="pgP">On <b>GO</b> the bed starts, the pace climbs to whatever this sector was '+
+      'asking for, and the stars draw out into streaks behind us. Then a few seconds of clear '+
+      'conduit before the first ring, so you get to watch us accelerate instead of surviving it.</div>'+
+    '<div class="pgNote">Pause on the line and we resume on the line — I don&rsquo;t take the '+
+      'seconds you didn&rsquo;t get. Same if I have to stop and explain a new mechanic before we '+
+      'go: the count picks up exactly where it was.</div>';
+}},
+
+{ group:'THE RUN', t:'Clearing a level', file:'14_clearing.txt', kb:'2.0', build:function(){
   return '<div class="pgKick">Objective</div><div class="pgH">Clearing a level</div>'+
     '<div class="pgLead">Hit the ring target and you&rsquo;re through. How well you flew decides '+
       'the stars.</div>'+
@@ -8369,7 +8676,7 @@ var MANUAL = [
       'I could just fade to a card. I&rsquo;d rather not.</div>';
 }},
 
-{ group:'THE RUN', t:'The slipstream', file:'14_slipstream.txt', kb:'1.8', build:function(){
+{ group:'THE RUN', t:'The slipstream', file:'15_slipstream.txt', kb:'1.8', build:function(){
   return '<div class="pgKick">Transit</div><div class="pgH">The slipstream</div>'+
     '<div class="pgLead">Every <b>' + JUMP_EVERY + ' rings</b> a small horizon opens at the '+
       'vanishing point. Everything still in flight goes into it, we go through, and a fresh set '+
@@ -8386,7 +8693,7 @@ var MANUAL = [
     '<div class="pgNote">Watch the velocity readout on the way through. I have never got tired of it.</div>';
 }},
 
-{ group:'THE RUN', t:'Inversion', file:'15_inversion.txt', kb:'2.4', build:function(){
+{ group:'THE RUN', t:'Inversion', file:'16_inversion.txt', kb:'2.4', build:function(){
   return '<div class="pgKick pink">Anomaly</div><div class="pgH">Inversion</div>'+
     '<div class="pgLead">A handful of levels contain a stretch where the whole thing turns over. '+
       'You pass a <b>solid red door</b>, and then:</div>'+
@@ -8412,7 +8719,7 @@ var MANUAL = [
       'Same price, opposite direction.</div>';
 }},
 
-{ group:'THE CAMPAIGN', t:'Sectors and length', file:'16_sectors.txt', kb:'1.9', build:function(){
+{ group:'THE CAMPAIGN', t:'Sectors and length', file:'17_sectors.txt', kb:'1.9', build:function(){
   return '<div class="pgKick">Chart</div><div class="pgH">Sectors and length</div>'+
     '<div class="pgLead"><b>246 levels</b>, and no two of them are the same level.</div>'+
     '<div class="pgP">They come in <b>sectors of ten</b>, and each sector is a system with its own '+
@@ -8429,7 +8736,7 @@ var MANUAL = [
       'on you.</div>';
 }},
 
-{ group:'THE CAMPAIGN', t:'The hazard schedule', file:'17_hazards.txt', kb:'2.6', build:function(){
+{ group:'THE CAMPAIGN', t:'The hazard schedule', file:'18_hazards.txt', kb:'2.6', build:function(){
   var BLURB = {
     spin:     'Some of them turn far quicker than the ones you&rsquo;ve been reading',
     fadein:   'Wedges arrive blank and colour up as they close',
@@ -8470,7 +8777,7 @@ var MANUAL = [
       'already lined up.</div>';
 }},
 
-{ group:'THE CAMPAIGN', t:'Hulls', file:'18_hulls.txt', kb:'2.3', build:function(){
+{ group:'THE CAMPAIGN', t:'Hulls', file:'19_hulls.txt', kb:'2.3', build:function(){
   var s = '<div class="pgKick">Hangar</div><div class="pgH">Hulls</div>'+
     '<div class="pgLead">Six of them, unlocked with total stars. They are side-grades, not '+
       'upgrades &mdash; every one of them gives something up.</div>'+
@@ -8486,7 +8793,7 @@ var MANUAL = [
       'the star count suggests.</div>';
 }},
 
-{ group:'THE CAMPAIGN', t:'Credits and the daily', file:'19_credits.txt', kb:'1.7', build:function(){
+{ group:'THE CAMPAIGN', t:'Credits and the daily', file:'20_credits.txt', kb:'1.7', build:function(){
   return '<div class="pgKick">Logistics</div><div class="pgH">Credits and the daily</div>'+
     '<div class="pgLead">You earn <b>one credit per point of signal</b> when you clear a level.</div>'+
     '<div class="pgP">Credits pay for continuing a run after a death, and they are what daily '+
@@ -8503,7 +8810,7 @@ var MANUAL = [
       'I announce them once when you finish them, not every run. You&rsquo;re welcome.</div>';
 }},
 
-{ group:'SHIP RECORDS', t:'How I teach you', file:'20_teaching.txt', kb:'1.6', build:function(){
+{ group:'SHIP RECORDS', t:'How I teach you', file:'21_teaching.txt', kb:'1.6', build:function(){
   return '<div class="pgKick">Protocol</div><div class="pgH">How I teach you</div>'+
     '<div class="pgLead">This conduit is mechanically heavy and it keeps getting heavier for two '+
       'hundred levels. So I introduce every mechanic <b>exactly once</b>, at the moment it first '+
@@ -8523,7 +8830,7 @@ var MANUAL = [
       'always here.</div>';
 }},
 
-{ group:'SHIP RECORDS', t:'Settings', file:'21_settings.txt', kb:'1.5', build:function(){
+{ group:'SHIP RECORDS', t:'Settings', file:'22_settings.txt', kb:'1.5', build:function(){
   return '<div class="pgKick">Configuration</div><div class="pgH">Settings</div>'+
     '<ul class="pgList">'+
       '<li><b>Sound effects</b> and <b>Music</b> &mdash; separate sliders, 0&ndash;100. Zero reads as off.</li>'+
@@ -8546,7 +8853,7 @@ var MANUAL = [
       'is triggered. It is simply always there, saying how fast we are going.</div>';
 }},
 
-{ group:'SHIP RECORDS', t:'The card', file:'22_card.txt', kb:'2.1', build:function(){
+{ group:'SHIP RECORDS', t:'The card', file:'23_card.txt', kb:'2.1', build:function(){
   return '<div class="pgKick">Transmission</div><div class="pgH">The card</div>'+
     '<div class="pgLead">Hit <b>Share</b> on any result and I&rsquo;ll render a three-second '+
       'animated replay of your run.</div>'+
@@ -8571,7 +8878,7 @@ var MANUAL = [
       'because somebody should.</div>';
 }},
 
-{ group:'SHIP RECORDS', t:'Your save', file:'23_save.txt', kb:'1.2', build:function(){
+{ group:'SHIP RECORDS', t:'Your save', file:'24_save.txt', kb:'1.2', build:function(){
   return '<div class="pgKick">Archive</div><div class="pgH">Your save</div>'+
     '<div class="pgLead">Everything lives in this browser, on this device. No account, no server, '+
       'no network of any kind. The entire ship is one file.</div>'+
@@ -9052,7 +9359,8 @@ function resumeGame(){
   chargeWrap.classList.add('show');     // hideAllScreens takes it away; a resume owes it back
   state = S_PLAY;
   slowmo = 0.5;
-  startMusic();
+  // a pause taken on the line resumes to the line, not to the bed
+  if(!cdHeld()) startMusic();
 }
 
 var prevHigh = store.high;
@@ -9231,8 +9539,7 @@ function beginDaily(){
   chargeWrap.classList.add('show');
   state = S_PLAY;
   showZones();                           // after hideAllScreens, which clears it
-  startMusic();
-  ambStart();
+  ambStart();                            // the bed waits for GO, same as a run
   toast('Daily conduit #' + dayNumber() + ' · one attempt');
 }
 
@@ -9301,7 +9608,9 @@ function beginRun(lv, resuming){
   chargeWrap.classList.add('show');
   state = S_PLAY;
   showZones();                           // after hideAllScreens, which clears it
-  startMusic();
+  /* The bed does NOT start here — launchRun() starts it, three seconds later,
+     on GO. Starting it here would put a techno track under a countdown whose
+     entire job is silence. */
   /* Built once and then it lives for the session — it is never triggered, only
      turned up and down, so there is nothing to restart. Started here because it
      needs the same user gesture the AudioContext does. */
@@ -9497,6 +9806,42 @@ syncToggles();
    UPDATE
    ============================================================ */
 function update(dt){
+  /* THE COUNTDOWN, before anything reads `speed`. While it is held the ship is
+     genuinely stopped — `speed` is zero, so `flow` below is zero and the whole
+     world stops with it: the walls, the bands, the rails, the streaks and the
+     spawner all take their motion from that one number. */
+  cdPaint();
+  /* Read off the timer, not off the branch below. A pause taken at TWO leaves
+     the timer where it is and stops ticking it — and if `held` were only true
+     on frames the branch ran, the ramp would quietly come up to full pace
+     behind the pause screen and the ship would already be flying when the
+     count resumed. */
+  var held = cdHeld();
+  if(state === S_PLAY && cdT > 0){
+    /* Wall clock, not `dt`. dt is clamped to 50ms so that a stalled frame can
+       never lurch the world forward — right for the world, wrong for a clock.
+       A run opens on the most expensive frames the engine ever draws: a level
+       generated, a pipeline seeded, every material compiled on its first draw.
+       Measured, three seconds of countdown spent in clamped frames took six
+       and a half, and the numbers held for 3.4s, 1.4s and 1.6s.
+
+       A gap over half a second is not jank, it is something that took the
+       screen — a pause, a primer, a backgrounded tab — and the count resumes
+       where it was rather than losing a beat to it. */
+    var cdNow = performance.now();
+    var cdGap = cdLast ? (cdNow - cdLast) / 1000 : 0;
+    cdLast = cdNow;
+    if(cdGap <= 0.5) cdT -= cdGap;
+    /* Repainted rather than left to next frame's cdPaint(), so GO! lands on
+       the same frame as the sound that goes with it. */
+    if(held && !cdHeld()){ launchRun(); cdPaint(); }
+    if(cdT <= 0){ cdT = 0; cdPaint(); zonesUp(); }
+  }
+  if(spdRamp < 1 && !held){
+    spdRamp += (1 - spdRamp) * Math.min(1, dt*CD_RAMP);
+    if(spdRamp > 0.999) spdRamp = 1;         // the pace has to actually arrive
+  }
+
   slowmo += (1-slowmo) * Math.min(1, dt*3.2);
   var flow = (state===S_PLAY ? speed
             : state===S_PAUSE ? 3
@@ -9596,7 +9941,8 @@ function update(dt){
   // metronome matched to the music tempo — everything visual pumps on the kick
   var bpm = 96 + diff()*54 + (over.on?18:0);
   var prevBeat = Math.floor(beatClock);
-  beatClock += dt * bpm/60 * (state===S_PLAY?1:0.55);
+  // no bed on the line, so nothing to pump to: the heartbeat drives the flare
+  beatClock += dt * bpm/60 * (held ? 0 : state===S_PLAY?1:0.55);
   if(Math.floor(beatClock) > prevBeat) beatPulse = 1;
   beatPulse *= Math.max(0, 1 - dt*6.5);
 
@@ -9659,7 +10005,9 @@ function update(dt){
     if(tutT <= 0) document.getElementById('tutHint').classList.remove('show');
   }
 
-  if(zoneT > 0){
+  // the side labels are not up yet while the count is, so they do not spend
+  // their time behind it either
+  if(zoneT > 0 && !cdBusy()){
     zoneT -= dt;
     if(zoneT <= 0) document.getElementById('zoneHint').classList.remove('show');
   }
@@ -9690,18 +10038,26 @@ function update(dt){
   }
 
   if(state === S_PLAY){
-    elapsed += dt;
-    // real seconds on this level, banked by flushLevelTime on every exit path
-    if(!dailyMode) lvSecs += dt;
+    /* The level's clock does not start until you do. Without this the seconds
+       on the ledger, the wander on the readout and the blackout wave would all
+       have been running for three seconds while the ship sat on the line. */
+    if(!held){
+      elapsed += dt;
+      // real seconds on this level, banked by flushLevelTime on every exit path
+      if(!dailyMode) lvSecs += dt;
+    }
     var d = diff();
     var pc = paceAt(d);
-    speed = pc.speed + (over.on?OVER_SPEED:0);
+    speed = (pc.speed + (over.on?OVER_SPEED:0)) * spdRamp;
     spawnGap = pc.gap;
 
     if(keys['ArrowLeft']||keys['KeyA']) worldRotTarget -= STEER_RATE*dt*abNum('steer',1)*steerSign();
     if(keys['ArrowRight']||keys['KeyD']) worldRotTarget += STEER_RATE*dt*abNum('steer',1)*steerSign();
 
-    if(plan.mods.drift){
+    /* Steering stays live on the line — settling the conduit where you want it
+       is the one thing worth doing with three free seconds. Drift does not: a
+       hazard that turns the world for you is the opposite of a held breath. */
+    if(plan.mods.drift && !held){
       drift += dt * 0.55;
       worldRotTarget += Math.sin(drift) * 26 * dt;
     }
@@ -9862,6 +10218,44 @@ function update(dt){
      that opens at the vanishing point. The ship shrinks by perspective alone;
      nothing here fakes distance.
      ============================================================ */
+  /* ============================================================
+     THE ARRIVAL. The studio card does not fade — it falls into the same event
+     horizon the end of a level flies into. Literally the same one: this drives
+     `bhole` and `holeAmt`, so the disc, the accretion shader and the lensing
+     in the composite are the ones the game already has, not a boot-time
+     imitation of them. The card's own layer spirals in to meet it from the
+     DOM side, and the menu lands as the horizon closes.
+
+     It runs outside every state check because at this point the game is in
+     S_MENU and has been since before the first frame. The idle throttle in
+     loop() steps aside for it too — thirty-two frames a second is fine for
+     scenery and is not fine for this.
+     ============================================================ */
+  if(bootHoleAt){
+    /* Wall clock, for the same reason the countdown is, and with more riding
+       on it: the card falling into this is a CSS animation, and CSS runs on
+       wall clock no matter how the frames are going. Stepped by a `dt` that
+       clamps at 50ms the horizon ran at about 60% speed on a slow device —
+       the mark finished its spiral into a hole that was still opening. */
+    var bt = Math.min(1, (performance.now() - bootHoleAt) / (BOOT_HOLE*1000));
+    /* Opens faster than it closes: the pow() front-loads the sine so it is
+       wide open while the mark is still falling, and has the back half of the
+       sequence to collapse under the menu. */
+    var bo = Math.sin(Math.pow(bt, 0.68) * Math.PI);
+    bhole.visible = true;
+    var bgrow = 0.5 + bo*3.4;
+    bhole.scale.set(bgrow, bgrow, 1);
+    bholeDisc.material.opacity = Math.min(1, bo*1.7);
+    bholeRing.material.opacity = bo*0.95;
+    bholeRing.rotation.z += dt*2.1;
+    bholeRing.material.color.setHex(PAL[colorIdx].hex);
+    bholeDisk.rotation.z -= dt*1.25;      // the mark spirals the same way
+    accretionMat.uniforms.uCol.value.setHex(PAL[colorIdx].hex);
+    accretionMat.uniforms.uAmt.value = bo;
+    holeAmt = bo;
+    if(bt >= 1){ bootHoleAt = 0; hideHole(); }
+  }
+
   var clearPull = 0;
   if(state === S_CLEAR){
     clearT += dt;
@@ -10087,7 +10481,9 @@ function loop(now){
   /* `last` has already advanced, so a skipped frame loses no time — it is
      banked and handed to update() whole on the frame that does run. */
   var lit = canvasLit || now < canvasFadeEnd;
-  if(state !== S_PLAY && !teachHold && (!lit || IDLE_STATES[state])){
+  /* The arrival is scenery by state and is not scenery by eye, so it takes the
+     full frame rate the way a run does. It is under two seconds, once. */
+  if(state !== S_PLAY && !teachHold && !bootHoleAt && (!lit || IDLE_STATES[state])){
     idleAcc += raw;
     if(idleAcc < (lit ? IDLE_STEP : DARK_STEP)) return;
     raw = idleAcc; idleAcc = 0;
@@ -10125,12 +10521,24 @@ function loop(now){
     window.__bootOK = true;      // past here, an error is not a failed boot
     if(window.__ndsReady && !window.__ndsDone){
       bootHold = true;
-      window.__ndsGone = function(){ bootHold = false; last = performance.now(); };
+      /* `warp` is the card telling us it is spiralling out rather than fading,
+         which it decides because it is the layer that knows whether the player
+         asked for reduced motion. Opening a horizon under a card that is going
+         to cross-fade would just be a bright smudge behind it. */
+      window.__ndsGone = function(warp){
+        bootHold = false; last = performance.now();
+        if(warp) bootHoleAt = performance.now();
+      };
       window.__ndsReady();
     }
   }
 }
 var firstFrameDone = false, bootHold = false;
+/* performance.now() at the start of the studio card's fall, 0 when no fall is
+   running. Long enough to open wide, swallow the mark and close under the
+   menu — and it has to stay in step with the CSS on the card, so it is timed
+   the way CSS is. */
+var bootHoleAt = 0, BOOT_HOLE = 1.9;
 /* Tabbing away must never cost a run. */
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){
