@@ -101,9 +101,19 @@
   .ic.cyan{color:var(--signal);} .ic.amber{color:var(--ember);} .ic.gold{color:var(--gold);}
   .ic.lime{color:var(--charge);} .ic.pink{color:var(--flare);}
   .iconBtn{
+    position:relative;
     width:46px;height:46px;flex:0 0 auto;border-radius:16px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;color:#b9d2ee;
     background:rgba(255,255,255,.05);border:1px solid rgba(190,225,255,.14);
+  }
+  /* ANDROID'S 48dp FLOOR, WITHOUT GROWING ANYTHING.
+     These are 46px, and the header variants shrink to 42 and 40 on narrow
+     screens — all three under the minimum touch target, and the smallest of
+     them lives on the level map where a mis-tap costs you a screen. The box
+     stays the size the layout wants; an invisible child takes the hit. */
+  .iconBtn::after{
+    content:'';position:absolute;left:50%;top:50%;
+    width:48px;height:48px;transform:translate(-50%,-50%);
   }
   .iconBtn svg{width:23px;height:23px;}
   .iconBtn:active{transform:scale(.94);}
@@ -2316,7 +2326,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.1 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.2 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -3379,7 +3389,38 @@ function buzz(p){ try{ if(store.haptics && !store.muted && navigator.vibrate && 
    ============================================================ */
 var wrap = document.getElementById('wrap');
 var renderer = new THREE.WebGLRenderer({antialias:false, alpha:false, powerPreference:'high-performance'});
-var DPR = Math.min(window.devicePixelRatio||1, 2);
+/* ============================================================
+   RESOLUTION IS THE WHOLE PERFORMANCE STORY ON ANDROID.
+
+   Nine passes — scene, bright, four blurs, streak, trail, composite — and
+   every one of them is fill-rate. The blurs are already at a quarter and the
+   trail at a half, so what is left is the scene pass and the composite, and
+   both scale with the pixel ratio. Measured on a throttled mid-range profile
+   at 360x800 CSS:
+
+       ratio 2.00   720x1600 = 1.15 Mpx    3.7 fps
+       ratio 1.50   540x1200 = 0.65 Mpx    9.3 fps
+       ratio 1.25   450x1000 = 0.45 Mpx   16.7 fps
+       ratio 1.00   360x 800 = 0.29 Mpx   20.3 fps
+
+   Five and a half times the frame rate for a change almost nobody can see on
+   a phone held at arm's length, under bloom and grain. Android device
+   variance is enormous and it is exactly what adaptive resolution is for, so
+   the game now measures and settles rather than being told.
+
+   It starts at 1.5 and moves BOTH ways: a weak phone never has to show a bad
+   frame before being rescued, and a flagship climbs to full within a couple
+   of seconds. Dropping the effects entirely is kept, but as the floor rather
+   than the first move — losing resolution is far less of a loss than losing
+   the whole look. */
+var PR_CAP  = Math.min(window.devicePixelRatio || 1, 2);
+var PR_TIER = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0].filter(function(x){ return x <= PR_CAP; });
+if(!PR_TIER.length) PR_TIER = [PR_CAP];
+/* Start one tier below 1.5 where the device allows it. The first seconds of a
+   run are the ones a player judges the game on, and they are also the ones
+   the sampler has no data for yet. */
+var prIdx = Math.max(0, PR_TIER.indexOf(1.5) >= 0 ? PR_TIER.indexOf(1.5) : PR_TIER.length - 1);
+var DPR = PR_TIER[prIdx];
 renderer.setPixelRatio(DPR);
 renderer.setClearColor(0x040a1a, 1);
 renderer.domElement.id = 'canvasHost';
@@ -6449,6 +6490,50 @@ window.addEventListener('keydown', function(e){
   keys[e.code]=true;
 });
 window.addEventListener('keyup', function(e){ keys[e.code]=false; });
+
+/* ============================================================
+   THE ANDROID BACK GESTURE.
+
+   Nothing handled it, which on Android means the system back swipe closed the
+   game — from the level map, from the manual, from the middle of level two
+   hundred. On a phone that gesture is not "quit", it is "up one level", and
+   it is used constantly and by reflex.
+
+   The hierarchy is the one Escape already walks, because a device with a
+   keyboard and a device with a back gesture should not disagree about what
+   "back" means. This is the single definition; the key handler above is the
+   other caller of it.
+
+   The mechanic is the standard one: keep a spare history entry pushed at all
+   times, and when it pops, consume it and push another. Back only ever
+   escapes the app from the main menu, which is where a player expects it to.
+   ============================================================ */
+function goBack(){
+  if(state === S_ARRIVE) return true;      // nobody backs out of the ending
+  if(state === S_MANUAL){ if(manDoc >= 0) showDir(); else closeManual(); return true; }
+  if(state === S_PLAY){ pauseGame(); return true; }
+  /* Pause goes OUT, not back into the run. Back walks up the stack on Android
+     and the run sits above the menu, so resuming here would make the gesture
+     a toggle you can never escape — measured exactly that: play, pause, play,
+     pause, with no way to reach the menu. Two deliberate gestures to abandon a
+     level is enough of a guard, and the first one already showed you a screen
+     with Resume on it. */
+  if(state === S_PAUSE){ tunnelVisible(true); showMenu(); return true; }
+  var open = function(id){ var e = document.getElementById(id);
+                           return e && !e.classList.contains('hidden'); };
+  if(open('settingsScreen')){ closeSettings(); return true; }
+  if(open('homeScreen') || open('sectorScreen') || open('hangarScreen') ||
+     open('startScreen') || open('dailyScreen') || open('levelScreen') ||
+     open('gameOverScreen')){
+    tunnelVisible(true); showMenu(); return true;
+  }
+  return false;                             // the menu: let the system have it
+}
+/* Re-armed after every pop, so the next gesture comes here too. Wrapped
+   because a file:// page in some WebViews throws on pushState. */
+function armBack(){ try{ history.pushState({rs:1}, ''); }catch(e){} }
+window.addEventListener('popstate', function(){ if(goBack()) armBack(); });
+armBack();
 
 /* ============================================================
    UI PLUMBING
@@ -11560,16 +11645,46 @@ var last = performance.now();
    rate we drop the bloom/trail chain automatically rather than making the
    player find a settings toggle. Says so out loud, and the FX button re-arms it. */
 var fpsFrames=0, fpsClock=0, fpsChecked=false;
+/* Re-point the renderer at a new pixel ratio and rebuild every target behind
+   it. Not cheap — five allocations and five frees — so it is rate limited by
+   the cooldown in watchPerf and only ever moves one tier at a time. */
+function applyPixelRatio(i){
+  i = Math.max(0, Math.min(PR_TIER.length - 1, i));
+  if(i === prIdx) return false;
+  prIdx = i; DPR = PR_TIER[i];
+  renderer.setPixelRatio(DPR);
+  W = 0;                       // force resize() past its no-op guard
+  resize();
+  return true;
+}
+
+/* THE SAMPLER. One second of frames at a time, and it only listens during a
+   run: the menu is throttled to 32fps on purpose and would read as a device
+   in trouble. Down fast, up slow — a phone that is struggling should be
+   rescued within a second, and one that is coping should not be poked every
+   time it has a good second. */
+var PR_DOWN = 46, PR_UP = 57, PR_COOL_DOWN = 1.1, PR_COOL_UP = 3.0;
+var prCool = 0;
 function watchPerf(dt){
-  if(fpsChecked || state!==S_PLAY || !store.fx) return;
+  if(state !== S_PLAY){ fpsFrames = 0; fpsClock = 0; return; }
+  if(prCool > 0) prCool -= dt;
   fpsFrames++; fpsClock += dt;
-  if(fpsClock >= 4){
-    if(fpsFrames/fpsClock < 38){
-      perfOK = false;
+  if(fpsClock < 1) return;
+  var fps = fpsFrames / fpsClock;
+  fpsFrames = 0; fpsClock = 0;
+  if(prCool > 0) return;
+
+  if(fps < PR_DOWN){
+    if(applyPixelRatio(prIdx - 1)){ prCool = PR_COOL_DOWN; return; }
+    /* Already at the smallest buffer we are willing to draw. The chain is the
+       only thing left to give up, and it is given up once. */
+    if(store.fx && perfOK && !fpsChecked){
+      perfOK = false; fpsChecked = true;
       syncToggles();          // takes the grain layer down with the shader chain
       toast('Effects dimmed to keep the frame rate — tap ✦ to force them back');
     }
-    fpsChecked = true;
+  } else if(fps > PR_UP && applyPixelRatio(prIdx + 1)){
+    prCool = PR_COOL_UP;
   }
 }
 
