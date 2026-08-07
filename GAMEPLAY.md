@@ -328,6 +328,83 @@ going.
 
 ---
 
+## 14a. The journey — why any of this is happening
+
+You are coming home from Andromeda.
+
+Fly the whole campaign and the ship covers about **seven astronomical units** —
+Sun to just past Jupiter. Two hundred and forty-six worlds do not fit in seven
+AU, and that contradiction is the story: **you are not flying the distance.**
+You are flying the corridors between the horizons, and every horizon puts you
+somewhere you could never have flown to. There are 1,233 of them in a
+campaign — 987 slipstreams and 246 send-offs — and they carry two and a half
+million light years between them.
+
+The velocity readout is the proof, and it was telling the truth before there
+was a story. It tops out at 0.999 and can never say more, because a
+displacement is not a velocity. The instrument measures your motion through
+the conduit; the jump is not motion through anything. Your own ship cannot
+measure what is happening to it.
+
+### The counter
+
+A real number, on the map, on the menu tile and on every level-clear card:
+**how far is left**. It starts at 2,537,000 light years and it only ever goes
+one way. Every figure on the route is a real distance to a real place, in the
+order you would meet them coming home:
+
+| | | |
+|---|---|---|
+| Sector 1 | Andromeda, outer arm | 2,537,000 ly |
+| Sector 11 | The Sagittarius Stream | 300,000 ly |
+| Sector 14 | The galactic halo | 92,000 ly |
+| Sector 16 | The Perseus Arm | 6,400 ly |
+| Sector 20 | The Pleiades | 444 ly |
+| Sector 24 | Alpha Centauri | 4.37 ly |
+| Sector 25 | The Solar System | 120 AU |
+
+The unit changes to AU in the last sector, because nobody says "0.0019 light
+years" — and the switch itself tells you that you are nearly there. Level 246
+begins two AU out. That last leg is the only part of the whole journey you
+actually fly.
+
+### ECHO
+
+The log is written by the ship. ECHO is an Earth-built mind that has been out
+here far longer than you have, and it has been the only voice on the channel
+for a very long time — so it opens clipped and procedural, keeping the log
+because keeping the log is the job, and it thaws as the number falls. One
+entry a sector, given to you at the crossing and kept in **the ship's log** in
+the console, which is the only file in the manual that is not finished. The
+sectors ahead of you are listed and not recovered.
+
+By the last sector it is not hiding anything, and the arrival is its
+homecoming as much as yours.
+
+---
+
+## 14b. Coming home
+
+The last horizon does not cut to a card.
+
+Two hundred and forty-five times, clearing a level has meant flying into a
+horizon and landing on a score screen. Level 246 goes in and then comes **out**
+— black for a beat, then the sky, then our star off the port bow, and then
+Earth, dead ahead and full in the frame. Terminator, weather, and the dark
+side lit up with cities.
+
+It is the real planet. Everything else in this game is generated — the
+conduit, the rings, the hulls, the worlds on the chart are all noise and
+mathematics — but continents are data, not a pattern, and the whole point of
+the last shot is that you recognise it without being told. So the coastline
+is the real coastline.
+
+Nothing is interactive until ECHO has finished. There is no score on screen,
+and there is no card until you ask for one, because a number is the wrong
+thing to put in front of somebody at the exact moment they arrive.
+
+---
+
 ## 15. The campaign
 
 **246 levels**, and no two of them are the same level.
@@ -695,7 +772,9 @@ single file.
 
 Saved: your level, best level, stars per level, best score, best chain, credits,
 chosen ship, every setting, which briefings you have seen, the daily's state and
-streak, and the lifetime ledger per level.
+streak, and the lifetime ledger per level. Also how far ECHO has written and
+whether you have crossed the last horizon — the two things the journey needs
+to remember.
 
 A corrupted or hand-edited save cannot break the game — it is checked and
 repaired on load. At worst you lose progress; you never lose the game.

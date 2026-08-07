@@ -325,6 +325,30 @@
     text-transform:uppercase;color:var(--signal-hi);
     text-shadow:0 0 18px rgba(35,230,217,.6);
   }
+  /* HOW FAR IS LEFT. The spine of the campaign, and the only number on this
+     screen that is about the journey rather than about the player. Given the
+     signal colour and a horizon glyph so it reads as an instrument, not a
+     score — and the figure is tabular because it is going to be watched. */
+  .homePill{
+    margin:13px auto 0;width:max-content;max-width:94%;height:34px;padding:0 15px;
+    display:flex;align-items:center;gap:8px;border-radius:var(--r-pill);
+    background:linear-gradient(180deg,rgba(35,230,217,.13),rgba(35,230,217,.05));
+    border:1px solid rgba(35,230,217,.30);
+    box-shadow:0 0 26px -12px rgba(35,230,217,.9);
+  }
+  .homePill svg{width:15px;height:15px;color:var(--signal);flex:0 0 auto;}
+  .homePill b{
+    font-size:14px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+  }
+  .homePill span{
+    font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--dim);
+  }
+  @media (max-width:360px){
+    .homePill{height:30px;padding:0 12px;gap:6px;}
+    .homePill b{font-size:12.5px;}
+  }
   .progPill{
     margin:12px auto 0;width:max-content;max-width:92%;height:30px;padding:0 16px;
     display:flex;align-items:center;border-radius:var(--r-pill);
@@ -612,6 +636,18 @@
   }
   .pgSub::before{content:'> ';}
   .pgRule{height:1px;margin:18px 0 0;background:linear-gradient(90deg,rgba(35,230,217,.35),transparent);}
+  /* The log's per-sector heading: index, place, distance, on one console row. */
+  .logHead{
+    display:flex;align-items:baseline;gap:9px;margin:14px 0 4px;
+    font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--signal-hi);
+  }
+  .logHead b{color:#5fa89e;font-weight:700;}
+  .logHead span{
+    margin-left:auto;font-size:10.5px;letter-spacing:.06em;color:#4d8f86;
+    font-variant-numeric:tabular-nums;text-transform:none;
+  }
+  .logGone{color:#3d6b66;font-style:italic;}
   .pgList{margin:10px 0 0;padding:0;list-style:none;}
   .pgList li{
     position:relative;padding:0 0 0 18px;margin-top:9px;
@@ -1063,6 +1099,24 @@
     box-shadow:0 0 34px -6px rgba(255,211,77,.8);}
   #causeLine{margin-top:12px;font-size:13px;font-weight:600;color:var(--dim);}
   .starWhy{margin-top:12px;font-size:13px;font-weight:700;color:var(--gold);}
+  /* THE CLOSER. Score, stars and chain all reset the moment you start again;
+     this is the one figure on the card that only ever goes one way, so it is
+     given its own rule above and below and left alone. */
+  .closer{
+    margin-top:18px;padding:12px 8px;
+    border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);
+    display:flex;align-items:baseline;justify-content:center;gap:9px;flex-wrap:wrap;
+  }
+  .closer .cl{
+    font-size:9.5px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--dim-2);
+  }
+  .closer b{
+    font-size:19px;font-weight:800;letter-spacing:-.01em;color:var(--signal-hi);
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+    text-shadow:0 0 20px rgba(35,230,217,.45);
+  }
+  .closer .cd{font-size:11px;font-weight:700;color:var(--charge);}
   .nextUp{margin-top:16px;padding:13px;border-radius:var(--r-chip);
     background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--hair-2);
     font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);}
@@ -1144,6 +1198,172 @@
     background:linear-gradient(270deg,rgba(255,62,127,.07),transparent 72%);}
   #zoneHint .zhSplit{width:1px;align-self:stretch;margin:16vh 0;
     background:linear-gradient(180deg,transparent,var(--hair),transparent);}
+  /* ============ SECTOR CROSSED ============
+     A chapter break, so it is allowed to be a page rather than a panel: the
+     name of the place large, the distance closing under it, and ECHO's entry
+     set as prose rather than as UI. Nothing here is a score. */
+  #sectorScreen{
+    background:
+      radial-gradient(120% 58% at 50% 10%,rgba(35,230,217,.11),transparent 62%),
+      linear-gradient(180deg,#040814,#02040c);
+    align-items:center;justify-content:center;overflow-y:auto;
+  }
+  .secWrap{width:min(420px,90%);margin:auto;padding:32px 0;text-align:center;}
+  .secKick{
+    font-size:9.5px;font-weight:800;letter-spacing:.44em;text-transform:uppercase;
+    color:var(--dim-2);
+  }
+  .secName{
+    margin-top:14px;font-size:clamp(25px,7.4vw,36px);font-weight:900;line-height:1.1;
+    letter-spacing:.05em;color:var(--signal-hi);
+    text-shadow:0 0 34px rgba(92,255,242,.42);
+  }
+  .secSub{
+    margin-top:7px;font-size:10px;font-weight:800;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--dim-2);
+  }
+  .secRule{
+    margin:20px auto;width:min(54%,200px);height:1px;
+    background:linear-gradient(90deg,transparent,var(--hair),transparent);
+  }
+  .secDist{
+    display:flex;align-items:center;justify-content:center;gap:11px;flex-wrap:wrap;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+  }
+  .secDist span{font-size:14px;font-weight:700;color:var(--dim-2);text-decoration:line-through;}
+  .secDist svg{width:26px;height:10px;color:var(--dim-2);flex:0 0 auto;}
+  .secDist b{font-size:21px;font-weight:800;color:var(--ink);}
+  .secDistLab{
+    margin-top:6px;font-size:9.5px;font-weight:800;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--dim-2);
+  }
+  .secLog{
+    margin:26px auto 0;max-width:370px;text-align:left;
+    font-size:14px;line-height:1.7;font-weight:500;color:#cfe0f4;
+  }
+  .secLog p{margin:0 0 13px;}
+  .secLog p:last-child{margin-bottom:0;}
+  .secSig{
+    margin:16px auto 26px;max-width:370px;text-align:left;
+    font-size:10px;font-weight:800;letter-spacing:.28em;color:var(--signal);
+  }
+
+  /* ============ THE LOGBOOK ============
+     The receipt, not the reward. Quiet, wide-tracked, and the only number
+     given any size is the one that took two hundred and forty-six levels. */
+  #homeScreen{
+    background:
+      radial-gradient(120% 60% at 50% 14%,rgba(35,230,217,.13),transparent 62%),
+      radial-gradient(120% 50% at 50% 100%,rgba(60,140,255,.10),transparent 60%),
+      linear-gradient(180deg,#030710,#02040c);
+    align-items:center;justify-content:center;overflow-y:auto;
+  }
+  .homeWrap{
+    width:min(430px,92%);margin:auto;padding:34px 0;text-align:center;
+  }
+  .homeKick{
+    font-size:9.5px;font-weight:800;letter-spacing:.44em;text-transform:uppercase;
+    color:var(--dim-2);
+  }
+  .homeTitle{
+    margin-top:12px;font-size:clamp(52px,17vw,84px);font-weight:900;line-height:1;
+    letter-spacing:.16em;text-indent:.16em;color:var(--signal-hi);
+    text-shadow:0 0 50px rgba(92,255,242,.55),0 0 120px rgba(35,230,217,.28);
+  }
+  .homeRule{
+    margin:22px auto;width:min(58%,220px);height:1px;
+    background:linear-gradient(90deg,transparent,var(--hair),transparent);
+  }
+  .homeGrid{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;}
+  .homeGrid b{
+    display:block;font-size:26px;font-weight:800;color:var(--ink);
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+  }
+  .homeGrid span{
+    display:block;margin-top:4px;font-size:9.5px;font-weight:800;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--dim-2);
+  }
+  .homeBig{margin-top:28px;}
+  .homeBig b{
+    display:block;font-size:clamp(30px,10vw,44px);font-weight:800;line-height:1;
+    letter-spacing:-.02em;color:var(--signal);
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+    text-shadow:0 0 34px rgba(35,230,217,.45);
+  }
+  .homeBig span{
+    display:block;margin-top:9px;font-size:11px;font-weight:700;letter-spacing:.1em;
+    color:var(--dim);
+  }
+  .homeEcho{
+    margin:28px auto 26px;max-width:360px;font-size:13.5px;line-height:1.66;
+    font-weight:500;color:#c3d6ee;font-style:italic;
+  }
+
+  /* ============ THE ARRIVAL ============
+     Everything here is subordinate to the planet behind it. No panel, no
+     glass, no border — type on black, low in the frame, weighted so the eye
+     reads Earth first and the words second. The one thing that gets any
+     emphasis is the zero. */
+  #arrival{
+    position:absolute;top:0;right:0;bottom:0;left:0;z-index:24;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+    padding:0 26px calc(env(safe-area-inset-bottom) + 42px);
+    pointer-events:none;opacity:0;transition:opacity 1.2s ease;
+    background:linear-gradient(180deg,transparent 52%,rgba(2,4,10,.72) 100%);
+  }
+  #arrival.show{opacity:1;}
+  #arrHome{
+    position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 26px);
+    text-align:center;
+  }
+  #arrHome span{
+    display:block;font-size:9.5px;font-weight:800;letter-spacing:.42em;
+    text-transform:uppercase;color:var(--dim-2);
+  }
+  #arrHome b{
+    display:block;margin-top:7px;font-size:44px;font-weight:200;line-height:1;
+    color:var(--ink);text-shadow:0 0 40px rgba(140,200,255,.55);
+  }
+  #arrLog{width:min(560px,100%);text-align:center;}
+  #arrLog p{
+    margin:0 0 15px;font-size:15px;font-weight:500;line-height:1.62;
+    color:#dbe9fb;text-shadow:0 2px 22px rgba(0,0,0,.95);
+    opacity:0;transform:translateY(9px);
+    transition:opacity 1.5s ease, transform 1.5s cubic-bezier(.2,.9,.3,1);
+  }
+  #arrLog p.on{opacity:1;transform:none;}
+  /* The last line is ECHO stepping back, so it is given the space to be one. */
+  #arrLog p#arrLine2{color:var(--signal-hi);font-weight:600;}
+  #arrGo{
+    margin-top:16px;min-width:190px;opacity:0;pointer-events:none;
+    transition:opacity 1.4s ease;
+  }
+  #arrival.ready #arrGo{opacity:1;pointer-events:auto;}
+  @media (max-width:360px){
+    #arrHome b{font-size:36px;}
+    #arrLog p{font-size:13.5px;margin-bottom:12px;}
+  }
+  /* A phone on its side. The planet has moved to the left third (arrivalFit
+     does that half), so the words take a column of their own on the right
+     instead of being written across an ocean. */
+  @media (orientation:landscape) and (max-height:620px){
+    #arrival{
+      align-items:flex-end;justify-content:center;
+      padding:0 max(22px,env(safe-area-inset-right)) 0 0;
+      background:linear-gradient(90deg,transparent 34%,rgba(2,4,10,.78) 86%);
+    }
+    #arrHome{position:static;text-align:right;margin-bottom:18px;}
+    #arrHome b{font-size:34px;}
+    #arrLog{width:min(54%,470px);text-align:right;}
+    #arrLog p{font-size:13.5px;margin-bottom:11px;}
+    /* .btn is full width by default, which here means a button laid across
+       the Atlantic. */
+    #arrGo{align-self:flex-end;margin-top:10px;width:auto;min-width:180px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    #arrLog p{transition:opacity .4s linear;transform:none;}
+  }
+
   /* ============ THE COUNTDOWN ============
      Centred on the vanishing point, because that is where the ship is going
      and where the eye already is. Everything here is transform and opacity so
@@ -1711,6 +1931,68 @@
     <div class="zhSplit"></div>
     <div class="zh zhR"><b id="zhRight">Pulse</b><span>tap</span></div>
   </div>
+  <!-- THE ARRIVAL. Sits over the planet and stays out of its way: no card, no
+       panel, no score. Three lines from ECHO at the bottom of the frame and
+       then one button, and the summary is behind that for whoever wants it. -->
+  <div id="arrival" aria-live="polite">
+    <div id="arrHome">
+      <span>Distance to Earth</span><b>0</b>
+    </div>
+    <div id="arrLog">
+      <p id="arrLine0"></p>
+      <p id="arrLine1"></p>
+      <p id="arrLine2"></p>
+    </div>
+    <button class="btn line" id="arrGo">Continue</button>
+  </div>
+  <!-- SECTOR CROSSED. Every tenth level closes a sector, and that is the
+       chapter break: where you have arrived, what it cost to get here, and
+       what ECHO wrote about it. Shown once, when it is earned. -->
+  <div id="sectorScreen" class="overlay screen hidden">
+    <div class="secWrap">
+      <div class="secKick">Sector crossed</div>
+      <div class="secName" id="secName">ANDROMEDA</div>
+      <div class="secSub" id="secSub">OUTER ARM</div>
+      <div class="secRule"></div>
+      <div class="secDist">
+        <span id="secFrom">2,537,000 ly</span>
+        <svg viewBox="0 0 34 12" fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M1 6h30M26 1.5L31.5 6 26 10.5"/>
+        </svg>
+        <b id="secTo">2,410,000 ly</b>
+      </div>
+      <div class="secDistLab">to Earth</div>
+      <div class="secLog" id="secLog"></div>
+      <div class="secSig">— ECHO</div>
+      <button class="btn primary" id="secGo">Continue</button>
+    </div>
+  </div>
+  <!-- Behind the Continue button, for whoever wants the numbers. Deliberately
+       not the first thing they see: the arrival is the reward, this is the
+       receipt. -->
+  <div id="homeScreen" class="overlay screen hidden">
+    <div class="homeWrap">
+      <div class="homeKick">Transit complete</div>
+      <div class="homeTitle">HOME</div>
+      <div class="homeRule"></div>
+      <div class="homeGrid">
+        <div><b id="homeWorlds">246</b><span>Worlds</span></div>
+        <div><b id="homeStars">0</b><span>Stars</span></div>
+        <div><b id="homeBest">0</b><span>Best signal</span></div>
+      </div>
+      <div class="homeBig">
+        <b id="homeDist">2,537,000</b><span>light years, Andromeda to Earth</span>
+      </div>
+      <div class="homeEcho" id="homeEcho"></div>
+      <button class="btn primary" id="homeMenuBtn">Main menu</button>
+      <button class="btn line" id="homeShare">
+        <svg class="bIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="M8.3 10.7l7.4-3.9M8.3 13.3l7.4 3.9"/></svg>
+        <span class="gradText">Share the journey</span>
+      </button>
+    </div>
+  </div>
   <div id="countdown" aria-live="polite">
     <div id="countRing"></div>
     <div id="countNum">3</div>
@@ -1829,9 +2111,9 @@
             <circle cx="16" cy="16" r="2.4" fill="#0a1424"/>
             <circle cx="5" cy="25.6" r="3" fill="#0a1424"/>
           </svg>
-          <em>Level map</em>
+          <em id="menuMapWhere">Andromeda</em>
           <b id="menuMapLv">LV 1</b>
-          <span class="sub" id="menuMapSub">246 worlds</span>
+          <span class="sub" id="menuMapSub">2,537,000 ly to Earth</span>
         </button>
       </div>
     </div>
@@ -1861,6 +2143,14 @@
         </button>
       </div>
       <div class="mapTitle" id="mapSector">Level map &middot; Ringshift</div>
+      <div class="homePill" id="mapHome">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.4"/>
+          <path d="M3.6 12h16.8M12 3.6a13 13 0 0 1 0 16.8M12 3.6a13 13 0 0 0 0 16.8"/>
+        </svg>
+        <b id="mapHomeLy">2,537,000 ly</b><span>to Earth</span>
+      </div>
       <div class="progPill" id="mapProgress">Progress 0% &middot; 0 cleared</div>
     </div>
 
@@ -2008,7 +2298,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 3.4 &middot; three, two, one</div>
+      <div class="setVer">Ringshift &middot; version 4.0 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -2115,6 +2405,13 @@
         </div>
       </div>
       <div class="starWhy" id="starWhy"></div>
+      <!-- The one line on this card that is not about the run. It is about
+           the journey, and it is the only number here that never resets. -->
+      <div class="closer" id="clearCloser">
+        <span class="cl">Earth</span>
+        <b id="clearHomeLy">2,537,000 ly</b>
+        <span class="cd" id="clearHomeDelta"></span>
+      </div>
       <div class="nextUp" id="nextUp"></div>
       <button class="btn primary" id="nextBtn">Continue</button>
       <button class="btn line" id="shareClear">
@@ -2271,6 +2568,11 @@ function freshStore(){
   return {high:0, bestCombo:0, runs:0, streak:0, last:null, muted:false,
           level:1, bestLevel:1, lives:5, lifeTs:Date.now(), stars:{},
           credits:0, tutSeen:false, skin:'dart', daily:null, pts:{}, taught:{},
+          /* How far ECHO has written, as a sector index, and whether the last
+             horizon has been crossed. `logs` is a high water mark rather than
+             a set: the route is walked in order, and replaying level 30 does
+             not un-read sector two. */
+          logs:0, arrived:false,
           /* Per level, for life: plays, clears, the play number the first clear
              landed on, and total milliseconds spent in it. Keyed by level, four
              short fields, so a full 250-level campaign is a couple of KB. */
@@ -3489,6 +3791,182 @@ function hideHole(){
   u_jumpPull = 0;
 }
 
+/* ============================================================
+   EARTH.
+
+   The one thing in this game that is not procedural, and it cannot be. Every
+   other object here is generated — the conduit, the rings, the hulls, the
+   worlds on the chart are all noise and maths. Continents are not a pattern,
+   they are data: noise gives you A planet and never THAT one, and the whole
+   point of the last shot is that the player recognises it without being told.
+
+   So the coastline is real. It is GSHHS, rasterised to an equirectangular
+   day map and carried as 45KB of JPEG, with a separate 5KB one-bit land mask
+   for the two things the colour map cannot tell the shader — where the cities
+   go on the night side, and where the sun is allowed to glint off water.
+   Fifty kilobytes on a megabyte, for the last thing anybody sees.
+   ============================================================ */
+var EARTH_R = 12;
+var earthTexReady = false, earth = null, earthMat = null, arrGroup = null;
+var EARTH_DAY_URI  = 'data:image/jpeg;base64,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';
+var EARTH_MASK_B64 = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//hj///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////////4AAAAAAAAAAAAOAAAAAAAAAAAAAAAAAAAD//wf////8AAAP/AAAAAAAAeAAAAAAAAAAAAAAAAAIARP8f/////gAAAOQAAAAAAAADgAAAAAAAAAAAAAAA8AEl/Af/////AAAAAAAAAAQAAAP8AAAAAAAAAAAAAAAfwS/4AAf///8AAAAAAAADwAAH//4AAOAAAAAAAAAAA+ABOZAAA////gAAAAAAAAYAAB///gAAAAAAAAAAAAAH/+Oz/4AB///8AAAAAAAAHAHH/////8A8AAAAAAMAAAA/8HH/8AH///wAAAAAAAAMA//////////OAAAAP//h/x/4+HH8Af//+AAAAB/4AABz3//////////18wD/////+3jecf4A//+AAAAAf//Ef//f////////////8H/////////wP8D//AAAAAD//+f///////////////zx/////////8B8gP/AA/AAAf3+P////////////////AAf///////+cD8Af4AD4AAH+//////////////////4AH////////gBDgA/AAAAAB/n//////////////////gA//////f/4AHwAA8AAAAAP8f3//////////////i/gAA/sD/////gAfgAAAAAAAA/4b//////////////8OAAAAOAD/////AB/8AAAAAAIDPB/////////////8ABwAAABAAD/////gH/wAAAAAAwCcf/////////////gAfAAAAAAAH/////gf/gAAAAADgJB/////////////4AB4AAAAAAAH/////z//gAAAAB3A9//////////////wAHAAAAAAAAP///f/P//AAAAAHef///////////////8AYAAAAAAAAf///////8AAAAAB7////////////////QAAAAAAAAAA///////sQAAAAAA////////////////9AAAAAAAAAAB////v//DwAAAAAf////////////////wAAAAAAAAAAD///8f/8AAAAAAA////////////////+AAAAAAAAAAAP///9v/+AAAAAAB///5n8fP////////wAAAAAAAAAAA////2/5AAAAAAAH/n/gfz9////////+EAAAAAAAAAAD////f/AAAAAAAP8DP8AfH/////////g4AAAAAAAAAAP/////4AAAAAAA/wHPxx+P////////wAAAAAAAAAAAA/////+AAAAAAAD8CE5//4///////++AIAAAAAAAAAAD/////4AAAAAAAfwABn//j///////wYBgAAAAAAAAAAH/////AAAAAAAA+ACEP//P///////wwMAAAAAAAAAAAP////8AAAAAAAAD/AAB/////////+DBwAAAAAAAAAAAf////gAAAAAAAH/8AAH/////////4A4AAAAAAAAAAAA////8AAAAAAAA//4AAf/////////wMAAAAAAAAAAAAB////AAAAAAAAH//48D//////////AAAAAAAAAAAAAAC//+cAAAAAAAAf//////////////8AAAAAAAAAAAAAAH/8AYAAAAAAAD//////8////////4AAAAAAAAAAAAAAX/gBgAAAAAAAf////9/5////////AAAAAAAAAAAAAAAv+ACAAAAAAAD/////z/wf//////4AAAAAAAAAAAAAAAf4AAAAAAAAAf/////n/kA//////AAAAAAAAAAAAAAAA/gAAAAAAAAD/////+f/8B/////4AAAAAAAAAAAAAAAB+ABgAAAAAAP/////8//wH//f/8AAAAAAAAAAAAAAAAH4MBgAAAAAA//////7//AD/w/8AAAAAAAAAAAAAAAAAPxwA4AAAAAD//////n/4AP8B/mAAAAAAAAAAAAAAAAAP+AAAAAAAAP//////P/AA/gH/ACAAAAAAAAAAAAAAAAP4AAAAAAAA//////8/gAD8AX+AYAAAAAAAAAAAAAAAAD+AAAAAAAD//////78AAHgAP8AgAAAAAAAAAAAAAAAAB4AAAAAAAP//////+AAAeAA/wAAAAAAAAAAAAAAAAAADgAAAAAAA///////gAAA4ACfAAAAAAAAAAAAAAAAAAAGD+gAAAAA///////8AADgAA4AQAAAAAAAAAAAAAAAAAMP/gAAAAD///////wAAMAAgAAAAAAAAAAAAAAAAAAAAL//AAAAAH//////+AAAEACAADAAAAAAAAAAAAAAAAAAH/+AAAAAP/f////4AAAQAGAEIAAAAAAAAAAAAAAAAAAf//gAAAAMg/////AAAAADYAwAAAAAAAAAAAAAAAAAAB///AAAAAAAf///8AAAAAGwPAAAAAAAAAAAAAAAAAAAP//8AAAAAAB////AAAAAAPB8AAAAAAAAAAAAAAAAAAB///wAAAAAAH///4AAAAAA8fwAAAAAAAAAAAAAAAAAAH///wAAAAAA//+/AAAAAABw+ACAAAAAAAAAAAAAAAAAf///wAAAAAB//74AAAAAADj5gJgAAAAAAAAAAAAAAAB////8AAAAAD///AAAAAAAOBmAfwAAAAAAAAAAAAAAAP////8AAAAAP//8AAAAAAAIAAAfwAAAAAAAAAAAAAAAf////4AAAAAf//wAAAAAAAYAAA/gAAAAAAAAAAAAAAB/////gAAAAB///AAAAAAAAeAAD+AAAAAAAAAAAAAAAD////+AAAAAH//8AAAAAAAAAAAAMAAAAAAAAAAAAAAAH////wAAAAAP//4AAAAAAAAAAAAAAAAAAAAAAAAAAAAf///+AAAAAA///gAAAAAAAAAAwQAAAAAAAAAAAAAAAA////wAAAAAH//+DAAAAAAAAAPhAAAAAAAAAAAAAAAAD////AAAAAAf//4MAAAAAAAAH+GAAAAAAAAAAAAAAAAH///8AAAAAD///DwAAAAAAAA/84AAAAAAAAAAAAAAAAH///wAAAAAP//4eAAAAAAAAH//wAAAAAAAAAAAAAAAAP///AAAAAAf//B4AAAAAAAA///AAAAAAAAAAAAAAAAA///4AAAAAB//4HgAAAAAAAP///AAAAAAAAAAAAAAAAD///gAAAAAD//gcAAAAAAAD///8AAAAAAAAAAAAAAAAP//4AAAAAAP/+BwAAAAAAAf///4AAAAAAAAAAAAAAAA//8AAAAAAA//4HAAAAAAAB////wAAAAAAAAAAAAAAAD//wAAAAAAB/+AAAAAAAAAH////gAAAAAAAAAAAAAAAf/+AAAAAAAH/4AAAAAAAAAf///+AAAAAAAAAAAAAAAB//4AAAAAAAP/gAAAAAAAAB////4AAAAAAAAAAAAAAAH//AAAAAAAA/8AAAAAAAAAD////gAAAAAAAAAAAAAAAf/4AAAAAAAB/gAAAAAAAAAP///+AAAAAAAAAAAAAAAB//AAAAAAAAH8AAAAAAAAAA/gf/wAAAAAAAAAAAAAAAH/8AAAAAAAAIAAAAAAAAAADgAP+AAAAAAAAAAAAAAAA/+AAAAAAAAAAAAAAAAAAAAAAAf4AAAAAAAAAAAAAAAD/4AAAAAAAAAAAAAAAAAAAAAAA/gAAgAAAAAAAAAAAAP/AAAAAAAAAAAAAAAAAAAAAAAAAAADgAAAAAAAAAAAA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAGAADAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAYAAYAAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAHwAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAPgAAP///j7/gAAAAAAAAAAAAAAAAA+AAAAAAAAAAAA///wP///////4AAAAAAAAAAAAAAAA/4AAAAAAAAIA/v/////////////8AAAAAAAAAAAAAAH/gAAAAA/////////////////////wAAAAAAAAAB+AAP+AAAAA//////////////////////gAAAAAAH4AH////4AAAAf/////////////////////wAAAAAD/////////wAAAf/////////////////////8AAAAAf//////////8AAP//////////////////////wAMAD/////////////7P//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w==';
+
+/* Built on demand, not at boot. Nobody sees this until they have finished the
+   campaign, and the studio card should not be paying to decode it. */
+function ensureEarth(){
+  if(arrGroup) return;
+  arrGroup = new THREE.Group();
+  arrGroup.visible = false;
+  scene.add(arrGroup);
+
+  /* THE SKY. Not the conduit's streaks — those live in the rotating world and
+     are laid out as a tube around the camera, which is right for a tunnel and
+     wrong for open space. These sit on a shell, far enough out to hold still. */
+  /* 3600, not the 900 this started at. They are scattered over the whole
+     celestial sphere and the camera sees about five percent of it — measured,
+     900 put forty-five stars on screen, which is an empty sky. One draw call
+     either way. */
+  var SN = 3600, sg = new THREE.BufferGeometry();
+  var sp = new Float32Array(SN*3), sc = new Float32Array(SN*3);
+  var srnd = mrnd(20250807);
+  for(var i=0;i<SN;i++){
+    var u = srnd()*2-1, th = srnd()*Math.PI*2, r = 380, s = Math.sqrt(1-u*u);
+    sp[i*3] = Math.cos(th)*s*r; sp[i*3+1] = u*r; sp[i*3+2] = Math.sin(th)*s*r;
+    /* Real starlight is not white. A few are hot and blue, most are not, and
+       the spread is what stops a point field reading as dust on the lens. */
+    var t = srnd(), b = 0.58 + srnd()*0.42;
+    sc[i*3]   = b * (t < 0.22 ? 0.72 : 1.0);
+    sc[i*3+1] = b * (t < 0.22 ? 0.82 : 0.96);
+    sc[i*3+2] = b * (t < 0.22 ? 1.00 : 0.88);
+  }
+  sg.setAttribute('position', new THREE.BufferAttribute(sp,3));
+  sg.setAttribute('color',    new THREE.BufferAttribute(sc,3));
+  /* No size attenuation. These are 380 units out, so attenuated they land at a
+     fraction of a pixel and the sky comes out empty — and stars do not get
+     smaller with distance anyway, they get fainter, which the colour ramp
+     above is already doing. */
+  var stars = new THREE.Points(sg, new THREE.PointsMaterial({
+    size:2.0, sizeAttenuation:false, vertexColors:true, transparent:true,
+    opacity:0, depthWrite:false, blending:THREE.AdditiveBlending }));
+  stars.frustumCulled = false;
+  arrGroup.add(stars);
+
+  // --- the textures
+  var dayTex = new THREE.Texture();
+  var dayImg = new Image();
+  dayImg.onload = function(){
+    dayTex.image = dayImg; dayTex.needsUpdate = true; earthTexReady = true;
+  };
+  dayImg.src = EARTH_DAY_URI;
+  dayTex.wrapS = THREE.RepeatWrapping;
+  dayTex.minFilter = THREE.LinearMipmapLinearFilter;
+  dayTex.magFilter = THREE.LinearFilter;
+
+  /* One bit per texel, unpacked to a red channel. LuminanceFormat would be
+     half the memory and is not in core WebGL2, and this is 128KB either way. */
+  var raw = atob(EARTH_MASK_B64), MW = 256, MH = 128;
+  var md = new Uint8Array(MW*MH*4);
+  for(var b2=0;b2<raw.length;b2++){
+    var byte = raw.charCodeAt(b2);
+    for(var bit=0;bit<8;bit++){
+      var idx = b2*8 + bit;
+      if(idx >= MW*MH) break;
+      md[idx*4] = (byte >> (7-bit)) & 1 ? 255 : 0;
+    }
+  }
+  var maskTex = new THREE.DataTexture(md, MW, MH, THREE.RGBAFormat);
+  maskTex.wrapS = THREE.RepeatWrapping;
+  maskTex.minFilter = THREE.LinearFilter;
+  maskTex.magFilter = THREE.LinearFilter;
+  maskTex.needsUpdate = true;
+
+  earthMat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:true, fog:false,
+    uniforms:{
+      tDay:{value:dayTex}, tLand:{value:maskTex},
+      uSun:{value:new THREE.Vector3(-0.62, 0.28, 0.74).normalize()},
+      uOpacity:{value:0}, uLights:{value:0}
+    },
+    vertexShader:[
+      "varying vec3 vN; varying vec2 vUv; varying vec3 vP;",
+      "void main(){",
+      "  vUv = uv; vN = normalize(normalMatrix * normal);",
+      "  vec4 mv = modelViewMatrix * vec4(position, 1.0);",
+      "  vP = mv.xyz;",
+      "  gl_Position = projectionMatrix * mv;",
+      "}"
+    ].join("\n"),
+    fragmentShader:[
+      "uniform sampler2D tDay, tLand;",
+      "uniform vec3 uSun; uniform float uOpacity, uLights;",
+      "varying vec3 vN; varying vec2 vUv; varying vec3 vP;",
+      "float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }",
+      "void main(){",
+      "  vec3 N = normalize(vN);",
+      "  vec3 S = normalize(uSun);",
+      "  vec3 V = normalize(-vP);",
+      "  float lam = dot(N, S);",
+      /* A terminator is not a hard line — the atmosphere carries light round
+         the edge, and the softness is most of what says "this has air". */
+      "  float day = smoothstep(-0.14, 0.26, lam);",
+      "  vec3 col  = texture2D(tDay, vUv).rgb;",
+      "  float land = texture2D(tLand, vUv).r;",
+      /* Sun off water only. On land it would read as wet rock. */
+      "  vec3 Hv = normalize(S + V);",
+      "  float spec = pow(max(0.0, dot(N, Hv)), 84.0) * (1.0 - land) * day;",
+      /* Cities. A flat glow over every landmass lights the Sahara and Siberia
+         as brightly as Europe, so it is broken into a coarse grid and most of
+         the cells are left dark. Sparse reads as inhabited; even reads as a
+         texture error. */
+      "  float night = 1.0 - day;",
+      /* A coarse grid shows as squares once the planet fills the frame, and a
+         hard step makes every lit cell the same brightness — together they
+         read as a checkerboard rather than as cities. Fine cells, so each one
+         lands near a pixel, and a smoothstep so they vary. */
+      "  float cell = hash(floor(vUv * vec2(820.0, 410.0)));",
+      "  float city = land * (smoothstep(0.80, 0.985, cell) + 0.07);",
+      "  vec3 lights = vec3(1.0, 0.74, 0.38) * city * night * uLights;",
+      "  vec3 lit = col * (0.045 + 1.12 * day) + vec3(1.0, 0.97, 0.92) * spec * 0.5 + lights;",
+      /* The limb. Brightest where the sun is behind it, which is the cue that
+         reads as a planet rather than a painted ball. */
+      "  float fres = pow(1.0 - max(0.0, dot(N, V)), 2.7);",
+      "  float atmo = fres * (0.22 + 0.78 * smoothstep(-0.55, 0.55, lam));",
+      "  lit += vec3(0.34, 0.60, 1.0) * atmo * 0.95;",
+      "  gl_FragColor = vec4(lit, uOpacity);",
+      "}"
+    ].join("\n")
+  });
+  earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R, 64, 48), earthMat);
+  /* 23.4 degrees, because it is 23.4 degrees. */
+  earth.rotation.z = 23.4 * Math.PI / 180;
+  arrGroup.add(earth);
+
+  /* THE SUN, off frame. Not a light — there is no lighting rig in this scene,
+     the shader takes a direction — so this is only the flare you would get
+     looking near it, sitting where that direction says it should be. */
+  var flare = new THREE.Mesh(
+    new THREE.PlaneGeometry(280, 280),
+    new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, depthTest:false,
+      blending:THREE.AdditiveBlending, fog:false,
+      uniforms:{ uAmt:{value:0} },
+      vertexShader:"varying vec2 vU; void main(){ vU = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+      fragmentShader:[
+        "uniform float uAmt; varying vec2 vU;",
+        "void main(){",
+        "  float r = length(vU - 0.5) * 2.0;",
+        "  float core = exp(-r*r*46.0);",
+        "  float halo = exp(-r*r*3.4) * 0.30;",
+        "  float i = (core + halo) * uAmt;",
+        "  gl_FragColor = vec4(vec3(1.0, 0.96, 0.88) * i * 2.2, i);",
+        "}"
+      ].join("\n")
+    })
+  );
+  arrGroup.add(flare);
+  arrGroup.userData = {stars:stars, flare:flare};
+}
+
 // --- pulsing bands of light on the wall: gives the tunnel real depth cues
 var BANDN = 30, BAND_GAP = 11;
 var bandGeo = new THREE.TorusGeometry(7.15, 0.075, 6, 60);
@@ -4301,7 +4779,8 @@ var orbs = [];
    GAME STATE
    ============================================================ */
 var S_MENU='menu', S_START='start', S_PLAY='play', S_OVER='over', S_CLEAR='clear',
-    S_PAUSE='pause', S_HANGAR='hangar', S_MANUAL='manual';
+    S_PAUSE='pause', S_HANGAR='hangar', S_MANUAL='manual',
+    S_ARRIVE='arrive';   // the far side of the last horizon
 var state = S_START;
 
 var score=0, combo=0, mult=1, bestComboRun=0, peakMult=1, razors=0;
@@ -4413,6 +4892,145 @@ var runCreditsPaid = 0, revivesUsed = 0, reviveCost = 150;
 var PTS_GAP=1, PTS_MATCH=2, PTS_RAZOR=5, PTS_BONUS=8, PTS_BOSS=50;
 var MULT_CAP=8, MULT_EVERY=5;
 var CHG_MATCH=0.075, CHG_RAZOR=0.16, CHG_BONUS=0.20, CHG_GAP=0, OVER_SECS=8;
+
+/* ============================================================
+   THE JOURNEY — twenty-five sectors, and a real number that goes down.
+
+   The campaign flies about seven astronomical units. Twenty-five sectors and
+   two hundred and forty-six worlds do not fit in seven AU, and that was a
+   contradiction sitting in plain sight until the horizons explained it: you
+   are not flying the distance, you are flying the corridors BETWEEN the
+   horizons, and each horizon puts you somewhere you could never have flown
+   to. 987 slipstreams and 246 send-offs. The route is real; the flying is
+   the part in the middle.
+
+   So the distances here are real distances to real places, in the real
+   order you would meet them coming home from Andromeda. Every one of them
+   is a number an astronomer would recognise. The counter is the spine of
+   the whole campaign: it starts at two and a half million light years and
+   the last sector is measured in AU, because by then you are inside the
+   room.
+
+   ECHO writes the log. It is an Earth-built mind that has been out here far
+   longer than the pilot, and it has been the only voice on the channel for
+   a very long time — so it opens clipped and procedural, keeping the log
+   because keeping the log is the job, and it thaws as the number falls. By
+   the last sector it is not hiding anything. The arrival is its homecoming
+   as much as yours, which is the only reason the ending has anyone in it.
+   ============================================================ */
+var LAST_LEVEL = 246;                // the transit that comes out at Earth
+var AU_LY = 1/63241.077;             // one astronomical unit, in light years
+var JOURNEY = [
+{n:'ANDROMEDA', sub:'OUTER ARM', ly:2537000, log:[
+  'Transit logged. Conduit stable. Hull nominal. Crew: one.',
+  'I have written that line four thousand one hundred and eighteen times. I keep writing it because writing it is the job, and because a log with a gap in it is not a log.']},
+{n:'ANDROMEDA', sub:'THE HALO', ly:2410000, log:[
+  'Out past the last of the stars. The chart calls this the halo, which is being generous — it is mostly the absence of things, arranged in a shape.',
+  'You fly well. I have not had cause to write that before.']},
+{n:'THE VOID', sub:'FIRST CROSSING', ly:2180000, log:[
+  'Nothing out here for a long while. No mass, no light worth the name, and no conduit that was not put here on purpose by somebody who is not answering.',
+  'I have stopped wondering who. It was making me slow.']},
+{n:'M32', sub:'THE SHALLOWS', ly:1940000, log:[
+  'A small galaxy, stripped to its core by the large one it orbits. Two hundred million stars in a space that should hold a thousand.',
+  'It is crowded and it is silent. I do not like it here. I am aware that is not a navigational observation.']},
+{n:'THE VOID', sub:'DEEP', ly:1620000, log:[
+  'Second crossing, and longer. If you want a number: nothing we pass in this sector will come within four hundred thousand light years of us.',
+  'Talk to me if you like. I will not mind.']},
+{n:'TRIANGULUM', sub:'APPROACH', ly:1310000, log:[
+  'Third largest thing in the Local Group, and it still took eleven transits to reach. Spiral, blue, making stars like it has somewhere to be.',
+  'It is the first thing in nine hundred thousand light years that is going anywhere.']},
+{n:'TRIANGULUM', sub:'TRAILING ARM', ly:960000, log:[
+  'Under a million.',
+  'Six digits instead of seven is not a real milestone. I noted it anyway.']},
+{n:'THE VOID', sub:'SECOND CROSSING', ly:820000, log:[
+  'I have run your conduit long enough now to know how you turn before you turn.',
+  'That is not affection. It is pattern recognition. I am told the difference matters.']},
+{n:'NGC 6822', sub:"BARNARD'S GALAXY", ly:610000, log:[
+  'An irregular. No arms, no core, no plan.',
+  'Somebody catalogued it from the surface of a planet, through a tube of ground glass, and gave it a name. I find I have a great deal of time for that.']},
+{n:'THE LEO SHALLOWS', sub:'DWARF SPHEROIDALS', ly:440000, log:[
+  'Two dwarf galaxies bound to the one we are going to. Faint enough that they were argued over before they were accepted.',
+  'We are inside the argument now.']},
+{n:'THE SAGITTARIUS STREAM', sub:'TIDAL DEBRIS', ly:300000, log:[
+  'This was a galaxy. It came too close, and now it is a smear of stars being pulled apart along its own orbit, one lap at a time.',
+  'The Milky Way is eating it. I mention this because the Milky Way is where we are going, and I would rather you heard it from me.']},
+{n:'THE SMALL MAGELLANIC CLOUD', sub:'OUTER STREAM', ly:200000, log:[
+  'Visible from the surface. Naked eye, southern sky — a smudge people steered by for thousands of years before anyone knew what it was.',
+  'Somebody down there has looked at where we are standing. That is new.']},
+{n:'THE LARGE MAGELLANIC CLOUD', sub:'30 DORADUS', ly:158000, log:[
+  'Six digits, and for the last time.',
+  'The next entry I write will have five.']},
+{n:'THE GALACTIC HALO', sub:'GLOBULAR FIELD', ly:92000, log:[
+  'Inside it. Not the disc, not yet — the halo is the old part, the globular clusters and the dark, wrapped around everything else.',
+  'Every star out here is twelve billion years old. Ours is four and a half. We are going to the young part.']},
+{n:'THE OUTER ARM', sub:'GALACTIC DISC', ly:24000, log:[
+  'Disc. Dust. Traffic, if you can call it that.',
+  'I have started checking the chart against what I can actually see rather than against what I remember. It matches. I did not expect it to.']},
+{n:'THE PERSEUS ARM', sub:'INBOUND', ly:6400, log:[
+  'Four digits.',
+  'I have no observation for this sector. I checked the number three times and then I wrote it down.']},
+{n:'CYGNUS X', sub:'STAR NURSERY', ly:4600, log:[
+  'Loud. Everything here is being born, or being taken apart by something that was born earlier.',
+  'From the surface it is a bright patch in a constellation somebody decided was a swan. Nobody has revisited the decision.']},
+{n:'THE NORTH AMERICA NEBULA', sub:'NGC 7000', ly:2600, log:[
+  'Named for its shape, by people who had a map of a coastline and noticed it twice.',
+  'I have that coastline. It is in my charts, under a heading I have not opened in a long time.']},
+{n:'THE ORION SPUR', sub:'LOCAL ARM', ly:1600, log:[
+  'This is the neighbourhood. Not the arm — the spur, the short bridge between two of them. That is where the address is.',
+  'I am going to stop calling it the destination now.']},
+{n:'THE PLEIADES', sub:'MELOTTE 22', ly:444, log:[
+  'Seven blue stars wrapped in the dust they are lighting. Every culture that could see the sky counted them, and most counted seven, though there are more than a thousand.',
+  'They are the first thing on this route I have seen with my own instruments and recognised without looking it up.']},
+{n:'THE LOCAL BUBBLE', sub:'CAVITY WALL', ly:300, log:[
+  'A hole in the interstellar medium, blown out by supernovae before anything on the surface had a spine. Thin, hot, and nearly empty.',
+  'Home is in the middle of it. We are inside the room now. We are simply not across it.']},
+{n:'THE HYADES', sub:'MELOTTE 25', ly:153, log:[
+  'The closest open cluster. From the surface it makes the face of a bull, and it has done for as long as there have been people to say so.',
+  'Three digits. I would like it noted that I am not going to remark on every digit.']},
+{n:'61 CYGNI', sub:'FLYING STAR', ly:11.4, log:[
+  'The first star anyone measured the distance to. Eighteen thirty-eight. A man with a telescope and a very great deal of patience worked out how far away something was by watching it not quite hold still.',
+  'Everything I do is downstream of that.']},
+{n:'ALPHA CENTAURI', sub:'NEAREST SYSTEM', ly:4.37, log:[
+  'Two suns and a small red one. For most of recorded history this was the furthest place anybody seriously proposed going.',
+  'It is the last stop. I have run out of route to plan.']},
+{n:'THE SOLAR SYSTEM', sub:'HELIOPAUSE', ly:0.0019, log:[
+  'Inside the heliopause. From here the wind is coming from our star and nobody else’s.',
+  'One transit left. Everything before this you were carried — every horizon put us somewhere we could not have flown to. This last part you fly.',
+  'I have been out here a long time. Thank you for the lift.']}
+];
+/* ECHO's last entry. Not in the table above because it is not a sector: it is
+   written on the far side of the last horizon, with the thing it is about
+   filling the window. */
+var ARRIVAL_LOG = [
+  'Third planet. Blue because of the water, white because of the weather. The dark side is lit, which means they are still there and they are still awake.',
+  'Distance to Earth: zero.',
+  'I do not have a procedure for this. I am going to stop talking and let you look at it.'
+];
+
+function sectorOf(n){ return Math.max(0, Math.min(JOURNEY.length-1, Math.floor((n-1)/10))); }
+/* How far is left before flying level n. Geometric between the sector anchors,
+   because the journey closes by ratio rather than by subtraction — halving
+   what is left reads as progress at every scale, and this route spans eleven
+   orders of magnitude. */
+function lyAt(n){
+  if(n > 246) return 0;
+  var s = sectorOf(n), a = JOURNEY[s].ly;
+  var b = (s+1 < JOURNEY.length) ? JOURNEY[s+1].ly : AU_LY;
+  var span = (s === JOURNEY.length-1) ? 6 : 10;          // the last sector is six levels
+  var p = Math.min(span-1, (n-1) % 10) / span;
+  return a * Math.pow(b/a, p);
+}
+/* Light years until it stops being a sensible unit, then AU. Nobody says
+   "0.0019 light years"; they say "a hundred and twenty AU", and the switch
+   itself tells you that you are nearly there. */
+function fmtLy(ly){
+  if(ly <= 0) return '0';
+  if(ly < 0.02) return Math.round(ly/AU_LY).toLocaleString('en-GB') + ' AU';
+  if(ly < 100)  return (ly < 10 ? ly.toFixed(2) : ly.toFixed(1)) + ' ly';
+  return Math.round(ly).toLocaleString('en-GB') + ' ly';
+}
+function sectorName(n){ var s = JOURNEY[sectorOf(n)]; return s.n; }
+function sectorSub(n){  var s = JOURNEY[sectorOf(n)]; return s.sub; }
 
 /* ============ LEVELS ============
    Infinite, in blocks of ten. A block is a SECTOR and owns one theme — the
@@ -4781,6 +5399,11 @@ function resetRun(){
   clearT=0; shipZ=0; clearFlow=0; crossed=false;
   jumpT=0; u_jumpPull=0;
   cdArm();                    // three seconds of stillness, then the bed starts
+  /* The arrival takes the conduit apart to show a planet. Every route back
+     into a run goes through here, so this is the one place that has to put it
+     together again — relying on the arrival's own button to do it would leave
+     an empty tunnel behind anyone who left by another door. */
+  tunnelVisible(true);
   ship.visible = true; hideHole();
   over.on=false; over.t=0; pendingDeath=0; deathCause='';
   charge=0; runLog=[]; runCols=[]; runCreditsPaid=0; revivesUsed=0; reviveCost=150;
@@ -5938,6 +6561,176 @@ function speedDip(amount){ spdDip = Math.max(spdDip, amount); }
    saturating at 60 deg/s — well under the 190 a held key produces, so any
    deliberate turn pays the full price and only a hair of drift pays less. */
 var V_TURN = 0.005, spdTurn = 0;
+
+/* ============================================================
+   THE ARRIVAL — the far side of the last horizon.
+
+   Two hundred and forty-five times, clearing a level has meant flying into a
+   horizon and cutting to a card with your score on it. This one does not cut.
+   You go in, and then you come out, and what is on the other side is the
+   thing the counter has been counting down to since Andromeda.
+
+   It is deliberately slow. The player has spent months getting here and the
+   worst thing this could do is be brisk about it. Nothing is interactive
+   until ECHO has finished, and the score does not appear at all until they
+   ask for it — a number is the wrong thing to put in front of somebody at
+   the exact moment they arrive.
+
+   Phases, in seconds:
+     0.0 - 1.4   black. The horizon shut behind us and there is nothing.
+     1.4 - 3.2   the sky. Stars, then our star, off frame to port.
+     2.6 - 8.0   Earth, coasting in. Terminator, weather, cities on the dark.
+     6.4 -       ECHO, three lines, one at a time.
+     then        one quiet button. The card is behind it, for those who want it.
+   ============================================================ */
+var ARR_BLACK = 1.4, ARR_SKY = 3.2, ARR_EARTH_IN = 2.6, ARR_SETTLE = 8.0;
+var arrT = 0, arrLine = -1, arrDone = false;
+/* Coasting in: the last of the distance, flown rather than jumped. It never
+   quite arrives, because a planet you are still approaching is alive and a
+   planet parked at a mark is a wallpaper. */
+/* How much of the tighter half-dimension the planet fills when it settles.
+   The FOV is vertical, so on a portrait phone the WIDTH is what runs out
+   first — fitting to the height put the limb off both sides of the screen.
+   Solved per frame rather than baked, because the answer is different on a
+   phone, a tablet and a phone turned sideways. */
+var ARR_FILL = 0.78, ARR_Z0 = 165;
+function arrivalFit(){
+  var vHalf = Math.tan(CAM_FOV * 0.5 * Math.PI / 180);
+  var hHalf = vHalf * (W / H);
+  /* A sphere's silhouette is where the view ray goes TANGENT to it, not where
+     it crosses the centre plane — so the half-angle is asin(R/d), not
+     atan(R/d), and the projected radius is tan(asin(R/d)). Solving that for d
+     rather than the naive R/d: at arm's length the two agree, and at the
+     distance this settles to they were out by fourteen percent, which put the
+     limb off the side of the screen in landscape.
+
+       want   tan(asin(R/d)) = k          k = fill * half-angle-tangent
+       so     R/d = k / sqrt(1 + k*k)
+       hence  d   = R * sqrt(1 + k*k) / k                                  */
+  var k = Math.max(0.02, Math.min(vHalf, hHalf) * ARR_FILL);
+  var z = EARTH_R * Math.sqrt(1 + k*k) / k;
+  /* A phone on its side has no vertical slack at all — the planet fills the
+     height and ECHO ends up written across the Atlantic. So the composition
+     changes rather than shrinking: portrait stacks (planet up, words under),
+     landscape sits the planet left and gives the words their own column. The
+     overlay's own media query is the other half of this. */
+  var wide = (W > H) && (H <= 620);
+  return {
+    z: z,
+    x: wide ? -0.34 * z * hHalf : 0,
+    y: wide ? 0 : EARTH_R * 0.36
+  };
+}
+
+function tunnelVisible(on){
+  wall.visible = on; horizon.visible = on; dust.visible = on;
+  streaks.visible = on; points.visible = on; lane.visible = on;
+  for(var i=0;i<bands.length;i++) bands[i].visible = on;
+  for(var j=0;j<rails.length;j++) rails[j].visible = on;
+  for(var k=0;k<laneTicks.length;k++) laneTicks[k].visible = on;
+}
+
+function beginArrival(){
+  state = S_ARRIVE;
+  arrT = 0; arrLine = -1; arrDone = false;
+  ensureEarth();
+  clearBoard();
+  hideHole();
+  ship.visible = false;
+  tunnelVisible(false);
+  /* Screens down FIRST. hideAllScreens also takes the arrival group away —
+     it has to, because every other exit from this scene goes through it — so
+     showing the sky before calling it would hide the sky. */
+  hideAllScreens();
+  arrGroup.visible = true;
+  arrGroup.userData.stars.material.opacity = 0;
+  arrGroup.userData.flare.material.uniforms.uAmt.value = 0;
+  earthMat.uniforms.uOpacity.value = 0;
+  earthMat.uniforms.uLights.value = 0;
+  /* Our star, just off the port edge. It has to agree with the direction the
+     shader lights the planet from, or the glare is coming from somewhere the
+     terminator disagrees with — and it has to sit close enough to the frame
+     that the halo washes in past the edge. Fully off screen it lights nothing
+     and the scene reads as flat. */
+  var S = earthMat.uniforms.uSun.value;
+  var fz = camZ - 150;
+  var halfW = 150 * Math.tan(CAM_FOV*0.5*Math.PI/180) * (W/H);
+  arrGroup.userData.flare.position.set(-halfW*1.16, halfW*0.52, fz);
+  sysBtns.classList.add('hidden');
+  chargeWrap.classList.remove('show');
+  document.getElementById('hud').classList.add('hidden');
+  var el = document.getElementById('arrival');
+  el.classList.remove('show', 'ready');
+  for(var L=0; L<3; L++){
+    var p = document.getElementById('arrLine'+L);
+    p.classList.remove('on');
+    p.textContent = ARRIVAL_LOG[L] || '';
+  }
+  stopMusic();
+  ambUpdate(0, 0, 0, false);
+  sfxArrive();
+  save();
+}
+
+/* The sound of coming out the far side. Not a sting and not the bed — a low
+   swell that arrives with the light and then gets out of the way, because the
+   rest of this scene is supposed to be quiet. */
+function sfxArrive(){
+  if(!sfxOn()) return;
+  var a = audio(); if(!a) return;
+  try{
+    var t = a.currentTime;
+    for(var i=0;i<3;i++){
+      var o = a.createOscillator(), g = a.createGain();
+      var f = [55, 82.5, 110][i];
+      o.type = 'sine'; o.frequency.setValueAtTime(f, t + 1.2);
+      g.gain.setValueAtTime(0.0001, t + 1.2);
+      g.gain.exponentialRampToValueAtTime([0.20, 0.13, 0.09][i], t + 3.4);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 9.0);
+      o.connect(g); g.connect(musDry); o.start(t + 1.2); o.stop(t + 9.4);
+    }
+  }catch(e){}
+}
+
+function updateArrival(dt){
+  arrT += dt;
+  var U = arrGroup.userData;
+
+  // the sky, and then our star
+  var sky = Math.min(1, Math.max(0, (arrT - ARR_BLACK) / (ARR_SKY - ARR_BLACK)));
+  U.stars.material.opacity = sky * 0.95;
+  U.flare.material.uniforms.uAmt.value = sky * 0.85;
+  U.flare.lookAt(camera.position);
+
+  // Earth, coasting in
+  var e01 = Math.min(1, Math.max(0, (arrT - ARR_EARTH_IN) / (ARR_SETTLE - ARR_EARTH_IN)));
+  var ease = e01*e01*(3 - 2*e01);
+  earthMat.uniforms.uOpacity.value = Math.min(1, e01 * 2.2);
+  /* The lights come up late and slowly. They are the detail that says the
+     place is inhabited, and it should be something the player notices a beat
+     after they have taken in the planet, not at the same time. */
+  earthMat.uniforms.uLights.value = Math.min(1, Math.max(0, (arrT - 4.6) / 3.4));
+  var fit = arrivalFit();
+  earth.position.set(fit.x * ease, fit.y * ease,
+                     camZ - (ARR_Z0 + (fit.z - ARR_Z0) * ease));
+  /* One rotation every four minutes. Slow enough that it reads as held still
+     and fast enough that nobody thinks the frame has frozen. */
+  earth.rotation.y += dt * 0.026;
+
+  // ECHO, one line at a time, once the planet is actually there
+  var want = arrT < 6.4 ? -1 : Math.min(ARRIVAL_LOG.length - 1, Math.floor((arrT - 6.4) / 3.1));
+  if(want > arrLine){
+    arrLine = want;
+    var line = document.getElementById('arrLine' + arrLine);
+    if(line) line.classList.add('on');
+    document.getElementById('arrival').classList.add('show');
+    if(sfxOn()) tone(392 + arrLine*84, 0.20, 'sine', 0.045, 528 + arrLine*84);
+  }
+  if(!arrDone && arrLine >= ARRIVAL_LOG.length - 1 && arrT > 6.4 + ARRIVAL_LOG.length*3.1 + 1.4){
+    arrDone = true;
+    document.getElementById('arrival').classList.add('ready');
+  }
+}
 
 /* ============================================================
    THE COUNTDOWN — three seconds of nothing, on purpose.
@@ -8935,6 +9728,38 @@ var MANUAL = [
       'and repair it on load. At worst you lose progress. You never lose the ship.</div>'+
     '<div class="pgRule"></div>'+
     '<div class="pgP" style="color:#5fa89e">End of manual. Go and fly it.</div>';
+}},
+
+/* The only file in here that is not finished. It is written as you go: one
+   entry per sector crossed, in the order they were crossed, and the sectors
+   ahead of you are listed but not recovered. A player who opens it on level
+   four sees almost nothing and knows exactly how much there is. */
+{ group:"SHIP'S LOG", t:'The long way home', file:'25_log.txt', kb:'', build:function(){
+  var read = logsRead();
+  var out = '<div class="pgKick">Ship&rsquo;s log &middot; ECHO</div>'+
+            '<div class="pgH">The long way home</div>'+
+            '<div class="pgLead">One entry a sector. I write them as we cross, and I do not '+
+              'go back and tidy them up &mdash; a log you have edited is not a log.</div>'+
+            '<div class="pgP" style="color:#5fa89e">' + read + ' of ' + JOURNEY.length +
+              ' recovered &middot; ' + fmtLy(lyAt(store.level)) + ' to Earth</div>';
+  for(var i=0;i<JOURNEY.length;i++){
+    var J = JOURNEY[i];
+    out += '<div class="pgRule"></div>'+
+           '<div class="logHead"><b>' + String(i+1).padStart(2,'0') + '</b> ' +
+             (i < read ? J.n : '———') +
+             '<span>' + (i < read ? fmtLy(J.ly) : '') + '</span></div>';
+    if(i < read){
+      for(var k=0;k<J.log.length;k++) out += '<div class="pgP">' + J.log[k] + '</div>';
+    } else {
+      out += '<div class="pgP logGone">Not yet written.</div>';
+    }
+  }
+  if(store.arrived){
+    out += '<div class="pgRule"></div>'+
+           '<div class="logHead"><b>&mdash;&mdash;</b> EARTH<span>0</span></div>';
+    for(var a=0;a<ARRIVAL_LOG.length;a++) out += '<div class="pgP">' + ARRIVAL_LOG[a] + '</div>';
+  }
+  return out;
 }}
 ];
 
@@ -8978,7 +9803,7 @@ function buildDir(){
     out += '<button class="dirRow' + (manRead[i] ? ' read' : '') + '" data-doc="' + i + '">'+
              '<span class="dn">' + String(i).padStart(2,'0') + '</span>'+
              '<span class="dt">' + d.t + '</span>'+
-             '<span class="dk">' + d.kb + 'K</span>'+
+             '<span class="dk">' + (d.kb ? d.kb + 'K' : 'LIVE') + '</span>'+
            '</button>';
   }
   out += '<div class="dirHint">' + MANUAL.length + ' files. Read them in any order &mdash; '+
@@ -9244,10 +10069,15 @@ function hideAllScreens(){
   if(pr) pr.classList.remove('show');
   clearToasts();
   ['menuScreen','startScreen','settingsScreen','gameOverScreen','levelScreen',
-   'pauseScreen','hangarScreen','dailyScreen','manualScreen'].forEach(function(id){
+   'pauseScreen','hangarScreen','dailyScreen','manualScreen','homeScreen','sectorScreen'].forEach(function(id){
     var el = document.getElementById(id);
     if(el) el.classList.add('hidden');
   });
+  /* The arrival is not in the list above because it is not a screen — it is
+     type laid over a planet — but it still has to be taken down. */
+  var arr = document.getElementById('arrival');
+  if(arr) arr.classList.remove('show', 'ready');
+  if(typeof arrGroup !== 'undefined' && arrGroup) arrGroup.visible = false;
   sysBtns.classList.add('hidden');
   chargeWrap.classList.remove('show');
 }
@@ -9258,6 +10088,7 @@ function showMenu(){
   hideAllScreens();
   setTunnel(true, false);      // conduit keeps flying behind the wordmark
   clearBoard();          // never leave an abandoned run's rings frozen behind a menu
+  tunnelVisible(true);   // and never leave the arrival's empty sky behind one
   hideHole(); ship.visible = true; shipZ = 0;
   menuScreen.classList.remove('hidden');
   reflow(menuScreen);
@@ -9290,9 +10121,13 @@ function showMenu(){
   if(pSub) pSub.textContent = 'Level ' + store.level;
   var mLv = document.getElementById('menuMapLv');
   if(mLv) mLv.textContent = 'LV ' + store.level;
+  /* The map tile says how far is LEFT rather than how far you have come. The
+     theme name was decoration; the distance is the campaign. */
   var mSub = document.getElementById('menuMapSub');
-  if(mSub) mSub.textContent = (store.level - 1) + ' cleared · ' +
-    THEMES[levelPlan(store.level).block % THEMES.length].name;
+  if(mSub) mSub.textContent = store.arrived ? 'Journey complete'
+                            : fmtLy(lyAt(store.level)) + ' to Earth';
+  var mWhere = document.getElementById('menuMapWhere');
+  if(mWhere) mWhere.textContent = store.arrived ? 'Earth' : sectorName(store.level);
 }
 
 function showStart(){          // the level map
@@ -9308,11 +10143,20 @@ function showStart(){          // the level map
   document.getElementById('mapCredits').textContent = fmtChip(store.credits);
   var sc = document.getElementById('streakCount');
   if(sc) sc.textContent = dailyStreak();
+  /* The header is the route, not the app's name. Where you are, what part of
+     it, and how much of the way home is left. */
+  /* Once the last horizon is behind you the header stops being a heading and
+     starts being an answer. */
   document.getElementById('mapSector').textContent =
-    'Level map \u00b7 Ringshift';
-  var cleared = store.level - 1, inBlock = ((store.level-1) % 10);
+    store.arrived ? 'EARTH' : sectorName(store.level);
+  document.getElementById('mapHomeLy').textContent =
+    store.arrived ? 'Home' : fmtLy(lyAt(store.level));
+  var cleared = store.level - 1;
+  /* The sub-name rides in the progress pill rather than taking a row of its
+     own. Four rows of chrome over a map is three too many, and GLOBULAR FIELD
+     and 130 CLEARED are both answers to "where am I". */
   document.getElementById('mapProgress').textContent =
-    'Sector ' + (sp.block+1) + ' \u00b7 ' + Math.round(inBlock/10*100) + '% \u00b7 ' + cleared + ' cleared';
+    (store.arrived ? 'THE SOLAR SYSTEM' : sectorSub(store.level)) + ' \u00b7 ' + cleared + ' cleared';
   /* The briefing is NOT pre-filled. It appears when you pick a world and it
      describes that world, so the panel is never quietly out of date with the
      button underneath it. */
@@ -9508,6 +10352,13 @@ function levelClear(){
   emit(0, SHIP_Y, 0, PAL[colorIdx].hex, 60, 12, 3.2, 6);
   popup('LEVEL CLEAR', '#ffffff', 40);
   sfxBonus(); buzz([0,30,40,30,40,60]);
+  /* THE LAST ONE DOES NOT CUT TO A CARD. Two hundred and forty-five horizons
+     have ended in a score screen; this one ends on the far side of itself. */
+  if(plan.n >= LAST_LEVEL && !dailyMode){
+    store.arrived = true; save();
+    setTimeout(function(){ if(state === S_CLEAR) beginArrival(); }, CLEAR_FLY*1000 + 120);
+    return;
+  }
   setTimeout(function(){ showLevelClear(earned, earnedCredits); }, CLEAR_FLY*1000 + 260);
 }
 function showLevelClear(earned, earnedCredits){
@@ -9537,6 +10388,14 @@ function showLevelClear(earned, earnedCredits){
   document.querySelector('#levelScreen .clearTag').textContent = 'Level ' + plan.n + ' clear';
   var tag = nxt.extreme ? '<span class="extremeTag">EXTREME</span>'
           : nxt.hard    ? '<span class="hardTag">HARD</span>' : 'standard';
+  /* How much closer that level put you. Measured between the level you just
+     flew and the one you are about to, so the figure on the card is the one
+     the map will be showing when you get back to it. */
+  var wasLy = lyAt(plan.n), nowLy = lyAt(plan.n + 1);
+  document.getElementById('clearHomeLy').textContent = fmtLy(nowLy);
+  var closed = wasLy - nowLy;
+  document.getElementById('clearHomeDelta').textContent =
+    closed > 0 ? '−' + fmtLy(closed) : '';
   document.getElementById('nextUp').innerHTML =
     'Next &middot; <b>Level ' + nxt.n + '</b> &middot; ' + nxt.theme.name + ' &middot; ' + tag;
   levelScreen.classList.remove('hidden');
@@ -9752,8 +10611,79 @@ bindBtn('shareOver',   function(){ doShare(false); });
 bindBtn('homeBtn',     function(){ showStart(); });
 bindBtn('menuBtnOver', function(){ showMenu(); });
 
-bindBtn('nextBtn',     function(){ beginRun(store.level); });
+/* Continue goes to the sector card first if one is owed, and to the next
+   conduit otherwise. Putting the crossing between the two means it lands on
+   the beat where the player has just finished something, rather than
+   interrupting them on the way into the next one. */
+bindBtn('nextBtn',     function(){
+  if(sectorOwed()) showSectorCard();
+  else beginRun(store.level);
+});
+bindBtn('secGo',       function(){ beginRun(store.level); });
 bindBtn('shareClear',  function(){ doShare(true); });
+/* The arrival hands over to the logbook, and the logbook hands back to the
+   menu — and putting the conduit back is what makes the menu the menu again
+   rather than a screen floating over a planet. */
+bindBtn('arrGo', function(){ showHomeCard(); });
+
+/* ============================================================
+   SECTOR CROSSINGS AND THE SHIP'S LOG.
+
+   `store.logs` is how far ECHO has written, as a sector index. It is a high
+   water mark rather than a set, because the route is walked in order and a
+   player who replays level 30 has not un-read sector two.
+   ============================================================ */
+function logsRead(){ return Math.max(0, Math.min(JOURNEY.length, store.logs|0)); }
+/* A crossing is owed when the level just cleared was the last of its sector
+   and ECHO has not written that sector up yet. Level 246 is excluded: its
+   crossing is the arrival, and it does not need a card in front of it. */
+function sectorOwed(){
+  var done = store.level - 1;                 // the last level actually cleared
+  if(done < 10 || done >= LAST_LEVEL) return false;
+  if(done % 10 !== 0) return false;
+  return logsRead() < (done / 10);
+}
+function showSectorCard(){
+  var s = Math.min(JOURNEY.length - 1, (store.level - 1) / 10);   // the one just entered
+  var J = JOURNEY[s];
+  store.logs = Math.max(logsRead(), s); save();
+  hideAllScreens();
+  setTunnel(false);
+  document.getElementById('secName').textContent = J.n;
+  document.getElementById('secSub').textContent  = J.sub;
+  document.getElementById('secFrom').textContent = fmtLy(JOURNEY[s-1] ? JOURNEY[s-1].ly : JOURNEY[0].ly);
+  document.getElementById('secTo').textContent   = fmtLy(J.ly);
+  var body = document.getElementById('secLog');
+  body.innerHTML = '';
+  for(var i=0;i<J.log.length;i++){
+    var p = document.createElement('p');
+    p.textContent = J.log[i];
+    body.appendChild(p);
+  }
+  document.getElementById('sectorScreen').classList.remove('hidden');
+  reflow(document.getElementById('sectorScreen'));
+  state = S_MENU;                       // nothing is flying; let the loop idle
+  sfxPrimer();
+}
+
+/* The receipt. Everything on it is a lifetime figure rather than a run figure,
+   because the run that got you here is not the achievement — the two hundred
+   and forty-six of them are. */
+function showHomeCard(){
+  state = S_MENU;                      // the loop can idle again; nothing is flying
+  hideAllScreens();
+  setTunnel(false);
+  document.getElementById('homeWorlds').textContent = LAST_LEVEL;
+  document.getElementById('homeStars').textContent  = totalStars();
+  document.getElementById('homeBest').textContent   = fmtChip(store.high);
+  document.getElementById('homeDist').textContent   = Math.round(JOURNEY[0].ly).toLocaleString('en-GB');
+  document.getElementById('homeEcho').textContent   =
+    '\u201cI have been out here a long time. Thank you for the lift.\u201d \u2014 ECHO';
+  document.getElementById('homeScreen').classList.remove('hidden');
+  reflow(document.getElementById('homeScreen'));
+}
+bindBtn('homeMenuBtn', function(){ tunnelVisible(true); showMenu(); });
+bindBtn('homeShare', function(){ doShare(true); });
 bindBtn('clearHomeBtn',function(){ showStart(); });
 bindBtn('clearMenuBtn',function(){ showMenu(); });
 
@@ -10330,6 +11260,8 @@ function update(dt){
     if(bt >= 1) bootHoleAt = 0;
   }
 
+  if(state === S_ARRIVE){ updateArrival(dt); }
+
   var clearPull = 0;
   if(state === S_CLEAR){
     clearT += dt;
@@ -10389,12 +11321,23 @@ function update(dt){
   fovPunch  *= Math.max(0, 1 - dt*6.0);
   aberrPunch*= Math.max(0, 1 - dt*5.0);
   squash    *= Math.max(0, 1 - dt*8.5);
+  if(state === S_ARRIVE){
+    /* The rig above is built to ride a conduit — off-axis, nose down, banking
+       into a roll. None of that is true any more. The camera is level, dead
+       centre and holding still, because the only thing it is doing now is
+       looking. */
+    camera.position.set(0, 0, camZ);
+    camera.lookAt(0, 0, -1000);
+    camera.rotation.z = 0;
+  } else {
   camera.position.set(sx - bankRoll*0.4, camY + sy + bob*0.35, camZ + camPunch);
   camera.lookAt(-bankRoll*0.5, 0, -80);
   camera.rotation.z += bankRoll*0.09;
+  }
 
   // FOV only ever widens, so the ring can never grow past the fit margin
-  var fovT = CAM_FOV + (speed-34)*0.14 + (over.on?4:0) + fovPunch;
+  var fovT = (state === S_ARRIVE) ? CAM_FOV
+           : CAM_FOV + (speed-34)*0.14 + (over.on?4:0) + fovPunch;
   camera.fov += (fovT - camera.fov) * Math.min(1, dt*3.5);
   camera.updateProjectionMatrix();
 
