@@ -533,7 +533,9 @@ cannot drift out of step with the thing it describes.
 ## 24. Settings, and what the game will not let you do
 
 - **Sound effects** and **Music** — independent volume sliders, 0–100. Zero
-  reads as *Off*.
+  reads as *Off*. Both act on the mix bus rather than on new voices, so a sound
+  that is already ringing when you move the slider follows it down; you can
+  open Settings mid-run and hear the change immediately.
 - **Haptics** — vibration on and off.
 - **Bloom & effects** — the full post-processing chain. The game turns this off
   by itself if it detects a device that cannot hold a frame rate, and says so.
@@ -649,3 +651,10 @@ repaired on load. At worst you lose progress; you never lose the game.
 
 If the device cannot do 3D graphics at all, the game says so in plain words,
 explains what to try, and tells you your save is safe.
+
+Because it is local storage, the origin the page is served from matters. In a
+browser this looks after itself. In an Android WebView it does not — a
+`file://` page can be given an opaque origin with no storage at all, and the
+game will then run perfectly and quietly never save. That, along with the
+engine version the page needs and the three other WebView defaults that are
+wrong for it, is written up in `WEBVIEW.md`.
