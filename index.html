@@ -1334,11 +1334,15 @@
   #arrLog p.on{opacity:1;transform:none;}
   /* The last line is ECHO stepping back, so it is given the space to be one. */
   #arrLog p#arrLine2{color:var(--signal-hi);font-weight:600;}
-  #arrGo{
-    margin-top:16px;min-width:190px;opacity:0;pointer-events:none;
-    transition:opacity 1.4s ease;
+  /* THE FADE. Two and a bit seconds, not the five that were asked for: after
+     twenty-three seconds of a nearly static frame, five seconds of absolute
+     black on a phone is indistinguishable from the app having died, and the
+     player taps, waits, and then closes it. Long enough to be a breath,
+     short enough to still be a transition. */
+  #arrFade{
+    position:absolute;top:0;right:0;bottom:0;left:0;z-index:26;
+    background:#000;opacity:0;pointer-events:none;
   }
-  #arrival.ready #arrGo{opacity:1;pointer-events:auto;}
   @media (max-width:360px){
     #arrHome b{font-size:36px;}
     #arrLog p{font-size:13.5px;margin-bottom:12px;}
@@ -1943,8 +1947,11 @@
       <p id="arrLine1"></p>
       <p id="arrLine2"></p>
     </div>
-    <button class="btn line" id="arrGo">Continue</button>
   </div>
+  <!-- Straight black over everything, driven from the arrival's own clock so
+       it cannot drift out of step with the ship. Above the arrival, below the
+       cards that come after it. -->
+  <div id="arrFade" aria-hidden="true"></div>
   <!-- SECTOR CROSSED. Every tenth level closes a sector, and that is the
        chapter break: where you have arrived, what it cost to get here, and
        what ECHO wrote about it. Shown once, when it is earned. -->
@@ -2038,6 +2045,17 @@
     <div class="topTray">
       <button class="iconBtn" id="menuGear" aria-label="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-1 1.47V21a2 2 0 1 1-4 0v-.11a1.6 1.6 0 0 0-1.05-1.46 1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.6 1.6 0 0 0 .32-1.77 1.6 1.6 0 0 0-1.47-1H3a2 2 0 1 1 0-4h.11a1.6 1.6 0 0 0 1.46-1.05 1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.6 1.6 0 0 0 1.77.32H9a1.6 1.6 0 0 0 1-1.47V3a2 2 0 1 1 4 0v.11a1.6 1.6 0 0 0 1 1.47 1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.6 1.6 0 0 0-.32 1.77V9a1.6 1.6 0 0 0 1.47 1H21a2 2 0 1 1 0 4h-.11a1.6 1.6 0 0 0-1.49 1z"/></svg>
+      </button>
+      <!-- Only ever appears once the last horizon is behind you. It goes in
+           the tray rather than the grid below because that grid is four
+           squares by design, and a fifth tile would break the shape the whole
+           menu was built around. -->
+      <button class="iconBtn hidden" id="menuLogbook" aria-label="Logbook">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="8.4"/>
+          <path d="M3.6 12h16.8M12 3.6a13 13 0 0 1 0 16.8M12 3.6a13 13 0 0 0 0 16.8"/>
+        </svg>
       </button>
       <button class="iconBtn" id="menuManual" aria-label="Flight manual">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
@@ -2298,7 +2316,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.0 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.1 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -6354,6 +6372,7 @@ function tapIsPulse(x){
 function onDown(e){
   audio();
   if(teachHold) return;                 // the card owns the screen; nothing reaches the ship
+  if(state === S_ARRIVE){ arrivalNudge(); return; }
   if(state !== S_PLAY) return;          // menus and the map own their own input
   /* The HUD buttons live inside the play surface, and the FX button sits in
      the bottom-right — which is now the resonance half. Without this, reaching
@@ -6584,7 +6603,29 @@ var V_TURN = 0.005, spdTurn = 0;
      then        one quiet button. The card is behind it, for those who want it.
    ============================================================ */
 var ARR_BLACK = 1.4, ARR_SKY = 3.2, ARR_EARTH_IN = 2.6, ARR_SETTLE = 8.0;
-var arrT = 0, arrLine = -1, arrDone = false;
+/* Then the ship goes. Autopilot: the camera does not follow it, does not pan
+   and does not rack focus — it stays exactly where it has been for the last
+   quarter of a minute and simply watches the thing leave. Being left behind
+   by your own ship is the whole feeling, and a camera that chases it would
+   throw that away.
+
+   17.5s of looking before it lights up. That is three seconds longer than the
+   hold used to be and thirty seconds shorter than it could have been: a beat
+   of stillness after ECHO stops talking is the ending, and a further half a
+   minute of it is a screensaver. */
+/* The run out is LONGER than the gap before the fade on purpose: a ship
+   that reaches its mark and then sits still for a third of a second while
+   the black comes down has visibly stopped, and it should still be leaving
+   when you lose sight of it. */
+var ARR_GO_AT  = 17.5, ARR_GO   = 8.5;    // engines, and the run out to Earth
+var ARR_FADE_GAP = 5.5, ARR_FADE = 2.2;   // and out. Not five — see below.
+var arrT = 0, arrLine = -1, arrDone = false, arrLaunched = false, arrHanded = false;
+/* When the engines light on THIS arrival. A tap can bring it forward, and the
+   fade is measured from it rather than from the clock — otherwise nudging the
+   departure would eat into the departure. Held per-arrival because a constant
+   that a tap can edit is a constant that is wrong on the second playthrough. */
+var arrGoAt = ARR_GO_AT;
+var arrLast = 0;      // performance.now() at the last tick; 0 means not started
 /* Coasting in: the last of the distance, flown rather than jumped. It never
    quite arrives, because a planet you are still approaching is alive and a
    planet parked at a mark is a wallpaper. */
@@ -6632,7 +6673,9 @@ function tunnelVisible(on){
 
 function beginArrival(){
   state = S_ARRIVE;
-  arrT = 0; arrLine = -1; arrDone = false;
+  arrT = 0; arrLine = -1; arrDone = false; arrLaunched = false; arrHanded = false;
+  arrGoAt = ARR_GO_AT; arrLast = 0;
+  document.getElementById('arrFade').style.opacity = '0';
   ensureEarth();
   clearBoard();
   hideHole();
@@ -6693,7 +6736,16 @@ function sfxArrive(){
 }
 
 function updateArrival(dt){
-  arrT += dt;
+  /* Wall clock, for the third and last time in this file — the countdown and
+     the studio card's fall both learned it the same way. `dt` is clamped to
+     50ms so a stalled frame cannot lurch the world, which means on a device
+     that cannot hold 20fps this ending would quietly run at half speed and
+     take the best part of a minute. A cinematic is measured in seconds, not
+     in frames. Gaps over half a second are something taking the screen. */
+  var aNow = performance.now();
+  var aGap = arrLast ? (aNow - arrLast) / 1000 : 0;
+  arrLast = aNow;
+  arrT += (aGap > 0.5 ? dt : aGap);
   var U = arrGroup.userData;
 
   // the sky, and then our star
@@ -6727,9 +6779,55 @@ function updateArrival(dt){
     if(sfxOn()) tone(392 + arrLine*84, 0.20, 'sine', 0.045, 528 + arrLine*84);
   }
   if(!arrDone && arrLine >= ARRIVAL_LOG.length - 1 && arrT > 6.4 + ARRIVAL_LOG.length*3.1 + 1.4){
-    arrDone = true;
-    document.getElementById('arrival').classList.add('ready');
+    arrDone = true;      // from here a tap brings the departure forward
   }
+
+  /* ENGINES. The ship has been hidden since the horizon; now it is the only
+     thing moving. It starts exactly where it sits in every other second of
+     this game — same lane, same height, same size — so the last shot of it is
+     continuous with all the others, and then it is not there any more. */
+  if(arrT >= arrGoAt){
+    if(!arrLaunched){
+      arrLaunched = true;
+      ship.visible = true;
+      ship.rotation.set(0, 0, 0);
+      ship.scale.setScalar(shipBase);
+      /* The glyph badge is a readout — it tells you which colour you are
+         wearing, and there is nothing left to match. Out here it reads as a
+         HUD element that has escaped onto the model. */
+      shipSym.visible = false;
+      shieldMesh.visible = false;
+      shockwave(PAL[colorIdx].hex, 1.5);
+      emit(0, SHIP_Y, 0, PAL[colorIdx].hex, 34, 7, 2.0, -26);
+      sfxDepart();
+    }
+    var g01 = Math.min(1, (arrT - arrGoAt) / ARR_GO);
+    /* Under power, so it accelerates rather than easing out. Stopped at 0.78
+       of the way: past that it is inside the planet, and the fade has it by
+       then anyway. Perspective does the shrinking — nothing here fakes
+       distance, same rule as the send-off. */
+    var gp = g01*g01*(1.55 - 0.55*g01) * 0.78;
+    ship.position.set(fit.x * gp, SHIP_Y + (fit.y - SHIP_Y) * gp,
+                      (camZ - (ARR_Z0 + (fit.z - ARR_Z0) * ease)) * gp);
+    ship.scale.setScalar(shipBase);
+  }
+
+  // and out
+  if(arrT >= arrGoAt + ARR_FADE_GAP){
+    var f01 = Math.min(1, (arrT - arrGoAt - ARR_FADE_GAP) / ARR_FADE);
+    document.getElementById('arrFade').style.opacity = f01.toFixed(3);
+    if(f01 >= 1 && !arrHanded){ arrHanded = true; showHomeCard(); }
+  }
+}
+
+/* A tap once ECHO has finished means "go on then" — it brings the departure
+   forward, it does not skip it. Nothing about Earth or the words can be
+   skipped on a first arrival, and on a replay this is the difference between
+   a homecoming and a wait. */
+function arrivalNudge(){
+  if(state !== S_ARRIVE || !arrDone || arrT >= arrGoAt) return false;
+  arrGoAt = arrT;                       // the fade is measured from here
+  return true;
 }
 
 /* ============================================================
@@ -10128,6 +10226,8 @@ function showMenu(){
                             : fmtLy(lyAt(store.level)) + ' to Earth';
   var mWhere = document.getElementById('menuMapWhere');
   if(mWhere) mWhere.textContent = store.arrived ? 'Earth' : sectorName(store.level);
+  var lb = document.getElementById('menuLogbook');
+  if(lb) lb.classList.toggle('hidden', !store.arrived);
 }
 
 function showStart(){          // the level map
@@ -10624,7 +10724,6 @@ bindBtn('shareClear',  function(){ doShare(true); });
 /* The arrival hands over to the logbook, and the logbook hands back to the
    menu — and putting the conduit back is what makes the menu the menu again
    rather than a screen floating over a planet. */
-bindBtn('arrGo', function(){ showHomeCard(); });
 
 /* ============================================================
    SECTOR CROSSINGS AND THE SHIP'S LOG.
@@ -10683,6 +10782,7 @@ function showHomeCard(){
   reflow(document.getElementById('homeScreen'));
 }
 bindBtn('homeMenuBtn', function(){ tunnelVisible(true); showMenu(); });
+bindBtn('menuLogbook', function(){ showHomeCard(); });
 bindBtn('homeShare', function(){ doShare(true); });
 bindBtn('clearHomeBtn',function(){ showStart(); });
 bindBtn('clearMenuBtn',function(){ showMenu(); });
@@ -11301,15 +11401,23 @@ function update(dt){
   // ship banks into the roll; camera holds its line
   var targetBank = Math.max(-0.5, Math.min(0.5, -rotVel*0.0034));
   bankRoll += (targetBank - bankRoll) * Math.min(1, dt*8);
-  ship.rotation.z = bankRoll;
-  ship.rotation.x = -0.34 + Math.sin(performance.now()*0.0016)*0.018;  // nose down: shows the top deck
-  ship.rotation.y = bankRoll*0.62;                                    // bank turns the hull into the roll
-  ship.scale.set(shipBase*(1 + squash*0.30), shipBase*(1 - squash*0.22), shipBase);
+  if(state !== S_ARRIVE){
+    ship.rotation.z = bankRoll;
+    ship.rotation.x = -0.34 + Math.sin(performance.now()*0.0016)*0.018;  // nose down: shows the top deck
+    ship.rotation.y = bankRoll*0.62;                                    // bank turns the hull into the roll
+  }
+  if(state !== S_ARRIVE)
+    ship.scale.set(shipBase*(1 + squash*0.30), shipBase*(1 - squash*0.22), shipBase);
   /* On the send-off the ship also drops off its lane radius onto the axis, so
      it goes INTO the horizon rather than sailing past it. */
-  ship.position.set(bankRoll*0.35*(1-clearPull),
-                    (SHIP_Y + bob) * (1 - clearPull*0.94),
-                    shipZ);
+  if(state !== S_ARRIVE){
+    /* Same reason the camera is exempt: the rig above is bank, bob and lane
+       radius, and on the far side of the last horizon the ship is not flying
+       a conduit any more — updateArrival owns it. */
+    ship.position.set(bankRoll*0.35*(1-clearPull),
+                      (SHIP_Y + bob) * (1 - clearPull*0.94),
+                      shipZ);
+  }
   lane.position.x = ship.position.x*0.4;
 
   shakeMag *= Math.max(0, 1 - dt*3.2);

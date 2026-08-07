@@ -399,9 +399,26 @@ mathematics — but continents are data, not a pattern, and the whole point of
 the last shot is that you recognise it without being told. So the coastline
 is the real coastline.
 
-Nothing is interactive until ECHO has finished. There is no score on screen,
-and there is no card until you ask for one, because a number is the wrong
-thing to put in front of somebody at the exact moment they arrive.
+Nothing is interactive until ECHO has finished. There is no score on screen
+and no card, because a number is the wrong thing to put in front of somebody
+at the exact moment they arrive.
+
+Then the autopilot takes it. Your ship lights up where it has sat for the
+whole game — same lane, same height, same size — and flies away toward the
+planet, and **the camera does not follow it.** It stays exactly where it has
+been and watches the thing leave. Being left behind by your own ship is the
+point; a camera that chased it would throw that away.
+
+Black, and then the **logbook**: 246 worlds, your stars, your best signal, and
+two and a half million light years. From there, the main menu.
+
+Once you have arrived, the logbook has a permanent home — an icon in the top
+row of the main menu, next to Settings and the manual. It is a trophy rather
+than a result card, so it does not go away.
+
+A tap once ECHO has finished brings the departure forward. It never skips
+Earth and it never skips the words: on a first arrival there is nothing to
+rush, and on a replay it is the difference between a homecoming and a wait.
 
 ---
 
