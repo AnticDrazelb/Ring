@@ -277,6 +277,10 @@ Two options on the game-over card:
 - **Continue this run** — costs **credits**, keeps your score and chain. The
   first costs 150, and the price **doubles** each time. Three per run maximum.
 
+Retry is listed first. It is what almost every death ends in, and a paid
+option should not be the highest-contrast thing on the card that a player
+reaches while frustrated.
+
 ---
 
 ## 13. Clearing a level, and stars
@@ -634,14 +638,53 @@ credits**. They are announced once when you complete them, not every run.
 
 ---
 
+## 21a. The main menu
+
+Four square tiles in a 2×2 grid under the wordmark. Each is built the same way
+— a fixed heading, one big value, one line of detail — so the grid reads as
+four status panels rather than two panels and two buttons.
+
+| | |
+|---|---|
+| **Daily** — today's tasks, `0/3` | **Hangar** — total stars, `144★` |
+| **To Earth** — distance remaining, and the sector you are in | **Play** — the hero tile |
+
+Three things about it are deliberate:
+
+- **Play is bottom-right.** That is where a right-handed thumb rests on a phone
+  held one-handed, and it is the tile pressed more than the other three
+  combined. It is also the only filled surface on the screen.
+- **It says *Start* until you have cleared something,** and *Continue* after.
+  There is nothing to continue on a save that has never been played.
+- **The distance is the number, not the level.** The Play tile beside it
+  already says which level you are on; the one fact nothing else on the screen
+  carries is how far is left, so that takes the number slot and the sector
+  name drops to the detail line. On the menu the distance is rounded
+  (`2.54M ly`); the exact figure is in the map header one tap away.
+
+A fifth tile, **Logbook**, appears permanently once you have arrived (§14b).
+
+---
+
 ## 22. The level map
 
 A vertical map of the campaign drawn as a star system: each level is a body —
 planet, moon or sun — with its stars underneath, joined by a dotted flight path.
 Sector banners break it into named systems.
 
+The header carries three lines: the sector's name, the distance still to Earth,
+and a progress pill reading **`62 of 246 cleared`** — the campaign's
+denominator, stated the same way the distance states the journey's.
+
 The panel at the bottom describes the level you are about to play: its ring
-count, its star requirements, and every hazard it contains, named.
+count, its star requirements, and every hazard it contains, named. It is not
+pre-filled — it appears when you pick a world, and it describes *that* world,
+so it is never quietly out of date with the button underneath it.
+
+The chart is 5,500 SVG nodes and takes ~160ms to assemble, which on a
+mid-range phone is half a second of frozen screen between the tap and anything
+happening. It is built one paint *after* the screen appears, so the header and
+the buttons are up immediately and the worlds arrive a beat later.
 
 ---
 

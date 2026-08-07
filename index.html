@@ -365,6 +365,9 @@
     background:rgba(255,255,255,.05);border:1px solid var(--hair);
     font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
     color:var(--signal);
+    /* fixed height + wrapping text spills a second line outside the capsule.
+       An ellipsis is the graceful failure; two lines is not. */
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   
   
@@ -2108,7 +2111,7 @@
             <circle cx="22" cy="19" r="7" stroke="#5cfff2"/><circle cx="22" cy="19" r="3.2" stroke="#5cfff2"/>
             <path d="M22 19l5.5-5.5M25.4 11.6l.6 2.4 2.4.6-2.4.6-.6 2.4" stroke="#5cfff2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <em id="dailyLab">Daily mission</em>
+          <em id="dailyLab">Daily</em>
           <b><span id="dailyProg">0/3</span><span class="miniBar" id="dailyBar"></span></b>
           <span class="sub" id="dailySub">Clear 3 levels today</span>
         </button>
@@ -2123,14 +2126,6 @@
           <b id="starsTotal">0</b>
           <span class="sub" id="hangSubMenu">Ships &amp; upgrades</span>
         </button>
-        <button class="infoCard go" id="menuPlay">
-          <svg class="icoBig" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
-            <path d="M10 5.5l17 10.5-17 10.5z"/>
-          </svg>
-          <em>Continue</em>
-          <b>Play</b>
-          <span class="sub" id="menuPlaySub">Level 1</span>
-        </button>
         <button class="infoCard" id="menuLevels">
           <svg class="icoBig" viewBox="0 0 32 32" fill="none" stroke="#8ad8ff" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2139,10 +2134,19 @@
             <circle cx="16" cy="16" r="2.4" fill="#0a1424"/>
             <circle cx="5" cy="25.6" r="3" fill="#0a1424"/>
           </svg>
-          <em id="menuMapWhere">Andromeda</em>
-          <b id="menuMapLv">LV 1</b>
-          <span class="sub" id="menuMapSub">2,537,000 ly to Earth</span>
+          <em id="menuMapLab">To Earth</em>
+          <b id="menuMapLv">2.54M ly</b>
+          <span class="sub" id="menuMapWhere">Andromeda</span>
         </button>
+        <button class="infoCard go" id="menuPlay">
+          <svg class="icoBig" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+            <path d="M10 5.5l17 10.5-17 10.5z"/>
+          </svg>
+          <em id="menuPlayLab">Start</em>
+          <b>Play</b>
+          <span class="sub" id="menuPlaySub">Level 1</span>
+        </button>
+      
       </div>
     </div>
   </div>
@@ -2326,7 +2330,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.3 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.4 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -2393,16 +2397,21 @@
           <b class="gold" id="allBest">0</b><span>All-time</span>
         </div>
       </div>
-      <button class="btn gold hidden" id="reviveBtn">Continue</button>
+      <!-- RETRY FIRST. It is the action taken after almost every death, and it
+           was sitting UNDER a gold button that spends currency — the highest
+           contrast element on the card was the one asking to be paid. The
+           revive is still here and still one tap; it is simply no longer
+           dressed as the thing you came to do. -->
       <button class="btn pink" id="retryBtn">Retry level</button>
+      <button class="btn gold hidden" id="reviveBtn">Continue</button>
       <button class="btn line" id="shareOver">
         <svg class="bIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="M8.3 10.7l7.4-3.9M8.3 13.3l7.4 3.9"/></svg>
         <span class="gradText">Share run</span>
       </button>
       <div class="exitRow">
-        <button class="btn ghost" id="homeBtn"><svg class="bIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>Level map</button>
-        <button class="btn ghost" id="menuBtnOver"><svg class="bIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2L12 4l8 7.2"/><path d="M6.4 10v9.2h11.2V10"/></svg>Main menu</button>
+        <button class="btn ghost" id="homeBtn"><svg class="bIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>Map</button>
+        <button class="btn ghost" id="menuBtnOver"><svg class="bIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2L12 4l8 7.2"/><path d="M6.4 10v9.2h11.2V10"/></svg>Menu</button>
       </div>
     </div>
   </div>
@@ -5116,6 +5125,15 @@ function fmtLy(ly){
   if(ly < 0.02) return Math.round(ly/AU_LY).toLocaleString('en-GB') + ' AU';
   if(ly < 100)  return (ly < 10 ? ly.toFixed(2) : ly.toFixed(1)) + ' ly';
   return Math.round(ly).toLocaleString('en-GB') + ' ly';
+}
+/* The menu's map tile is a 160px square and "2,537,000 ly to Earth" — the
+   very first thing a new player reads — took two lines in it while the three
+   tiles beside it took one. The exact figure is one tap away in the map
+   header; the tile only has to carry the magnitude. */
+function fmtLyShort(ly){
+  if(ly >= 1000000) return (ly/1000000).toFixed(2) + 'M ly';
+  if(ly >= 10000)   return Math.round(ly/1000).toLocaleString('en-GB') + 'k ly';
+  return fmtLy(ly);
 }
 function sectorName(n){ var s = JOURNEY[sectorOf(n)]; return s.n; }
 function sectorSub(n){  var s = JOURNEY[sectorOf(n)]; return s.sub; }
@@ -10306,11 +10324,12 @@ function showMenu(){
   reflow(menuScreen);
   document.getElementById('menuCredits').textContent = fmtChip(store.credits);
   document.getElementById('menuBest').textContent = fmtChip(store.high);
-  document.getElementById('starsTotal').textContent = totalStars();
   var dc = document.getElementById('dailyCard');
   var ready = dailyReady();
   dc.classList.toggle('ready', ready);
-  document.getElementById('dailyLab').textContent = 'Daily mission';
+  /* one word, like the three tiles beside it — "Daily mission" took two
+     lines at 320dp and the sub already says what the mission is */
+  document.getElementById('dailyLab').textContent = 'Daily';
   document.getElementById('dailyProg').textContent = dailyCount() + '/' + DAILY_GOAL;
   var bar = '';
   for(var bi=0; bi<DAILY_GOAL; bi++) bar += '<i class="' + (bi < dailyCount() ? 'on' : '') + '"></i>';
@@ -10324,22 +10343,38 @@ function showMenu(){
                 : 'Claimed · back tomorrow');
   var st = totalStars(), ownedN = 0;
   for(var hi=0; hi<HULLS.length; hi++) if(st >= HULLS[hi].need) ownedN++;
-  document.getElementById('starsTotal').textContent = st + ' STARS';
+  /* "144 STARS" wraps onto two lines at 360px and the tile reads as broken
+     next to the three that do not. The glyph says the same thing in a third
+     of the width, and the tile is already headed HANGAR. */
+  document.getElementById('starsTotal').textContent = st + '★';
   document.getElementById('hangSubMenu').textContent =
     ownedN + ' ship' + (ownedN>1?'s':'') + ' · ' + (HULLS.length - ownedN) + ' locked';
   /* the two action squares carry their own state, so the grid reads as four
      status tiles rather than two tiles and two unlabelled buttons */
   var pSub = document.getElementById('menuPlaySub');
   if(pSub) pSub.textContent = 'Level ' + store.level;
-  var mLv = document.getElementById('menuMapLv');
-  if(mLv) mLv.textContent = 'LV ' + store.level;
-  /* The map tile says how far is LEFT rather than how far you have come. The
-     theme name was decoration; the distance is the campaign. */
-  var mSub = document.getElementById('menuMapSub');
-  if(mSub) mSub.textContent = store.arrived ? 'Journey complete'
-                            : fmtLy(lyAt(store.level)) + ' to Earth';
+  /* nothing to continue on a save that has never been played */
+  var pLab = document.getElementById('menuPlayLab');
+  if(pLab) pLab.textContent = store.level > 1 ? 'Continue' : 'Start';
+  /* THE MAP TILE, COMPOSED LIKE THE THREE BESIDE IT: a fixed heading, one big
+     number, one line of detail.
+
+     It used to lead with the sector name, and nine of the twenty-five names
+     are wider than the 130px tile — "THE SMALL MAGELLANIC CLOUD" measures
+     242px, and no font size down to 10px wraps it into two lines at 320dp.
+     A place name is not a heading.
+
+     It also said "LV 116" next to a Play tile already saying "Level 116".
+     The distance is the one fact on this screen that nothing else carries, so
+     it takes the number slot, and the place name drops to the detail line
+     where two lines are ordinary. */
+  var mLab = document.getElementById('menuMapLab');
+  var mLv  = document.getElementById('menuMapLv');
   var mWhere = document.getElementById('menuMapWhere');
-  if(mWhere) mWhere.textContent = store.arrived ? 'Earth' : sectorName(store.level);
+  if(mLab) mLab.textContent = store.arrived ? 'Home' : 'To Earth';
+  if(mLv)  mLv.textContent  = store.arrived ? 'Arrived' : fmtLyShort(lyAt(store.level));
+  if(mWhere) mWhere.textContent = store.arrived ? 'EARTH · JOURNEY COMPLETE'
+                                : sectorName(store.level);
   var lb = document.getElementById('menuLogbook');
   if(lb) lb.classList.toggle('hidden', !store.arrived);
 }
@@ -10369,13 +10404,40 @@ function showStart(){          // the level map
   /* The sub-name rides in the progress pill rather than taking a row of its
      own. Four rows of chrome over a map is three too many, and GLOBULAR FIELD
      and 130 CLEARED are both answers to "where am I". */
+  /* The pill used to carry the sector's sub-name as well, and at 360dp
+     "DWARF SPHEROIDALS · 245 CLEARED" measured 436px inside a 331px pill —
+     it wrapped, and the second line fell straight out of a 30px-high
+     capsule. The sub-name is already on the sector card and in the logbook,
+     and the big title above this pill names the sector anyway. What the pill
+     was missing is the denominator: "245 of 246" says where you are in the
+     campaign the way "930,207 ly to Earth" says where you are in space. */
   document.getElementById('mapProgress').textContent =
-    (store.arrived ? 'THE SOLAR SYSTEM' : sectorSub(store.level)) + ' \u00b7 ' + cleared + ' cleared';
+    cleared + ' of ' + LAST_LEVEL + ' cleared';
   /* The briefing is NOT pre-filled. It appears when you pick a world and it
      describes that world, so the panel is never quietly out of date with the
      button underneath it. */
-  buildMap();
-  clearMapSelection();
+  /* THE CHART IS BUILT AFTER THE SCREEN IS ON, NOT BEFORE.
+
+     It is five and a half thousand SVG nodes and it measures 161ms to
+     assemble here — which on a mid-range Android is closer to half a second
+     of a completely frozen phone between the tap and anything happening. The
+     tap felt broken, and a tap that feels broken gets tapped again.
+
+     Nothing about the work got faster. It simply happens on the far side of a
+     paint, so the header, the buttons and the sector name are on screen
+     immediately and the worlds arrive a beat later. Perceived latency is the
+     only latency a player has.
+
+     Double rAF, not one: the first fires BEFORE the browser paints the frame
+     that showed the screen, so building in it would stall exactly the frame
+     being waited for. */
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      if(state !== S_START) return;      // they left again before it landed
+      buildMap();
+      clearMapSelection();
+    });
+  });
   refreshLifeUI();
 }
 
@@ -10486,7 +10548,7 @@ function showDailyResult(){
     dailyStreak() > 1 ? dailyStreak() + ' day streak' : 'Back tomorrow for a new conduit';
   document.getElementById('runRings').textContent = d.rings + '/' + DAILY_RINGS;
   document.getElementById('runCombo').textContent = bestComboRun;
-  document.getElementById('allBest').textContent = (store.dailyBest||0);
+  document.getElementById('allBest').textContent = fmt(store.dailyBest||0);
   document.getElementById('newBestTag').classList.add('hidden');
   // a daily is one attempt: no retry, no continue
   document.getElementById('reviveBtn').classList.add('hidden');
@@ -10515,7 +10577,7 @@ function showOver(){
   document.getElementById('runRings').textContent =
     Math.min(ringsCleared, plan.target) + '/' + plan.target;
   document.getElementById('runCombo').textContent = bestComboRun;
-  document.getElementById('allBest').textContent = store.high;
+  document.getElementById('allBest').textContent = fmt(store.high);
   document.getElementById('causeLine').textContent = deathCause;
   bumpDaily(false);
   var nb=document.getElementById('newBestTag');
