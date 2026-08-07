@@ -1151,9 +1151,16 @@
      is busy seeding a level, and a number that stutters while the world holds
      perfectly still would be the only thing moving badly on screen.
 
-     The number is LIGHT, not heavy. Every other number in this game is 900
-     weight and shouting; this one is the calm before, and the weight is doing
-     that work. GO! is the one that shouts. */
+     THE TYPE IS THE VELOCITY READOUT'S, SCALED UP. It was a 200-weight face
+     with positive tracking, which is the opposite of this game on both axes
+     and belonged to no other element in it — every number here is heavy and
+     tracked TIGHT, and the readout it hands over to is 800 at -0.02em with
+     tabular figures. The count and the velocity are the two numeric
+     statements the game makes about speed, three seconds apart, and they
+     should look like the same instrument saying both.
+
+     GO! is not a number, so it takes the other voice the game has: the wide
+     locked-out caps of OVERDRIVE and the wordmark. */
   #countdown{
     position:absolute;top:0;right:0;bottom:0;left:0;z-index:21;
     pointer-events:none;display:flex;flex-direction:column;
@@ -1162,14 +1169,14 @@
   }
   #countdown.show{opacity:1;}
   #countNum{
-    font-size:clamp(88px,29vw,196px);font-weight:200;line-height:1;
-    letter-spacing:.02em;color:var(--ink);
-    font-variant-numeric:tabular-nums;
-    text-shadow:0 0 42px rgba(35,230,217,.55),0 0 100px rgba(35,230,217,.22);
+    font-size:clamp(96px,31vw,208px);font-weight:800;line-height:.92;
+    letter-spacing:-.045em;color:#fff;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+    text-shadow:0 0 44px rgba(35,230,217,.5),0 0 108px rgba(35,230,217,.2);
     animation:cdTick var(--cd-step,.92s) cubic-bezier(.16,1,.3,1) both;
   }
   #countCap{
-    margin-top:20px;font-size:11px;font-weight:800;letter-spacing:.42em;
+    margin-top:22px;font-size:11px;font-weight:800;letter-spacing:.42em;
     text-transform:uppercase;color:var(--dim-2);
   }
   /* the pulse itself — one ring per heartbeat, out and gone */
@@ -1191,8 +1198,11 @@
   /* GO! — the shout. Bigger ring, harder note, and the caption changes job
      from telling you to wait to telling you that you are away. */
   #countdown.go #countNum{
-    font-weight:900;letter-spacing:.14em;color:var(--signal-hi);
-    font-size:clamp(62px,20vw,132px);
+    font-weight:900;letter-spacing:.2em;line-height:1;color:var(--signal-hi);
+    font-size:clamp(58px,18.5vw,124px);
+    /* locked-out caps pad on the right; without this the word sits left of
+       the centre line the numbers were just standing on */
+    text-indent:.2em;
     text-shadow:0 0 46px rgba(92,255,242,.72),0 0 120px rgba(35,230,217,.35);
     animation:cdGo .62s cubic-bezier(.16,1,.3,1) both;
   }
@@ -1426,20 +1436,34 @@
     background-color:transparent;
     transition:background-color 300ms linear;
     transform-origin:50% 50%;
-    animation:ndsFall 1200ms cubic-bezier(.42,0,.82,.46) 300ms both;
+    /* Lands at 1.2s, and the horizon starts eating the frame at 0.99s — so
+       the mark is gone into it before the rest of the picture follows, which
+       is the order the whole thing has to happen in to read. */
+    animation:ndsFall 900ms cubic-bezier(.42,0,.82,.46) 300ms both;
   }
   @keyframes ndsFall{
     0%  { transform:scale(1)     rotate(0deg);   opacity:1; }
     50% { transform:scale(.44)   rotate(52deg);  opacity:.94; }
     100%{ transform:scale(.012)  rotate(232deg); opacity:0; }
   }
-  /* The menu comes up through the collapse rather than being there all along.
-     Held out for the first 45% — the horizon is at its widest then and the
-     menu's own dimming gradient over the top of it would be a waste of it. */
-  #menuScreen.warpin{ animation:ndsArrive 1650ms cubic-bezier(.2,.9,.3,1) both; }
+  /* WE OPEN ON THE MENU. The horizon does not close and hand the screen back
+     — it eats the frame, and for a beat there is nothing on screen at all.
+     The menu is held out of that entirely (72% is BH_HOLD in the script, the
+     moment the black is total and the horizon is taken away) and then simply
+     comes up out of it, alongside the canvas fading back in underneath.
+     No scale, no drift: a scene opens, it does not slide on. */
+  /* Not clickable while it cannot be seen. The tiles are laid out and hit-
+     testable from the first frame; without this the Play button is a live
+     control sitting invisibly over a black screen. */
+  #menuScreen.warpin{ animation:ndsArrive var(--boot-dur,2900ms) linear both;
+                      pointer-events:none; }
   @keyframes ndsArrive{
-    0%,45%{ opacity:0; transform:scale(1.14); }
-    100%  { opacity:1; transform:none; }
+    0%      { opacity:0; animation-timing-function:steps(1,end); }
+    /* 72% to 88% is 460ms against the canvas's 250ms behind it — near enough
+       to the same move that the conduit coming back and the menu landing on
+       it read as one reveal rather than two. */
+    72%     { opacity:0; animation-timing-function:cubic-bezier(.33,0,.2,1); }
+    88%,100%{ opacity:1; }
   }
   @media (prefers-reduced-motion: reduce){
     #nds-splash.nds-warp{ animation:none; opacity:0; transition:opacity 500ms linear; }
@@ -1598,9 +1622,24 @@
     var menu = document.getElementById('menuScreen');
     if(menu && !calm){
       menu.classList.add('warpin');
-      setTimeout(function(){ menu.classList.remove('warpin'); }, 2000);
+      /* Taken off on whichever comes first. The class holds pointer-events
+         off, so a menu that never lost it would be a menu you cannot press —
+         the timer alone is not a safe enough way to give a screen back. */
+      var unwarp = function(e){
+        /* animationend BUBBLES, and the menu is full of animated children —
+           any one of them finishing would otherwise hand the screen back
+           early, which is a menu that fades in from nothing while already
+           accepting taps. Only this element's own arrival counts. */
+        if(e && (e.target !== menu || e.animationName !== 'ndsArrive')) return;
+        menu.removeEventListener('animationend', unwarp);
+        menu.classList.remove('warpin');
+      };
+      menu.addEventListener('animationend', unwarp);
+      setTimeout(unwarp, 3200);
     }
-    setTimeout(function(){ s.classList.add('nds-gone'); }, calm ? 1000 : 1700);
+    // the fall lands at 1.2s; take the layer out of the tree right behind it,
+    // well before the horizon closes the frame down over the top of everything
+    setTimeout(function(){ s.classList.add('nds-gone'); }, calm ? 1000 : 1300);
   }
   function start(){
     if(started) return;
@@ -1969,7 +2008,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 3.3 &middot; three, two, one</div>
+      <div class="setVer">Ringshift &middot; version 3.4 &middot; three, two, one</div>
     </div>
 
     <div class="setFoot">
@@ -2877,13 +2916,19 @@ function sfxHeart(){
   heartThump(a.currentTime,        0.34, 74);
   heartThump(a.currentTime + 0.16, 0.20, 62);
 }
+/* THE COUNT TONE, over the thump. Three identical beeps and then one an
+   octave up on GO — every start line in the world uses that shape, and it
+   uses it because you can hear the last one coming without being told which
+   one it is. The thump is the body, this is the pitch. */
+function sfxBeep(){ tone(880, 0.13, 'triangle', 0.105); }
 /* THE LAUNCH. Not a sting either — the riser has been climbing since ONE and
    this is the thing it was climbing to, so all it has to do is land: a low
    hit under it and one bright note over the top, then the bed takes over. */
 function sfxLaunch(){
   if(!sfxOn()) return;
-  tone(52,  0.85, 'sine',     0.34, 30);
-  tone(660, 0.34, 'triangle', 0.13, 1320);
+  tone(1760, 0.30, 'triangle', 0.125);       // the fourth beep, an octave up
+  tone(52,   0.85, 'sine',     0.34, 30);
+  tone(660,  0.34, 'triangle', 0.11, 1320);
   noiseSweep(0.55, 0.20, 300, 5200);
 }
 /* The primer's arrival. Deliberately not a sting: two soft rising notes that
@@ -5982,6 +6027,7 @@ function cdPaint(){
   reflow(num);
   reflow(document.getElementById('countRing'));
   if(n > 0){
+    sfxBeep();
     sfxHeart();
     beatPulse = Math.max(beatPulse, 0.45);   // the tunnel breathes with it
     if(n === 1) riserAt(CD_STEP);            // starts on ONE, lands on GO
@@ -8638,13 +8684,13 @@ var MANUAL = [
       'being modest — nothing is moving. The walls don&rsquo;t scroll, the stars are points '+
       'rather than streaks, and the engine is silent, because all of those are just the ship&rsquo;s '+
       'speed wearing different clothes. There is no speed yet.</div>'+
-    '<div class="pgP">What you can hear is me, keeping time. One pulse a second, three of them. '+
-      'Use them. Settle the conduit where you want it — <b>steering works on the line</b>, and '+
-      'it is the only thing that does.</div>'+
+    '<div class="pgP">What you can hear is me, keeping time. A tone and a pulse under it, once a '+
+      'second, three of them. Use them. Settle the conduit where you want it — <b>steering works '+
+      'on the line</b>, and it is the only thing that does.</div>'+
     '<table class="pgTable"><tr><th>Count</th><th>What I&rsquo;m doing</th></tr>'+
       '<tr><td class="key">THREE</td><td>Holding. Nothing out there can reach you.</td></tr>'+
       '<tr><td class="key">TWO</td><td>Still holding. Pick your line.</td></tr>'+
-      '<tr><td class="key">ONE</td><td>Spooling up. You&rsquo;ll hear it.</td></tr>'+
+      '<tr><td class="key">ONE</td><td>Spooling up. You&rsquo;ll hear it climbing.</td></tr>'+
       '<tr><td class="key">GO</td><td>Everything at once.</td></tr>'+
     '</table>'+
     '<div class="pgP">On <b>GO</b> the bed starts, the pace climbs to whatever this sector was '+
@@ -10238,22 +10284,50 @@ function update(dt){
        clamps at 50ms the horizon ran at about 60% speed on a slow device —
        the mark finished its spiral into a hole that was still opening. */
     var bt = Math.min(1, (performance.now() - bootHoleAt) / (BOOT_HOLE*1000));
-    /* Opens faster than it closes: the pow() front-loads the sine so it is
-       wide open while the mark is still falling, and has the back half of the
-       sequence to collapse under the menu. */
-    var bo = Math.sin(Math.pow(bt, 0.68) * Math.PI);
-    bhole.visible = true;
-    var bgrow = 0.5 + bo*3.4;
-    bhole.scale.set(bgrow, bgrow, 1);
-    bholeDisc.material.opacity = Math.min(1, bo*1.7);
-    bholeRing.material.opacity = bo*0.95;
-    bholeRing.rotation.z += dt*2.1;
-    bholeRing.material.color.setHex(PAL[colorIdx].hex);
-    bholeDisk.rotation.z -= dt*1.25;      // the mark spirals the same way
-    accretionMat.uniforms.uCol.value.setHex(PAL[colorIdx].hex);
-    accretionMat.uniforms.uAmt.value = bo;
-    holeAmt = bo;
-    if(bt >= 1){ bootHoleAt = 0; hideHole(); }
+    /* ABANDON IF THE SCREEN HAS MOVED ON. The menu is invisible for most of
+       this and a tap can still reach it — pointer-events on .warpin closes
+       that, but a keyboard, a deep link or a slow frame could all still start
+       something. The arrival owns the canvas and the HUD while it runs, and
+       going on dimming a canvas or hiding a HUD that now belongs to a run is
+       how you get a level played blind. Caught exactly this: the run started
+       mid-fall and the arrival hid its HUD half a second later. */
+    if(state !== S_MENU){
+      bootHoleAt = 0;
+      if(bhole.visible) hideHole();
+    } else if(bt < BH_HOLD){
+      /* It opens, and then it does not close — it EATS. Past BH_OPEN the
+         scale runs away, which drags the composite's lens radius out past the
+         corners of the frame; and the composite multiplies everything by the
+         shadow term after bloom, trail, streak and grain, because nothing
+         escapes a horizon. So the screen goes genuinely black, swallowed, by
+         the same shader that draws the hole — rather than being faded out by
+         a black rectangle laid over the top of it. */
+      var bo = Math.sin(Math.min(1, bt / BH_OPEN) * Math.PI * 0.5);
+      var eat = bt <= BH_OPEN ? 0 : Math.min(1, (bt - BH_OPEN) / (BH_DARK - BH_OPEN));
+      bhole.visible = true;
+      var bgrow = 0.5 + bo*3.4 + eat*eat*BH_EAT;
+      bhole.scale.set(bgrow, bgrow, 1);
+      bholeDisc.material.opacity = Math.min(1, bo*1.7);
+      bholeRing.material.opacity = bo*0.95;
+      bholeRing.rotation.z += dt*2.1;
+      bholeRing.material.color.setHex(PAL[colorIdx].hex);
+      bholeDisk.rotation.z -= dt*1.25;      // the mark spirals the same way
+      accretionMat.uniforms.uCol.value.setHex(PAL[colorIdx].hex);
+      accretionMat.uniforms.uAmt.value = bo;
+      holeAmt = bo;
+      /* Dim the canvas once the frame is already black, so the 250ms opacity
+         fade has nothing to fade — and keep DRIVING the horizon through it,
+         because taking the horizon away first would put a lit conduit back on
+         screen for exactly as long as that fade lasts. */
+      if(bt >= BH_DARK && canvasLit) setTunnel(false, false);
+    } else if(bhole.visible){
+      /* Total black, and now it is the canvas's own opacity holding it there.
+         Safe to take the horizon away and bring the conduit back up under a
+         menu that is still waiting on its own fade. */
+      hideHole();
+      setTunnel(true, false);
+    }
+    if(bt >= 1) bootHoleAt = 0;
   }
 
   var clearPull = 0;
@@ -10527,18 +10601,36 @@ function loop(now){
          to cross-fade would just be a bright smudge behind it. */
       window.__ndsGone = function(warp){
         bootHold = false; last = performance.now();
-        if(warp) bootHoleAt = performance.now();
+        if(warp){
+          bootHoleAt = performance.now();
+          /* One clock for both halves of this. The card's fall and the menu's
+             opening are CSS animations keyed off the same total, so it is
+             published rather than written down twice. */
+          document.documentElement.style.setProperty('--boot-dur', (BOOT_HOLE*1000) + 'ms');
+        }
       };
       window.__ndsReady();
     }
   }
 }
 var firstFrameDone = false, bootHold = false;
-/* performance.now() at the start of the studio card's fall, 0 when no fall is
-   running. Long enough to open wide, swallow the mark and close under the
-   menu — and it has to stay in step with the CSS on the card, so it is timed
-   the way CSS is. */
-var bootHoleAt = 0, BOOT_HOLE = 1.9;
+/* THE ARRIVAL'S CLOCK. performance.now() at the start of the studio card's
+   fall, 0 when no fall is running. Timed the way CSS is, because the card
+   falling into it and the menu opening out of it are both CSS.
+
+   Four phases, as fractions of the whole:
+     0      → OPEN   the horizon opens, the card falls in
+     OPEN   → DARK   it stops being a hole in the frame and eats the frame
+     DARK   → HOLD   total black, held
+     HOLD   → 1      we open on the menu
+
+   BH_EAT is how much extra scale the swallow adds. It has to carry the
+   composite's lens radius past the corner of the widest screen anyone will
+   hold this on, which is further than it looks: the shadow term needs a
+   radius over ~1.3 in its own units on a landscape phone against ~0.61 in
+   portrait, and 78 is measured to clear both with room. */
+var bootHoleAt = 0, BOOT_HOLE = 2.9;
+var BH_OPEN = 0.34, BH_DARK = 0.58, BH_HOLD = 0.72, BH_EAT = 78;
 /* Tabbing away must never cost a run. */
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){

@@ -67,9 +67,11 @@ Every run opens stopped. Not slow — **stopped**. The conduit does not scroll,
 the stars are points rather than streaks, the engine is silent, and the
 velocity readout says **0.000**, because it is telling you the truth.
 
-Over that, three numbers and a heartbeat. One pulse per number, the tunnel
-breathing faintly with it, and nothing else on the screen at all: the side
-labels and everything else wait their turn.
+Over that, three numbers, each with a beep and a heartbeat under it — the
+tunnel breathing faintly on every one, and nothing else on screen at all: the
+side labels and everything else wait their turn. The three beeps are identical
+and the one on GO is an octave up, which is the shape every start line uses,
+and uses because you can hear the last one coming without being told.
 
 Then **GO!**, and everything arrives at once — the music starts, the pace
 climbs to what the level asked for over about a second and a half, and the
@@ -310,10 +312,19 @@ result card arrives.
 **The same horizon opens once more, before you have played anything.** The
 studio card at boot does not cross-fade into the menu — it falls in. The
 horizon opens behind it, the card's black drops away to reveal it, and the mark
-spirals down into the disc while the menu rises through the collapse. It is not
-a boot-time imitation of the effect: it is the effect, the same disc, the same
-shader, the same lens bending the same conduit. A cross-fade is the one
-transition that says nothing about where you have been or where you are going.
+spirals down into the disc.
+
+Then it does not stop. It keeps eating: the conduit winds in after the mark,
+the photon ring sweeps out past the edges of the screen, and for a beat there
+is **nothing on screen at all**. Not a fade to black — a swallow. The shadow
+of a horizon is applied after bloom, trail, streak and grain, because nothing
+escapes one, so the frame goes genuinely and completely dark by the same
+shader that drew the hole. Out of that, we open on the menu.
+
+It is not a boot-time imitation of the effect: it is the effect, the same disc,
+the same shader, the same lens bending the same conduit. A cross-fade is the
+one transition that says nothing about where you have been or where you are
+going.
 
 ---
 
@@ -589,9 +600,10 @@ density all climb with difficulty and with your chain, so the music tells you
 how well you are doing. A sidechain duck makes the whole bed breathe under the
 kick.
 
-It starts on **GO**, and nowhere else. Through the countdown the only thing you
-can hear is a heartbeat — a real lub-dub, one per number, with a riser climbing
-under the last of them. There is exactly one moment in the game where a conduit
+It starts on **GO**, and nowhere else. Through the countdown all you can hear
+is the count: a beep and a real lub-dub heartbeat under it, one per number,
+with a riser climbing under the last of them and the fourth beep an octave up
+as the throttle opens. There is exactly one moment in the game where a conduit
 goes live, and everything you hear is on one side of it or the other.
 
 Underneath that is a continuous layer that is **driven by the ship rather than
