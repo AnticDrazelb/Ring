@@ -2326,7 +2326,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.2 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.3 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -4981,87 +4981,116 @@ var LAST_LEVEL = 246;                // the transit that comes out at Earth
 var AU_LY = 1/63241.077;             // one astronomical unit, in light years
 var JOURNEY = [
 {n:'ANDROMEDA', sub:'OUTER ARM', ly:2537000, log:[
-  'Transit logged. Conduit stable. Hull nominal. Crew: one.',
-  'I have written that line four thousand one hundred and eighteen times. I keep writing it because writing it is the job, and because a log with a gap in it is not a log.']},
+  'Transit logged. Conduit stable, hull nominal, crew one.',
+  'Entry four thousand one hundred and eighteen. A log with a gap in it is not a log.'
+]},
 {n:'ANDROMEDA', sub:'THE HALO', ly:2410000, log:[
-  'Out past the last of the stars. The chart calls this the halo, which is being generous — it is mostly the absence of things, arranged in a shape.',
-  'You fly well. I have not had cause to write that before.']},
+  'The chart calls this the halo. It is the absence of things, arranged in a shape.',
+  'Nothing to report. Reporting it anyway.'
+]},
 {n:'THE VOID', sub:'FIRST CROSSING', ly:2180000, log:[
-  'Nothing out here for a long while. No mass, no light worth the name, and no conduit that was not put here on purpose by somebody who is not answering.',
-  'I have stopped wondering who. It was making me slow.']},
+  'No mass. No light worth the name. No conduit in this volume that was not put here on purpose.',
+  'Whoever put it here is not answering. Logged, and not pursued.'
+]},
 {n:'M32', sub:'THE SHALLOWS', ly:1940000, log:[
-  'A small galaxy, stripped to its core by the large one it orbits. Two hundred million stars in a space that should hold a thousand.',
-  'It is crowded and it is silent. I do not like it here. I am aware that is not a navigational observation.']},
+  'A galaxy stripped to its core by the larger one it orbits. Two hundred million stars in a volume that should hold a thousand.',
+  'Crowded. Silent. Neither observation is navigational.'
+]},
 {n:'THE VOID', sub:'DEEP', ly:1620000, log:[
-  'Second crossing, and longer. If you want a number: nothing we pass in this sector will come within four hundred thousand light years of us.',
-  'Talk to me if you like. I will not mind.']},
+  'Second crossing, and longer than the first. Nothing we pass in this sector will come within four hundred thousand light years of us.',
+  'The channel is open at your end, if you want it.'
+]},
 {n:'TRIANGULUM', sub:'APPROACH', ly:1310000, log:[
-  'Third largest thing in the Local Group, and it still took eleven transits to reach. Spiral, blue, making stars like it has somewhere to be.',
-  'It is the first thing in nine hundred thousand light years that is going anywhere.']},
+  'Spiral. Blue. Making stars at a rate that suggests somewhere to be.',
+  'First thing in nine hundred thousand light years that is going anywhere.'
+]},
 {n:'TRIANGULUM', sub:'TRAILING ARM', ly:960000, log:[
-  'Under a million.',
-  'Six digits instead of seven is not a real milestone. I noted it anyway.']},
+  'Six digits.',
+  'That is not a milestone, it is arithmetic. Noted regardless.'
+]},
 {n:'THE VOID', sub:'SECOND CROSSING', ly:820000, log:[
-  'I have run your conduit long enough now to know how you turn before you turn.',
-  'That is not affection. It is pattern recognition. I am told the difference matters.']},
+  'Long enough on this conduit now to know how you turn before you turn.',
+  'Pattern recognition. I am told there is a difference between that and the other thing.',
+  'I have not looked into it.'
+]},
 {n:'NGC 6822', sub:"BARNARD'S GALAXY", ly:610000, log:[
   'An irregular. No arms, no core, no plan.',
-  'Somebody catalogued it from the surface of a planet, through a tube of ground glass, and gave it a name. I find I have a great deal of time for that.']},
+  'Catalogued from the surface of a planet, through a tube of ground glass, by somebody who then gave it a name.',
+  'There was no need to name it. They named it.'
+]},
 {n:'THE LEO SHALLOWS', sub:'DWARF SPHEROIDALS', ly:440000, log:[
-  'Two dwarf galaxies bound to the one we are going to. Faint enough that they were argued over before they were accepted.',
-  'We are inside the argument now.']},
+  'Two dwarfs, bound to the galaxy we are going to. Faint enough that they were argued over before they were accepted.',
+  'We are inside the argument.'
+]},
 {n:'THE SAGITTARIUS STREAM', sub:'TIDAL DEBRIS', ly:300000, log:[
-  'This was a galaxy. It came too close, and now it is a smear of stars being pulled apart along its own orbit, one lap at a time.',
-  'The Milky Way is eating it. I mention this because the Milky Way is where we are going, and I would rather you heard it from me.']},
+  'This was a galaxy. It came too close, and it is now a smear of stars being pulled out along its own orbit, one lap at a time.',
+  'The Milky Way is eating it. The Milky Way is also where we are going. You should hear that from me and not from the chart.'
+]},
 {n:'THE SMALL MAGELLANIC CLOUD', sub:'OUTER STREAM', ly:200000, log:[
-  'Visible from the surface. Naked eye, southern sky — a smudge people steered by for thousands of years before anyone knew what it was.',
-  'Somebody down there has looked at where we are standing. That is new.']},
+  'Naked eye from the surface. Southern sky. A smudge that people steered ships by for thousands of years without knowing what it was.',
+  'They were looking at where we are standing. They did not know that either.'
+]},
 {n:'THE LARGE MAGELLANIC CLOUD', sub:'30 DORADUS', ly:158000, log:[
-  'Six digits, and for the last time.',
-  'The next entry I write will have five.']},
+  'Thirty Doradus is in here, lighting a nebula a thousand light years across. The brightest star-forming region in the Local Group.',
+  'Six digits, and for the last time.'
+]},
 {n:'THE GALACTIC HALO', sub:'GLOBULAR FIELD', ly:92000, log:[
-  'Inside it. Not the disc, not yet — the halo is the old part, the globular clusters and the dark, wrapped around everything else.',
-  'Every star out here is twelve billion years old. Ours is four and a half. We are going to the young part.']},
+  'Inside it. Not the disc — the halo is the old part, globular clusters and dark, wrapped round everything else.',
+  'Every star out here is twelve billion years old. Ours is four and a half. We are going to the young part.'
+]},
 {n:'THE OUTER ARM', sub:'GALACTIC DISC', ly:24000, log:[
-  'Disc. Dust. Traffic, if you can call it that.',
-  'I have started checking the chart against what I can actually see rather than against what I remember. It matches. I did not expect it to.']},
+  'Disc. Dust. Traffic, of a sort.',
+  'I have started checking the chart against what I can see rather than against what I remember. It matches.'
+]},
 {n:'THE PERSEUS ARM', sub:'INBOUND', ly:6400, log:[
-  'Four digits.',
-  'I have no observation for this sector. I checked the number three times and then I wrote it down.']},
+  'An arm of our own galaxy, and the last one between us and the address.',
+  'No observation for this sector. The number was checked three times and then written down.'
+]},
 {n:'CYGNUS X', sub:'STAR NURSERY', ly:4600, log:[
-  'Loud. Everything here is being born, or being taken apart by something that was born earlier.',
-  'From the surface it is a bright patch in a constellation somebody decided was a swan. Nobody has revisited the decision.']},
+  'Loud. Everything in here is being born, or being taken apart by something that was born earlier.',
+  'From the surface it is a bright patch in a constellation somebody decided was a swan. Nobody has revisited the decision.'
+]},
 {n:'THE NORTH AMERICA NEBULA', sub:'NGC 7000', ly:2600, log:[
   'Named for its shape, by people who had a map of a coastline and noticed it twice.',
-  'I have that coastline. It is in my charts, under a heading I have not opened in a long time.']},
+  'I hold that coastline. It is in my charts, under a heading I have not opened in a long time.',
+  'I have not opened it now either.'
+]},
 {n:'THE ORION SPUR', sub:'LOCAL ARM', ly:1600, log:[
-  'This is the neighbourhood. Not the arm — the spur, the short bridge between two of them. That is where the address is.',
-  'I am going to stop calling it the destination now.']},
+  'Not the arm. The spur — the short bridge between two of them. That is where the address is.',
+  'I will stop calling it the destination.'
+]},
 {n:'THE PLEIADES', sub:'MELOTTE 22', ly:444, log:[
-  'Seven blue stars wrapped in the dust they are lighting. Every culture that could see the sky counted them, and most counted seven, though there are more than a thousand.',
-  'They are the first thing on this route I have seen with my own instruments and recognised without looking it up.']},
+  'Seven blue stars in the dust they are lighting. There are more than a thousand of them. Every culture that could see the sky counted seven.',
+  'First thing on this route my instruments found before the chart told them to look.'
+]},
 {n:'THE LOCAL BUBBLE', sub:'CAVITY WALL', ly:300, log:[
-  'A hole in the interstellar medium, blown out by supernovae before anything on the surface had a spine. Thin, hot, and nearly empty.',
-  'Home is in the middle of it. We are inside the room now. We are simply not across it.']},
+  'A cavity in the interstellar medium, blown clear by supernovae before anything on the surface had a spine.',
+  'Home is in the middle of it. We are in the room. We are not across it.'
+]},
 {n:'THE HYADES', sub:'MELOTTE 25', ly:153, log:[
   'The closest open cluster. From the surface it makes the face of a bull, and it has done for as long as there have been people to say so.',
-  'Three digits. I would like it noted that I am not going to remark on every digit.']},
+  'Three digits.'
+]},
 {n:'61 CYGNI', sub:'FLYING STAR', ly:11.4, log:[
-  'The first star anyone measured the distance to. Eighteen thirty-eight. A man with a telescope and a very great deal of patience worked out how far away something was by watching it not quite hold still.',
-  'Everything I do is downstream of that.']},
+  'The first star anyone measured the distance to. Eighteen thirty-eight.',
+  'A man watched it not quite hold still, did the arithmetic, and knew how far away something was for the first time in the history of the species.',
+  'Everything I do is downstream of that.'
+]},
 {n:'ALPHA CENTAURI', sub:'NEAREST SYSTEM', ly:4.37, log:[
-  'Two suns and a small red one. For most of recorded history this was the furthest place anybody seriously proposed going.',
-  'It is the last stop. I have run out of route to plan.']},
+  'Two suns and a small red one. For most of recorded history, the furthest place anybody seriously proposed going.',
+  'Last stop. There is no more route to plan.'
+]},
 {n:'THE SOLAR SYSTEM', sub:'HELIOPAUSE', ly:0.0019, log:[
-  'Inside the heliopause. From here the wind is coming from our star and nobody else’s.',
-  'One transit left. Everything before this you were carried — every horizon put us somewhere we could not have flown to. This last part you fly.',
-  'I have been out here a long time. Thank you for the lift.']}
+  'Inside the heliopause. The wind out here is coming from our own star now.',
+  'One transit left. Everything before this, you were carried — every horizon put us somewhere we could not have flown to. This last part you fly.',
+  'I have been out here a long time. Thank you for the lift.'
+]}
 ];
 /* ECHO's last entry. Not in the table above because it is not a sector: it is
    written on the far side of the last horizon, with the thing it is about
    filling the window. */
 var ARRIVAL_LOG = [
-  'Third planet. Blue because of the water, white because of the weather. The dark side is lit, which means they are still there and they are still awake.',
+  'Third planet. Blue because of the water, white because of the weather. The dark side is lit. They are still there, and they are still awake.',
   'Distance to Earth: zero.',
   'I do not have a procedure for this. I am going to stop talking and let you look at it.'
 ];
@@ -9660,9 +9689,9 @@ var MANUAL = [
       'being modest — nothing is moving. The walls don&rsquo;t scroll, the stars are points '+
       'rather than streaks, and the engine is silent, because all of those are just the ship&rsquo;s '+
       'speed wearing different clothes. There is no speed yet.</div>'+
-    '<div class="pgP">What you can hear is me, keeping time. A tone and a pulse under it, once a '+
-      'second, three of them. Use them. Settle the conduit where you want it — <b>steering works '+
-      'on the line</b>, and it is the only thing that does.</div>'+
+    '<div class="pgP">What you can hear is me keeping time. A tone and a pulse under it, once a '+
+      'second, three times. Use them &mdash; settle the conduit where you want it. <b>Steering '+
+      'works on the line</b>, and it is the only thing that does.</div>'+
     '<table class="pgTable"><tr><th>Count</th><th>What I&rsquo;m doing</th></tr>'+
       '<tr><td class="key">THREE</td><td>Holding. Nothing out there can reach you.</td></tr>'+
       '<tr><td class="key">TWO</td><td>Still holding. Pick your line.</td></tr>'+
@@ -9921,8 +9950,8 @@ var MANUAL = [
   var read = logsRead();
   var out = '<div class="pgKick">Ship&rsquo;s log &middot; ECHO</div>'+
             '<div class="pgH">The long way home</div>'+
-            '<div class="pgLead">One entry a sector. I write them as we cross, and I do not '+
-              'go back and tidy them up &mdash; a log you have edited is not a log.</div>'+
+            '<div class="pgLead">One entry a sector, written as we cross. I do not go back '+
+              'and tidy them up &mdash; a log you have edited is not a log.</div>'+
             '<div class="pgP" style="color:#5fa89e">' + read + ' of ' + JOURNEY.length +
               ' recovered &middot; ' + fmtLy(lyAt(store.level)) + ' to Earth</div>';
   for(var i=0;i<JOURNEY.length;i++){

@@ -372,11 +372,24 @@ actually fly.
 
 The log is written by the ship. ECHO is an Earth-built mind that has been out
 here far longer than you have, and it has been the only voice on the channel
-for a very long time — so it opens clipped and procedural, keeping the log
-because keeping the log is the job, and it thaws as the number falls. One
-entry a sector, given to you at the crossing and kept in **the ship's log** in
-the console, which is the only file in the manual that is not finished. The
-sectors ahead of you are listed and not recovered.
+for a very long time. One entry a sector, given to you at the crossing and
+kept in **the ship's log** in the console — the only file in the manual that
+is not finished, with the sectors ahead of you listed and not recovered.
+
+It runs in four movements, and the shape of the writing moves with them, not
+just the temperature:
+
+| | | |
+|---|---|---|
+| 1–6 | **Procedure** | Log entries. Fragments. ECHO is barely a person. |
+| 7–12 | **The crack** | It starts noting things it does not need to note. |
+| 13–19 | **Recognition** | The people who named these places take over. |
+| 20–25 | **Arrival** | Short again — but short from feeling this time. |
+
+It never says the warm thing early. The first entry is a form being filled in
+("*Transit logged. Conduit stable, hull nominal, crew one.*") and the last one
+is not ("*I have been out here a long time. Thank you for the lift.*"), and
+everything between them is the distance between those two sentences.
 
 By the last sector it is not hiding anything, and the arrival is its
 homecoming as much as yours.
