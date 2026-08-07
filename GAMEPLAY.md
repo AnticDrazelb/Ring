@@ -764,6 +764,38 @@ ever triggered — it is simply always there, saying how fast you are going.
 
 ---
 
+## 25a. How the interface is built
+
+Everything the game draws in HTML comes out of one small set of parts, because
+a screen made of ten one-off components reads as ten unrelated screens.
+
+**Five shapes.** A terminal corner for the console's keys, then chip, control,
+button, card and sheet — in that order of roundness. Nothing else. A surface's
+radius tells you what kind of thing it is before you read it.
+
+**Two hairlines and two lit ones.** One neutral edge, one at half strength for
+divisions inside a panel, one cyan for a live or selected state, one pink for a
+hazard. There is no third grey.
+
+**One chip.** The requirement chips, the CLEARED tag, the hazard tags, the
+distance pill, the progress pill and the map tip are the same component at two
+heights. They used to be five components at four heights, three type sizes and
+two different ways of drawing a one-pixel border, and three of them shared a
+single panel.
+
+**Nine type sizes and seven control heights, all fluid.** Every one is a
+`clamp()` calibrated to hit its designed value at 430dp and shrink smoothly
+below it. There are no width breakpoints that change scale — a 320dp phone and
+a 430dp phone get the *same* layout at different sizes, not two layouts with a
+seam between them. The only width rules left are ones that *hide* something
+when the top tray genuinely runs out of room.
+
+**Anything you tap is at least 44px, always.** The type and the chrome scale
+with the screen; touch targets do not. On the smallest phone the labels get
+smaller and the buttons stay the same.
+
+---
+
 ## 26. The shareable card
 
 Hit **Share** on any result and the game renders a **three-second animated GIF**

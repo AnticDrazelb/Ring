@@ -104,8 +104,15 @@ You do not need to add error handling around it.
   console in a WebView, so a black screen would tell the player nothing.
 - **An error after the first frame** — swallowed. The game is demonstrably
   running by then and one async throw is not a reason to replace it.
-- **A frame rate it cannot hold** — the post-processing chain is dropped
-  automatically and the player is told.
+- **A frame rate it cannot hold** — the render resolution is walked down a
+  tier at a time first; the post-processing chain is only dropped once it is
+  already at the floor, and the player is told.
+- **A screen size you did not test** — the UI has no fixed pixel sizes left in
+  it. Every control height and every type size is a `clamp()` calibrated to
+  hit its designed value at 430dp and shrink continuously below that, so a
+  320dp phone gets the same layout at a smaller size rather than a different
+  one. Anything tappable holds a hard 44px floor regardless of how small the
+  screen gets — the chrome shrinks, the touch targets do not.
 - **A corrupt or hand-edited save** — checked and repaired on load.
 - **`prefers-reduced-motion`** — respected without being asked.
 
@@ -122,3 +129,6 @@ which build you are running. Then:
    type is software.
 3. If the layout is bunched or the tiles are not square, the WebView is below
    84 and wants updating.
+4. Rotate the phone and resize the window if you can. Nothing should jump: the
+   layout has no width breakpoints left that change scale, only ones that
+   *hide* a chip when the top tray runs out of room.

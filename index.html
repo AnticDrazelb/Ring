@@ -38,7 +38,59 @@
     --dim:#8ea6c4;
     --dim-2:#5b739a;
 
-    --r-chip:14px; --r-btn:20px; --r-card:22px; --r-pill:999px;
+    /* ---- SHAPE ------------------------------------------------------
+       Eighteen distinct border-radius values were in use for what is really
+       five kinds of surface. These are the five. */
+    --r-term:6px;      /* the console's keys — a terminal has corners       */
+    --r-chip:14px;     /* small square-ish surfaces                          */
+    --r-ctl:16px;      /* icon buttons, stat blocks                          */
+    --r-btn:20px;      /* action buttons                                     */
+    --r-card:22px;     /* panels and tiles                                   */
+    --r-sheet:28px;    /* full cards and the briefing sheet                  */
+    --r-pill:999px;
+
+    /* ---- HAIRLINES --------------------------------------------------
+       Six different neutral border colours and five signal ones were doing
+       the same two jobs. --hair is the neutral edge, --edge-on the lit one;
+       -2 is the same edge at half strength for internal divisions. */
+    --edge:rgba(175,215,255,.15);
+    --edge-2:rgba(175,215,255,.085);
+    --edge-on:rgba(35,230,217,.38);
+    --edge-hot:rgba(255,120,190,.30);
+
+    /* ---- CONTROL HEIGHTS --------------------------------------------
+       These scale with the viewport instead of stepping at four hand-written
+       breakpoints, so a 320dp phone and a 430dp phone get the same layout at
+       different sizes rather than two different layouts.
+
+       ANYTHING TAPPABLE HAS A HARD 44px FLOOR. A control does not get to
+       shrink below a thumb just because the screen is small — the fluid part
+       is the chrome around it. */
+    --h-tag:clamp(24px,6.5vw,28px);     /* tags, hazard chips — not tappable */
+    --h-pill:clamp(30px,7.9vw,34px);    /* status pills       — not tappable */
+    --h-ctl:clamp(44px,10.7vw,46px);    /* icon buttons, chips, console keys */
+    --h-hud:clamp(46px,12.1vw,52px);    /* the in-run HUD pills              */
+    --h-btn:clamp(54px,15.8vw,68px);    /* primary action buttons            */
+    --h-ctl-t:clamp(38px,9.6vw,42px);   /* the map tray, one notch tighter   */
+    --h-hud-t:clamp(42px,11.2vw,48px);  /* the HUD in its two-row mode       */
+    --h-sys:clamp(54px,14.4vw,62px);    /* the round system buttons          */
+    --h-btn-2:clamp(50px,14.4vw,62px);  /* secondary buttons                 */
+    --h-row:clamp(56px,15.3vw,66px);    /* settings rows                     */
+
+    /* ---- TYPE -------------------------------------------------------
+       Forty-two hand-picked font sizes, eight of them fluid, collapsed onto
+       nine rungs that all scale together. The vw term is calibrated so each
+       rung hits its old value at 430dp — the size this was designed at — and
+       shrinks smoothly from there rather than jumping at a breakpoint. */
+    --t-micro:clamp(8.5px,2.2vw,9.5px);
+    --t-tiny:clamp(9.5px,2.45vw,10.5px);
+    --t-fine:clamp(10px,2.6vw,11px);
+    --t-sm:clamp(11.5px,3.0vw,13px);
+    --t-md:clamp(12.5px,3.5vw,15px);
+    --t-lg:clamp(14.5px,4.0vw,17px);
+    --t-xl:clamp(17px,4.9vw,21px);
+    --t-2xl:clamp(20px,6.0vw,26px);
+    --t-3xl:clamp(25px,7.7vw,33px);
 
     --ui:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
     /* the console's face. ui-monospace resolves to SF Mono on Apple hardware,
@@ -69,7 +121,7 @@
   :focus-visible{outline:2px solid var(--signal);outline-offset:3px;}
 
   .lab,.chipLab,.tpSub,.chip span,.rewardRow em,.setSub,.hangNeed{
-    font-size:10.5px;font-weight:800;letter-spacing:.2em;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.2em;
     text-transform:uppercase;color:var(--dim);
   }
   .disp{font-weight:900;letter-spacing:-.03em;display:inline-block;}
@@ -82,29 +134,29 @@
   .topTray{
     display:flex;align-items:center;gap:8px;flex-wrap:nowrap;
     margin:max(10px,env(safe-area-inset-top)) 12px 0;
-    padding:9px;border-radius:26px;
+    padding:9px;border-radius:var(--r-sheet);
     background:rgba(12,20,34,.5);
-    border:1px solid var(--hair-pink);
+    border:1px solid var(--edge-hot);
     -webkit-backdrop-filter:blur(20px) saturate(1.3);backdrop-filter:blur(20px) saturate(1.3);
     box-shadow:0 0 34px -14px rgba(35,230,217,.55), inset 0 1px 0 rgba(255,255,255,.06);
   }
   .topTray .spring{flex:1 1 auto;}
   .hudChip{
     display:flex;align-items:center;gap:7px;flex:0 0 auto;
-    height:46px;padding:0 16px;border-radius:var(--r-pill);
+    height:var(--h-ctl);padding:0 16px;border-radius:var(--r-pill);
     background:rgba(255,255,255,.06);
-    border:1px solid rgba(190,225,255,.14);
+    border:1px solid var(--edge);
   }
-  .hudChip b{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.01em;}
-  .hudChip .chipLab{font-size:12px;font-weight:800;letter-spacing:.06em;color:#dbe9fb;}
+  .hudChip b{font-size:var(--t-xl);font-weight:800;color:#fff;letter-spacing:-.01em;}
+  .hudChip .chipLab{font-size:var(--t-sm);font-weight:800;letter-spacing:.06em;color:#dbe9fb;}
   .ic{width:19px;height:19px;flex:0 0 auto;}
   .ic.cyan{color:var(--signal);} .ic.amber{color:var(--ember);} .ic.gold{color:var(--gold);}
   .ic.lime{color:var(--charge);} .ic.pink{color:var(--flare);}
   .iconBtn{
     position:relative;
-    width:46px;height:46px;flex:0 0 auto;border-radius:16px;cursor:pointer;
+    width:var(--h-ctl);height:var(--h-ctl);flex:0 0 auto;border-radius:var(--r-ctl);cursor:pointer;
     display:flex;align-items:center;justify-content:center;color:#b9d2ee;
-    background:rgba(255,255,255,.05);border:1px solid rgba(190,225,255,.14);
+    background:rgba(255,255,255,.05);border:1px solid var(--edge);
   }
   /* ANDROID'S 48dp FLOOR, WITHOUT GROWING ANYTHING.
      These are 46px, and the header variants shrink to 42 and 40 on narrow
@@ -124,9 +176,9 @@
   .btn{
     position:relative;overflow:hidden;
     display:flex;align-items:center;justify-content:center;gap:10px;
-    width:100%;min-height:68px;padding:0 22px;margin-top:12px;
+    width:100%;min-height:var(--h-btn);padding:0 22px;margin-top:12px;
     border-radius:var(--r-btn);cursor:pointer;
-    font-size:25px;font-weight:800;letter-spacing:0;
+    font-size:var(--t-2xl);font-weight:800;letter-spacing:0;
     transition:transform .09s ease,filter .15s ease;
   }
   .btn:active{transform:scale(.975);filter:brightness(1.12);}
@@ -150,8 +202,8 @@
   }
   .btn.ghost{
     background:rgba(255,255,255,.028);color:#9db3ce;
-    box-shadow:inset 0 0 0 1px rgba(190,225,255,.14);
-    font-size:20px;font-weight:700;min-height:62px;
+    box-shadow:inset 0 0 0 1px var(--edge);
+    font-size:var(--t-xl);font-weight:700;min-height:var(--h-btn-2);
   }
   .btn.locked{
     background:rgba(255,255,255,.035)!important;color:var(--dim-2)!important;
@@ -159,11 +211,10 @@
   }
   .btn .cost{
     display:inline-flex;align-items:center;gap:6px;
-    font-size:20px;font-weight:800;letter-spacing:0;
+    font-size:var(--t-xl);font-weight:800;letter-spacing:0;
   }
   .btn .cost svg{width:20px;height:20px;}
-  #reviveBtn{font-size:21px;white-space:nowrap;}
-  @media (max-width:380px){ #reviveBtn{font-size:18px;} #reviveBtn .cost .cost{font-size:17px;} }
+  #reviveBtn{font-size:var(--t-xl);white-space:nowrap;}
   .btn .bIcon{width:24px;height:24px;flex:0 0 auto;}
   .btn.line .bIcon{color:var(--signal-hi);}
   .btn.ghost .bIcon{color:#9db3ce;}
@@ -257,18 +308,18 @@
     position:relative;min-width:0;display:flex;flex-direction:column;align-items:stretch;
     text-align:left;cursor:pointer;overflow:hidden;
     aspect-ratio:1/1;
-    padding:15px 15px 14px;border-radius:22px;
+    padding:15px 15px 14px;border-radius:var(--r-card);
     background:rgba(255,255,255,.05);
-    border:1px solid var(--hair-pink);
+    border:1px solid var(--edge-hot);
     -webkit-tap-highlight-color:transparent;
   }
   @supports not (aspect-ratio:1/1){ .infoCard{min-height:150px;} }
   .infoCard .icoBig{width:38px;height:38px;display:block;margin-bottom:auto;}
-  .infoCard em{display:block;font-style:normal;font-size:13px;font-weight:800;
+  .infoCard em{display:block;font-style:normal;font-size:var(--t-sm);font-weight:800;
                letter-spacing:.02em;text-transform:uppercase;color:#fff;}
-  .infoCard b{display:block;margin-top:5px;font-size:25px;font-weight:900;
+  .infoCard b{display:block;margin-top:5px;font-size:var(--t-2xl);font-weight:900;
               letter-spacing:-.02em;color:var(--signal-hi);line-height:1.05;}
-  .infoCard .sub{display:block;margin-top:5px;font-size:11px;font-weight:600;line-height:1.3;
+  .infoCard .sub{display:block;margin-top:5px;font-size:var(--t-fine);font-weight:600;line-height:1.3;
                  color:#9fb6d2;letter-spacing:-.01em;}
   .infoCard:active{transform:scale(.975);}
   #starsCard b{color:var(--flare);}
@@ -282,7 +333,7 @@
   }
   .infoCard.go .icoBig{color:#04202b;}
   .infoCard.go em{color:rgba(4,26,36,.72);}
-  .infoCard.go b{color:#04202b;font-size:38px;letter-spacing:-.03em;}
+  .infoCard.go b{color:#04202b;font-size:clamp(22.8px,8.84vw,38px);letter-spacing:-.03em;}
   .infoCard.go .sub{color:rgba(4,26,36,.72);font-weight:800;}
 
   .miniBar{display:inline-flex;gap:3px;margin-left:8px;vertical-align:middle;}
@@ -294,13 +345,16 @@
   .mapHead{
     position:relative;z-index:6;pointer-events:auto;
     padding:1px 0 76px;text-align:center;
-    background:linear-gradient(180deg,rgba(4,6,15,.99) 0%,rgba(4,6,15,.97) 42%,
-                                      rgba(4,6,15,.86) 66%,rgba(4,6,15,0));
+    /* The wash used to be down to .97 where the sector title sits and a bright
+       planet scrolling underneath showed through the letters. It holds solid
+       until past the last pill, then falls away. */
+    background:linear-gradient(180deg,rgba(4,6,15,1) 0%,rgba(4,6,15,1) 58%,
+                                      rgba(4,6,15,.88) 74%,rgba(4,6,15,0));
   }
   #startScreen .topTray{gap:6px;padding:7px;}
-  #startScreen .hudChip{height:42px;padding:0 11px;gap:5px;}
-  #startScreen .hudChip b{font-size:17px;}
-  #startScreen .iconBtn{width:42px;height:42px;}
+  #startScreen .hudChip{height:var(--h-ctl-t);padding:0 11px;gap:5px;}
+  #startScreen .hudChip b{font-size:var(--t-lg);}
+  #startScreen .iconBtn{width:var(--h-ctl-t);height:var(--h-ctl-t);}
   #startScreen .iconBtn svg{width:21px;height:21px;}
   /* Seven controls in one tray on a 390px phone. Everything in it is
      flex:0 0 auto — it cannot shrink, it can only spill — so the tray tightens
@@ -309,9 +363,8 @@
   @media (max-width:430px){
     #startScreen .hudChip .chipLab{display:none;}
     #startScreen .topTray{gap:4px;padding:6px;}
-    #startScreen .iconBtn{width:40px;height:40px;}
     #startScreen .iconBtn svg{width:20px;height:20px;}
-    #startScreen .hudChip{padding:0 8px;gap:4px;height:40px;}
+    #startScreen .hudChip{padding:0 8px;gap:4px;}
   }
   @media (max-width:430px){ #menuScreen .hudChip .chipLab{display:none;} }
   /* The tray holds seven controls and every one of them is a 44px touch target
@@ -320,7 +373,6 @@
      button off the edge, which is what it did when the manual was added to it. */
   @media (max-width:420px){
     #startScreen .hudChip{padding:0 7px;}
-    #startScreen .hudChip b{font-size:16px;}
     #startScreen .streakChip{display:none;}      /* also on the daily card */
   }
   @media (max-width:344px){
@@ -331,7 +383,7 @@
   }
   .mapHead .progPill,.mapHead 
   .mapTitle{
-    margin-top:18px;font-size:13px;font-weight:800;letter-spacing:.32em;
+    margin-top:18px;font-size:var(--t-sm);font-weight:800;letter-spacing:.32em;
     text-transform:uppercase;color:var(--signal-hi);
     text-shadow:0 0 18px rgba(35,230,217,.6);
   }
@@ -340,30 +392,26 @@
      signal colour and a horizon glyph so it reads as an instrument, not a
      score — and the figure is tabular because it is going to be watched. */
   .homePill{
-    margin:13px auto 0;width:max-content;max-width:94%;height:34px;padding:0 15px;
+    margin:13px auto 0;width:max-content;max-width:94%;height:var(--h-pill);padding:0 15px;
     display:flex;align-items:center;gap:8px;border-radius:var(--r-pill);
-    background:linear-gradient(180deg,rgba(35,230,217,.13),rgba(35,230,217,.05));
-    border:1px solid rgba(35,230,217,.30);
+    background:linear-gradient(180deg,rgba(10,30,42,.92),rgba(6,18,28,.92));
+    border:1px solid var(--edge-on);
     box-shadow:0 0 26px -12px rgba(35,230,217,.9);
   }
   .homePill svg{width:15px;height:15px;color:var(--signal);flex:0 0 auto;}
   .homePill b{
-    font-size:14px;font-weight:800;letter-spacing:-.01em;color:var(--ink);
+    font-size:var(--t-md);font-weight:800;letter-spacing:-.01em;color:var(--ink);
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
   }
   .homePill span{
-    font-size:9.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.2em;text-transform:uppercase;
     color:var(--dim);
   }
-  @media (max-width:360px){
-    .homePill{height:30px;padding:0 12px;gap:6px;}
-    .homePill b{font-size:12.5px;}
-  }
   .progPill{
-    margin:12px auto 0;width:max-content;max-width:92%;height:30px;padding:0 16px;
+    margin:12px auto 0;width:max-content;max-width:92%;height:var(--h-pill);padding:0 16px;
     display:flex;align-items:center;border-radius:var(--r-pill);
-    background:rgba(255,255,255,.05);border:1px solid var(--hair);
-    font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
+    background:rgba(6,11,22,.82);border:1px solid var(--edge-2);
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;text-transform:uppercase;
     color:var(--signal);
     /* fixed height + wrapping text spills a second line outside the capsule.
        An ellipsis is the graceful failure; two lines is not. */
@@ -379,6 +427,14 @@
   #mapSvg{display:block;width:100%;height:auto;}
   .nodeG{cursor:pointer;}
   .nodeG:active{opacity:.8;}
+  /* THE SIX RULES BELOW ARE INSIDE THE SVG AND MUST STAY IN USER UNITS.
+
+     The chart is a 340-unit-wide viewBox scaled to the container, so it is
+     already responsive — the whole drawing grows and shrinks as one. A
+     viewport-relative size in here would scale a second time, and the badge
+     rectangles around this text are drawn in fixed user units, so the labels
+     would shrink out of the shapes holding them. Measured at 320dp: 34
+     effective pixels of text inside a circle sized for 46. */
   .nnum{font-family:var(--ui);font-weight:900;font-size:52px;text-anchor:middle;
         letter-spacing:-.04em;}
   .nnum.sm{font-size:15px;}
@@ -396,16 +452,16 @@
   }
   .nextPanel{
     position:relative;
-    margin:0 auto;max-width:460px;padding:16px 44px 16px 16px;
-    border-radius:24px;background:rgba(11,22,38,.88);
-    border:1px solid var(--hair);
+    margin:0 auto;max-width:460px;padding:16px 46px 16px 16px;
+    border-radius:var(--r-sheet);background:rgba(11,22,38,.88);
+    border:1px solid var(--edge);
   }
   .nextPanel.in{animation:panelIn .18s ease-out both;}
   @keyframes panelIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
   .panelClose{
-    position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:12px;
+    position:absolute;top:8px;right:8px;width:var(--h-ctl);height:var(--h-ctl);border-radius:var(--r-chip);
     display:flex;align-items:center;justify-content:center;cursor:pointer;
-    background:rgba(255,255,255,.06);border:1px solid var(--hair);color:#9fb6d2;
+    background:rgba(255,255,255,.06);border:1px solid var(--edge);color:#9fb6d2;
   }
   .panelClose svg{width:15px;height:15px;}
   .panelClose:active{transform:scale(.92);}
@@ -413,10 +469,12 @@
   /* Sits over a busy chart, so it carries its own plate rather than trusting
      the foot's gradient to be dark wherever a world happens to be. */
   .mapTip{
-    width:max-content;max-width:92%;margin:0 auto;text-align:center;
-    font-size:10.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-    color:#7d95b4;padding:7px 14px;border-radius:var(--r-pill);
-    background:rgba(6,11,22,.82);border:1px solid rgba(190,225,255,.10);
+    display:flex;align-items:center;justify-content:center;
+    width:max-content;max-width:92%;height:var(--h-tag);margin:0 auto;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+    color:#7d95b4;padding:0 14px;border-radius:var(--r-pill);
+    background:rgba(6,11,22,.82);border:1px solid var(--edge-2);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .mapTip.hidden{display:none;}
   /* the selected world wears a reticle; only one node ever carries it */
@@ -490,37 +548,46 @@
   @media (prefers-reduced-motion:reduce){ #mapSvg .anim{animation:none!important;} }
   .nextHead{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
   .nextTag{
-    display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 11px;border-radius:var(--r-pill);
-    border:1px solid rgba(35,230,217,.45);color:var(--signal-hi);
-    font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+    height:var(--h-tag);padding:0 11px;border-radius:var(--r-pill);
+    border:1px solid var(--edge-on);color:var(--signal-hi);
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;text-transform:uppercase;
   }
-  .nextName{font-size:21px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+  .nextName{flex:1 1 auto;min-width:0;font-size:var(--t-xl);font-weight:800;color:#fff;
+            letter-spacing:-.01em;line-height:1.15;}
   .nextName span{color:#fff;}
-  .gateRow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  /* Four requirement chips wrapped 3 + 1 on a phone and the odd one out read
+     as a layout bug. As a grid they are two even rows on a narrow screen and
+     one on a wide one, and either way it looks intended. */
+  .gateRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));
+           gap:8px;margin-top:14px;}
   .gate{
-    display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:0;
+    height:var(--h-pill);padding:0 13px;
     border-radius:var(--r-pill);background:rgba(255,255,255,.05);
-    border:1px solid rgba(190,225,255,.14);
-    font-size:13px;font-weight:600;color:#cddef2;
+    border:1px solid var(--edge);
+    font-size:var(--t-sm);font-weight:600;color:#cddef2;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
+  .gate svg{flex:0 0 auto;}
   .gate svg{width:16px;height:16px;color:#9fd8ff;}
   .gate.on{color:var(--signal-hi);border-color:rgba(35,230,217,.45);}
   .gate.on svg{color:var(--signal-hi);}
   .mapFoot .btn{max-width:460px;margin:12px auto 0;}
 
   /* hazard chips on the map, ability chips in the hangar */
-  .hzRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+  .hzRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .hzChip{
-    font-style:normal;font-size:10px;font-weight:800;letter-spacing:.1em;
+    display:inline-flex;align-items:center;font-style:normal;
+    height:var(--h-tag);padding:0 11px;border-radius:var(--r-pill);
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;
     text-transform:uppercase;color:#ffb0c8;
-    padding:4px 9px;border-radius:var(--r-pill);
-    background:rgba(255,62,127,.10);box-shadow:inset 0 0 0 1px rgba(255,62,127,.32);
+    background:rgba(255,62,127,.10);border:1px solid var(--edge-hot);
   }
-  .hzChip.calm{color:var(--dim);background:rgba(255,255,255,.04);
-    box-shadow:inset 0 0 0 1px var(--hair-2);}
+  .hzChip.calm{color:var(--dim);background:rgba(255,255,255,.04);border-color:var(--edge-2);}
   .hangAb{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:6px;}
   .hangAb .ab{
-    font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em;
+    font-style:normal;font-size:var(--t-micro);font-weight:900;letter-spacing:.06em;
     text-transform:uppercase;padding:3px 7px;border-radius:var(--r-pill);
   }
   .hangAb .ab.up{color:#8affe4;background:rgba(35,230,217,.12);
@@ -528,7 +595,7 @@
   .hangAb .ab.down{color:#ffa8c2;background:rgba(255,62,127,.10);
     box-shadow:inset 0 0 0 1px rgba(255,62,127,.28);}
   .hangBlurb{
-    display:block;margin-top:7px;font-size:10.5px;line-height:1.45;
+    display:block;margin-top:7px;font-size:var(--t-tiny);line-height:1.45;
     font-weight:600;color:var(--dim);
     min-height:3em;
   }
@@ -570,21 +637,21 @@
   }
   .conBack{
     display:flex;align-items:center;gap:6px;cursor:pointer;
-    height:34px;padding:0 11px;border-radius:6px;
-    background:rgba(35,230,217,.08);border:1px solid rgba(35,230,217,.35);
+    height:var(--h-ctl);padding:0 13px;border-radius:var(--r-term);
+    background:rgba(35,230,217,.08);border:1px solid var(--edge-on);
     color:var(--signal-hi);font-family:var(--mono);
-    font-size:11px;font-weight:700;letter-spacing:.14em;
+    font-size:var(--t-fine);font-weight:700;letter-spacing:.14em;
   }
   .conBack svg{width:13px;height:13px;}
   .conBack:active{background:rgba(35,230,217,.2);}
   .conPath{
     flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    font-size:var(--t-fine);font-weight:700;letter-spacing:.16em;text-transform:uppercase;
     color:#4fd6c4;text-shadow:0 0 12px rgba(35,230,217,.5);
   }
   .conLamp{
     display:flex;align-items:center;gap:6px;flex:0 0 auto;
-    font-size:10px;font-weight:700;letter-spacing:.2em;color:#3f9c90;
+    font-size:var(--t-tiny);font-weight:700;letter-spacing:.2em;color:#3f9c90;
   }
   .conLamp i{
     width:7px;height:7px;border-radius:50%;background:var(--signal-hi);
@@ -603,48 +670,48 @@
 
   /* ---- the directory ---- */
   .dirGroup{
-    margin:16px 0 6px;font-size:10px;font-weight:700;letter-spacing:.24em;
+    margin:16px 0 6px;font-size:var(--t-tiny);font-weight:700;letter-spacing:.24em;
     color:#2f7d73;
   }
   .dirGroup:first-child{margin-top:2px;}
   .dirRow{
-    display:flex;align-items:baseline;gap:9px;width:100%;cursor:pointer;
-    padding:8px 6px;border:0;border-left:2px solid transparent;
+    display:flex;align-items:center;gap:9px;width:100%;cursor:pointer;
+    min-height:var(--h-ctl);padding:4px 6px;border:0;border-left:2px solid transparent;
     background:none;text-align:left;font-family:var(--mono);
   }
   .dirRow:active{background:rgba(35,230,217,.10);border-left-color:var(--signal-hi);}
-  .dirRow .dn{font-size:11px;color:#2f7d73;flex:0 0 auto;}
-  .dirRow .dt{flex:1;min-width:0;font-size:13.5px;font-weight:700;letter-spacing:.02em;
+  .dirRow .dn{font-size:var(--t-fine);color:#2f7d73;flex:0 0 auto;}
+  .dirRow .dt{flex:1;min-width:0;font-size:var(--t-sm);font-weight:700;letter-spacing:.02em;
               color:#bff3ea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .dirRow .dk{font-size:10px;color:#2f7d73;flex:0 0 auto;letter-spacing:.06em;}
+  .dirRow .dk{font-size:var(--t-tiny);color:#2f7d73;flex:0 0 auto;letter-spacing:.06em;}
   .dirRow.read .dt{color:#5fa89e;}
   .dirRow.read .dk::before{content:'\2713 ';color:var(--signal-hi);}
   .dirHint{
-    margin:22px 0 4px;font-size:11px;line-height:1.6;color:#2f7d73;letter-spacing:.04em;
+    margin:22px 0 4px;font-size:var(--t-fine);line-height:1.6;color:#2f7d73;letter-spacing:.04em;
   }
 
   /* ---- a document ---- */
   #conText{max-width:640px;margin:0 auto;}
   .pgKick{
     display:inline-block;margin-bottom:10px;padding:3px 8px;
-    border:1px solid rgba(35,230,217,.4);color:var(--signal-hi);
-    font-size:9.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+    border:1px solid var(--edge-on);color:var(--signal-hi);
+    font-size:var(--t-micro);font-weight:700;letter-spacing:.2em;text-transform:uppercase;
   }
   .pgKick.pink{border-color:rgba(255,62,127,.5);color:#ff8fbe;}
   .pgH{
-    font-size:21px;font-weight:700;letter-spacing:.04em;line-height:1.2;
+    font-size:var(--t-xl);font-weight:700;letter-spacing:.04em;line-height:1.2;
     color:#dffff8;text-shadow:0 0 16px rgba(35,230,217,.45);
     margin-bottom:2px;text-transform:uppercase;
   }
   .pgLead,.pgP{
-    font-size:13.5px;line-height:1.72;color:#9fd8ce;margin:13px 0 0;
+    font-size:var(--t-sm);line-height:1.72;color:#9fd8ce;margin:13px 0 0;
     letter-spacing:.005em;
   }
   .pgLead{color:#cdf3ea;}
   .pgP b,.pgLead b{color:#eafffb;font-weight:700;}
   .pgP em,.pgLead em{font-style:normal;color:var(--signal-hi);}
   .pgSub{
-    margin:22px 0 0;font-size:10px;font-weight:700;letter-spacing:.24em;
+    margin:22px 0 0;font-size:var(--t-tiny);font-weight:700;letter-spacing:.24em;
     text-transform:uppercase;color:#2f7d73;
   }
   .pgSub::before{content:'> ';}
@@ -652,30 +719,30 @@
   /* The log's per-sector heading: index, place, distance, on one console row. */
   .logHead{
     display:flex;align-items:baseline;gap:9px;margin:14px 0 4px;
-    font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    font-size:var(--t-sm);font-weight:700;letter-spacing:.14em;text-transform:uppercase;
     color:var(--signal-hi);
   }
   .logHead b{color:#5fa89e;font-weight:700;}
   .logHead span{
-    margin-left:auto;font-size:10.5px;letter-spacing:.06em;color:#4d8f86;
+    margin-left:auto;font-size:var(--t-tiny);letter-spacing:.06em;color:#4d8f86;
     font-variant-numeric:tabular-nums;text-transform:none;
   }
   .logGone{color:#3d6b66;font-style:italic;}
   .pgList{margin:10px 0 0;padding:0;list-style:none;}
   .pgList li{
     position:relative;padding:0 0 0 18px;margin-top:9px;
-    font-size:13px;line-height:1.68;color:#9fd8ce;
+    font-size:var(--t-sm);line-height:1.68;color:#9fd8ce;
   }
   .pgList li::before{content:'\00BB';position:absolute;left:2px;top:0;color:var(--signal-hi);}
   .pgList li b{color:#eafffb;font-weight:700;}
   .pgTable{width:100%;border-collapse:collapse;margin-top:13px;}
   .pgTable th{
-    text-align:left;padding:0 10px 6px 0;font-size:9.5px;font-weight:700;
+    text-align:left;padding:0 10px 6px 0;font-size:var(--t-micro);font-weight:700;
     letter-spacing:.18em;text-transform:uppercase;color:#2f7d73;
     border-bottom:1px solid rgba(35,230,217,.25);
   }
   .pgTable td{
-    padding:8px 10px 8px 0;font-size:12.5px;line-height:1.55;color:#93cec5;
+    padding:8px 10px 8px 0;font-size:var(--t-sm);line-height:1.55;color:#93cec5;
     border-bottom:1px solid rgba(35,230,217,.10);vertical-align:top;
   }
   .pgTable td:last-child,.pgTable th:last-child{padding-right:0;}
@@ -687,7 +754,7 @@
     position:relative;margin-top:18px;padding:12px 13px 12px 15px;
     border-left:2px solid var(--signal-hi);
     background:rgba(35,230,217,.06);
-    font-size:12.5px;line-height:1.65;color:#a9e6dc;
+    font-size:var(--t-sm);line-height:1.65;color:#a9e6dc;
   }
   .pgNote b{color:#eafffb;}
   .pgNote.calm{border-left-color:#ff8fbe;background:rgba(255,62,127,.06);color:#ffc2d8;}
@@ -695,7 +762,7 @@
     display:block;margin:16px auto 0;max-width:100%;height:auto;
     border:1px solid rgba(35,230,217,.18);background:rgba(35,230,217,.03);
   }
-  .pgCap{margin-top:7px;text-align:center;font-size:10px;font-weight:700;
+  .pgCap{margin-top:7px;text-align:center;font-size:var(--t-tiny);font-weight:700;
          letter-spacing:.16em;text-transform:uppercase;color:#2f7d73;}
   /* a figure waits its turn while the text types, then arrives */
   .typing .pgFig,.typing .pgCap{opacity:0;}
@@ -718,18 +785,22 @@
     border-top:1px solid rgba(35,230,217,.22);
   }
   .conKey{
-    min-width:46px;height:40px;padding:0 12px;cursor:pointer;flex:0 0 auto;
+    min-width:var(--h-ctl);height:var(--h-ctl);padding:0 12px;cursor:pointer;flex:0 0 auto;
     display:flex;align-items:center;justify-content:center;
-    background:rgba(35,230,217,.07);border:1px solid rgba(35,230,217,.32);
+    border-radius:var(--r-term);
+    background:rgba(35,230,217,.07);border:1px solid var(--edge-on);
     color:var(--signal-hi);font-family:var(--mono);
-    font-size:11px;font-weight:700;letter-spacing:.14em;
+    font-size:var(--t-fine);font-weight:700;letter-spacing:.14em;
   }
+  /* the two chevrons are one key wide and identical to each other */
+  #manPrev,#manNext{width:var(--h-ctl);padding:0;}
   .conKey svg{width:16px;height:16px;}
   .conKey:active{background:rgba(35,230,217,.2);}
   .conKey[disabled]{opacity:.25;pointer-events:none;}
   .conStat{
-    flex:1;min-width:0;text-align:right;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;font-size:10px;font-weight:700;letter-spacing:.16em;
+    flex:1;min-width:0;text-align:center;padding:0 6px;
+    overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;font-size:var(--t-tiny);font-weight:700;letter-spacing:.14em;
     color:#2f7d73;
   }
   /* The status text is the only thing here that may shrink. INDEX is the way
@@ -737,8 +808,7 @@
      visible way out of a file at all. */
   @media (max-width:360px){
     .conFoot{gap:6px;padding-left:10px;padding-right:10px;}
-    .conKey{min-width:42px;padding:0 9px;}
-    .pgH{font-size:18px;}
+    .conKey{padding:0 9px;}
   }
 
   /* ============ HANGAR ============ */
@@ -750,21 +820,21 @@
   .setHead .iconBtn{background:none;border:none;color:#dfeaf7;width:40px;}
   .setHead .iconBtn svg{width:28px;height:28px;}
   #setBack{color:var(--signal-hi);}
-  .setTitle{font-size:32px;font-weight:800;letter-spacing:-.02em;color:#fff;}
+  .setTitle{font-size:var(--t-3xl);font-weight:800;letter-spacing:-.02em;color:#fff;}
   .headSpacer{width:40px;flex:0 0 auto;}
-  .hangSub{text-align:center;font-size:16px;font-weight:600;color:#8fa8c6;padding:2px 0 16px;}
+  .hangSub{text-align:center;font-size:var(--t-lg);font-weight:600;color:#8fa8c6;padding:2px 0 16px;}
   .setScroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 16px 12px;}
   .hangGrid{align-items:stretch;display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:0 0 8px;}
   .hangCard{
-    position:relative;border-radius:18px;padding:0;overflow:hidden;cursor:pointer;
-    background:rgba(255,255,255,.04);border:1px solid rgba(190,225,255,.10);
+    position:relative;border-radius:var(--r-card);padding:0;overflow:hidden;cursor:pointer;
+    background:rgba(255,255,255,.04);border:1px solid var(--edge-2);
   }
   .hangCard .art{position:relative;display:flex;align-items:center;justify-content:center;
                  height:158px;background:rgba(255,255,255,.012);}
   .hangCard svg.hull{width:118px;height:118px;display:block;
                      filter:drop-shadow(0 8px 16px rgba(0,0,0,.55));}
   .hangCard .foot{display:block;padding:12px 8px 14px;background:rgba(255,255,255,.03);text-align:center;}
-  .hangCard b{display:block;font-size:16px;font-weight:800;letter-spacing:.06em;color:#eaf4ff;}
+  .hangCard b{display:block;font-size:var(--t-lg);font-weight:800;letter-spacing:.06em;color:#eaf4ff;}
   .hangCard.equipped{
     border:2px solid var(--signal-hi);
     box-shadow:0 0 26px -4px rgba(35,230,217,.75),inset 0 0 24px -10px rgba(35,230,217,.6);
@@ -776,14 +846,14 @@
   .eqPill{
     display:inline-block;margin-top:9px;padding:5px 15px;border-radius:var(--r-pill);
     background:var(--signal-hi);color:#00272c;
-    font-size:11px;font-weight:900;letter-spacing:.13em;
+    font-size:var(--t-fine);font-weight:900;letter-spacing:.13em;
   }
-  .hangLv{display:block;margin-top:9px;font-size:14px;font-weight:600;color:#8fa7c9;}
+  .hangLv{display:block;margin-top:9px;font-size:var(--t-md);font-weight:600;color:#8fa7c9;}
   .lockBadge{
     display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:5px 13px;
     border-radius:var(--r-pill);
     background:linear-gradient(180deg,#c79233,#8f6318);color:#ffefc4;
-    font-size:13px;font-weight:900;
+    font-size:var(--t-sm);font-weight:900;
   }
   .lockBadge svg{width:13px;height:13px;}
   .lockDot{
@@ -799,29 +869,29 @@
   .setGroup{margin-bottom:26px;}
   .setGroupHead{
     text-align:center;padding:0 4px 12px;
-    font-size:13px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;
+    font-size:var(--t-sm);font-weight:800;letter-spacing:.24em;text-transform:uppercase;
     color:var(--neon-hi);
   }
   .setGroup > .setRow{box-shadow:inset 0 -1px 0 rgba(255,255,255,.06);}
-  .setGroup > .setRow:first-of-type{border-radius:18px 18px 0 0;}
-  .setGroup > .setRow:last-of-type{border-radius:0 0 18px 18px;box-shadow:none;}
-  .setGroup > .setRow:only-of-type{border-radius:18px;box-shadow:none;}
+  .setGroup > .setRow:first-of-type{border-radius:var(--r-card) var(--r-card) 0 0;}
+  .setGroup > .setRow:last-of-type{border-radius:0 0 var(--r-card) var(--r-card);box-shadow:none;}
+  .setGroup > .setRow:only-of-type{border-radius:var(--r-card);box-shadow:none;}
   .setRow{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
-    min-height:66px;padding:0 18px;cursor:pointer;
+    min-height:var(--h-row);padding:0 18px;cursor:pointer;
     background:rgba(255,255,255,.045);
-    font-size:20px;font-weight:500;color:#f2f7ff;
+    font-size:var(--t-xl);font-weight:500;color:#f2f7ff;
   }
   .setRow.col{flex-direction:column;align-items:stretch;justify-content:center;gap:16px;padding:18px;}
   /* a settings row that needs a word of explanation gets one under its label */
-  .setRow small{display:block;margin-top:3px;font-size:11.5px;font-weight:700;
+  .setRow small{display:block;margin-top:3px;font-size:var(--t-fine);font-weight:700;
     letter-spacing:.05em;color:var(--dim-2);text-transform:none;}
   .rowTop{display:flex;justify-content:space-between;align-items:center;}
-  .rowTop b{color:var(--signal-hi);font-size:16px;font-weight:900;}
-  .rowEnds{display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:#7f95b2;}
+  .rowTop b{color:var(--signal-hi);font-size:var(--t-lg);font-weight:900;}
+  .rowEnds{display:flex;justify-content:space-between;font-size:var(--t-md);font-weight:600;color:#7f95b2;}
   .tog{
     width:60px;height:34px;border-radius:var(--r-pill);flex:0 0 auto;position:relative;
-    background:rgba(255,255,255,.10);box-shadow:inset 0 0 0 1px var(--hair-2);
+    background:rgba(255,255,255,.10);box-shadow:inset 0 0 0 1px var(--edge-2);
     transition:background .22s ease,box-shadow .22s ease;
   }
   .tog i{
@@ -846,23 +916,23 @@
     box-shadow:0 0 0 1px rgba(140,240,255,.6),0 4px 16px rgba(34,211,238,.7);
   }
   .miniBtn{
-    height:38px;padding:0 16px;border-radius:var(--r-chip);cursor:pointer;
+    height:var(--h-ctl);padding:0 16px;border-radius:var(--r-chip);cursor:pointer;
     background:rgba(255,90,90,.14);box-shadow:inset 0 0 0 1px rgba(255,90,90,.4);
-    color:var(--danger);font-weight:900;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--danger);font-weight:900;font-size:var(--t-sm);letter-spacing:.16em;text-transform:uppercase;
   }
-  .setVer{padding:0 16px 10px;text-align:center;font-size:10.5px;font-weight:800;
+  .setVer{padding:0 16px 10px;text-align:center;font-size:var(--t-tiny);font-weight:800;
           letter-spacing:.2em;text-transform:uppercase;color:var(--dim-2);}
   #resetBtn{color:var(--signal-hi);background:rgba(35,230,217,.05);
-            box-shadow:inset 0 0 0 1px rgba(35,230,217,.5);font-size:17px;font-weight:700;
+            box-shadow:inset 0 0 0 1px rgba(35,230,217,.5);font-size:var(--t-lg);font-weight:700;
             padding:0 10px;white-space:nowrap;}
-  #doneBtn{font-size:22px;}
+  #doneBtn{font-size:var(--t-2xl);}
 
   /* ============ IN-GAME HUD ============ */
   #hud{position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none;z-index:5;}
   .pill{
     position:relative;display:flex;align-items:center;
-    padding:0 18px;height:52px;border-radius:var(--r-pill);
-    background:rgba(12,22,38,.5);border:1px solid rgba(190,225,255,.18);
+    padding:0 18px;height:var(--h-hud);border-radius:var(--r-pill);
+    background:rgba(12,22,38,.5);border:1px solid var(--edge);
     -webkit-backdrop-filter:blur(18px) saturate(1.25);backdrop-filter:blur(18px) saturate(1.25);
     box-shadow:0 0 28px -14px rgba(35,200,255,.8);
   }
@@ -877,21 +947,21 @@
   #scorePill{justify-self:start;gap:10px;}
   #speedPill{justify-self:center;}
   #levelPill{justify-self:end;}
-  #scorePill .lab{font-size:14px;font-weight:700;letter-spacing:.02em;color:#e6f2ff;
+  #scorePill .lab{font-size:var(--t-md);font-weight:700;letter-spacing:.02em;color:#e6f2ff;
                   text-transform:uppercase;}
-  #scoreVal{font-size:27px;font-weight:800;line-height:1;color:#fff;letter-spacing:-.02em;}
+  #scoreVal{font-size:var(--t-3xl);font-weight:800;line-height:1;color:#fff;letter-spacing:-.02em;}
   #sigBars{width:20px;height:20px;color:#4fc3ff;flex:0 0 auto;}
   #levelPill{gap:9px;pointer-events:auto;cursor:pointer;}
-  #lvVal{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.02em;}
-  #lvProg{font-size:15px;font-weight:600;color:#9db5cf;}
+  #lvVal{font-size:var(--t-2xl);font-weight:800;color:#fff;letter-spacing:-.02em;}
+  #lvProg{font-size:var(--t-md);font-weight:600;color:#9db5cf;}
   #levelPill .chev{width:16px;height:16px;color:#9db5cf;}
   #comboBox{position:absolute;top:max(76px,calc(env(safe-area-inset-top) + 70px));right:14px;
             flex-direction:column;align-items:flex-end;height:auto;padding:9px 15px;
             border-radius:var(--r-btn);
             opacity:0;transform:translateY(-6px);transition:opacity .2s ease,transform .2s ease;}
   #comboBox.show{opacity:1;transform:translateY(0);}
-  #multVal{font-size:25px;font-weight:900;line-height:1;color:var(--ember);letter-spacing:-.04em;}
-  #comboCount{font-size:10.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;
+  #multVal{font-size:var(--t-2xl);font-weight:900;line-height:1;color:var(--ember);letter-spacing:-.04em;}
+  #comboCount{font-size:var(--t-tiny);font-weight:800;letter-spacing:.2em;text-transform:uppercase;
               color:var(--dim);}
   @keyframes pillPunch{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}
   .pill.punch{animation:pillPunch .22s ease-out;}
@@ -905,12 +975,12 @@
   #speedPill.show{opacity:1;}
   #spdIcon{width:19px;height:19px;color:#4fc3ff;flex:0 0 auto;}
   #spdVal{
-    font-size:25px;font-weight:800;line-height:1;letter-spacing:-.02em;color:#fff;
+    font-size:var(--t-2xl);font-weight:800;line-height:1;letter-spacing:-.02em;color:#fff;
     /* tabular figures: a number that changes twenty times a second must not
        change its own width while it does it */
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
   }
-  #spdUnit{font-size:14px;font-weight:800;color:#9db5cf;letter-spacing:.02em;}
+  #spdUnit{font-size:var(--t-md);font-weight:800;color:#9db5cf;letter-spacing:.02em;}
   /* overdrive tints it the same amber as everything else overdrive touches */
   #speedPill.over #spdVal{color:#ffdda6;}
   #speedPill.over #spdIcon,#speedPill.over #spdUnit{color:var(--ember);}
@@ -938,8 +1008,8 @@
   #hudTop.t1 #spdIcon{display:none;}
   #hudTop.t1 #speedPill{gap:6px;}
   #hudTop.t2{gap:6px;}
-  #hudTop.t2 .pill{padding:0 12px;height:48px;}
-  #hudTop.t2 #scoreVal,#hudTop.t2 #spdVal,#hudTop.t2 #lvVal{font-size:21px;}
+  #hudTop.t2 .pill{padding:0 12px;height:var(--h-hud-t);}
+  #hudTop.t2 #scoreVal,#hudTop.t2 #spdVal,#hudTop.t2 #lvVal{font-size:var(--t-xl);}
   #hudTop.t2 #lvProg,#hudTop.t2 #levelPill .chev{display:none;}
 
   /* The tray is 40px off the bottom and about 80px tall, so at 122 the charge
@@ -980,16 +1050,16 @@
   #sysBtns{
     position:absolute;left:50%;transform:translateX(-50%);
     bottom:calc(env(safe-area-inset-bottom) + 40px);
-    display:flex;gap:16px;z-index:12;padding:12px 18px;border-radius:52px;
-    background:rgba(12,22,38,.46);border:1px solid rgba(190,225,255,.18);
+    display:flex;gap:16px;z-index:12;padding:12px 18px;border-radius:var(--r-pill);
+    background:rgba(12,22,38,.46);border:1px solid var(--edge);
     -webkit-backdrop-filter:blur(20px) saturate(1.25);backdrop-filter:blur(20px) saturate(1.25);
     box-shadow:0 0 40px -18px rgba(35,200,255,.9);
   }
   #sysBtns.hidden{display:none!important;}
   .sysBtn{
-    position:relative;width:62px;height:62px;border-radius:50%;cursor:pointer;
+    position:relative;width:var(--h-sys);height:var(--h-sys);border-radius:50%;cursor:pointer;
     display:flex;align-items:center;justify-content:center;color:#8fd4ff;
-    background:rgba(255,255,255,.07);border:1px solid rgba(190,225,255,.16);
+    background:rgba(255,255,255,.07);border:1px solid var(--edge);
   }
   .sysBtn svg{width:27px;height:27px;}
   .sysBtn:active{transform:scale(.94);}
@@ -999,13 +1069,13 @@
   #gameMark{
     position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 12px);
     text-align:center;pointer-events:none;z-index:5;
-    font-size:12px;font-weight:700;letter-spacing:.42em;color:rgba(140,190,235,.3);
+    font-size:var(--t-sm);font-weight:700;letter-spacing:.42em;color:rgba(140,190,235,.3);
   }
   #overdriveTag{
     position:absolute;left:50%;top:22%;transform:translateX(-50%) scale(.86);
     padding:9px 22px;border-radius:var(--r-pill);
     background:linear-gradient(180deg,#ffd97a,var(--ember));color:#2b1600;
-    font-size:15px;font-weight:900;letter-spacing:.22em;
+    font-size:var(--t-md);font-weight:900;letter-spacing:.22em;
     box-shadow:0 0 40px -6px rgba(255,179,71,.8);
     opacity:0;transition:opacity .2s ease,transform .2s ease;
   }
@@ -1028,7 +1098,7 @@
     position:absolute;left:50%;top:11.5%;transform:translateX(-50%) scale(.86);
     padding:6px 16px;border-radius:var(--r-pill);
     background:linear-gradient(180deg,#ff6a80,#ff2f4d);color:#2b0008;
-    font-size:11.5px;font-weight:900;letter-spacing:.2em;
+    font-size:var(--t-fine);font-weight:900;letter-spacing:.2em;
     box-shadow:0 0 30px -8px rgba(255,47,77,.9);
     opacity:0;transition:opacity .2s ease,transform .2s ease;
   }
@@ -1041,7 +1111,7 @@
   #invEdge.on{opacity:1;animation:invEdgePulse 2.4s ease-in-out infinite;}
   @keyframes invEdgePulse{0%,100%{opacity:.5}50%{opacity:.95}}
   #popLayer{position:absolute;left:0;right:0;bottom:30%;text-align:center;pointer-events:none;z-index:6;}
-  .pop{font-weight:900;font-size:30px;letter-spacing:.04em;opacity:0;
+  .pop{font-weight:900;font-size:var(--t-3xl);letter-spacing:.04em;opacity:0;
        animation:popRise .8s ease-out forwards;}
   @keyframes popRise{
     0%{opacity:0;transform:translateY(10px) scale(.8);}
@@ -1060,9 +1130,9 @@
     width:min(430px,94vw);
     max-height:calc(100dvh - 20px);
     overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
-    padding:24px 20px 18px;border-radius:30px;
+    padding:24px 20px 18px;border-radius:var(--r-sheet);
     text-align:center;background:rgba(16,22,36,.72);
-    border:1px solid rgba(255,255,255,.10);
+    border:1px solid var(--edge);
     -webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2);
     box-shadow:0 30px 80px -20px rgba(0,0,0,.9);
     animation:cardIn .32s cubic-bezier(.2,.9,.3,1.2) both;
@@ -1077,28 +1147,28 @@
     box-shadow:0 0 22px rgba(35,230,217,.85);
   }
   @keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
-  .goTitle{font-size:17px;font-weight:800;letter-spacing:.3em;text-transform:uppercase;
+  .goTitle{font-size:var(--t-lg);font-weight:800;letter-spacing:.3em;text-transform:uppercase;
            color:#ff9ecb;text-shadow:0 0 20px rgba(255,62,127,.6);}
-  .clearTag{font-size:17px;font-weight:800;letter-spacing:.26em;text-transform:uppercase;
+  .clearTag{font-size:var(--t-lg);font-weight:800;letter-spacing:.26em;text-transform:uppercase;
             color:var(--signal-hi);text-shadow:0 0 20px rgba(35,230,217,.6);}
-  .goScore{margin-top:10px;font-size:82px;font-weight:800;line-height:1;
+  .goScore{margin-top:10px;font-size:clamp(49.2px,19.07vw,82px);font-weight:800;line-height:1;
            letter-spacing:-.04em;color:#fff;text-shadow:0 0 40px rgba(255,255,255,.45);}
-  .goSubLine{margin-top:8px;font-size:13px;font-weight:800;letter-spacing:.16em;
+  .goSubLine{margin-top:8px;font-size:var(--t-sm);font-weight:800;letter-spacing:.16em;
              text-transform:uppercase;color:#ff9ecb;}
   .starRow{display:flex;justify-content:center;gap:10px;margin-top:14px;}
   .starRow svg{width:38px;height:38px;}
   .starRow .s{color:#22314b;transition:color .3s ease,transform .3s ease;}
   .starRow .s.on{color:var(--gold);filter:drop-shadow(0 0 12px rgba(255,211,77,.85));}
   .chips{display:flex;gap:10px;margin-top:20px;}
-  .chip{flex:1;padding:12px 6px 13px;border-radius:16px;
-        background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);}
+  .chip{flex:1;padding:12px 6px 13px;border-radius:var(--r-ctl);
+        background:rgba(255,255,255,.05);border:1px solid var(--edge-2);}
   .chip .ci{display:block;width:26px;height:26px;margin:0 auto 9px;}
-  .chip b{display:block;font-size:26px;font-weight:800;color:#fff;line-height:1;letter-spacing:-.02em;}
+  .chip b{display:block;font-size:var(--t-2xl);font-weight:800;color:#fff;line-height:1;letter-spacing:-.02em;}
   .chip b.gold{color:#fff;}
-  .chip span{display:block;margin-top:8px;font-size:9.5px;letter-spacing:.1em;white-space:nowrap;}
+  .chip span{display:block;margin-top:8px;font-size:var(--t-micro);letter-spacing:.1em;white-space:nowrap;}
   .metaRow{
     display:flex;align-items:center;margin-top:18px;padding:16px 0;
-    border-top:1px solid rgba(255,255,255,.10);border-bottom:1px solid rgba(255,255,255,.10);
+    border-top:1px solid var(--edge);border-bottom:1px solid var(--edge);
   }
   .metaCol{flex:1;text-align:center;}
   .metaCol .lab{display:block;margin-bottom:10px;}
@@ -1108,40 +1178,40 @@
   .hearts svg.off{color:transparent;stroke:#7d8ba3;}
   .ribbon{display:inline-block;margin-top:14px;padding:8px 18px;border-radius:var(--r-pill);
     background:linear-gradient(180deg,#ffe08a,var(--gold));color:#2b1d00;
-    font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;
+    font-size:var(--t-fine);font-weight:900;letter-spacing:.2em;text-transform:uppercase;
     box-shadow:0 0 34px -6px rgba(255,211,77,.8);}
-  #causeLine{margin-top:12px;font-size:13px;font-weight:600;color:var(--dim);}
-  .starWhy{margin-top:12px;font-size:13px;font-weight:700;color:var(--gold);}
+  #causeLine{margin-top:12px;font-size:var(--t-sm);font-weight:600;color:var(--dim);}
+  .starWhy{margin-top:12px;font-size:var(--t-sm);font-weight:700;color:var(--gold);}
   /* THE CLOSER. Score, stars and chain all reset the moment you start again;
      this is the one figure on the card that only ever goes one way, so it is
      given its own rule above and below and left alone. */
   .closer{
     margin-top:18px;padding:12px 8px;
-    border-top:1px solid var(--hair-2);border-bottom:1px solid var(--hair-2);
+    border-top:1px solid var(--edge-2);border-bottom:1px solid var(--edge-2);
     display:flex;align-items:baseline;justify-content:center;gap:9px;flex-wrap:wrap;
   }
   .closer .cl{
-    font-size:9.5px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.28em;text-transform:uppercase;
     color:var(--dim-2);
   }
   .closer b{
-    font-size:19px;font-weight:800;letter-spacing:-.01em;color:var(--signal-hi);
+    font-size:var(--t-xl);font-weight:800;letter-spacing:-.01em;color:var(--signal-hi);
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
     text-shadow:0 0 20px rgba(35,230,217,.45);
   }
-  .closer .cd{font-size:11px;font-weight:700;color:var(--charge);}
+  .closer .cd{font-size:var(--t-fine);font-weight:700;color:var(--charge);}
   .nextUp{margin-top:16px;padding:13px;border-radius:var(--r-chip);
-    background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--hair-2);
-    font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);}
+    background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--edge-2);
+    font-size:var(--t-fine);font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);}
   .nextUp b{color:var(--ink);}
   .nextUp .hardTag{color:var(--ember);} .nextUp .extremeTag{color:var(--danger);}
   /* ---- daily missions ---- */
-  .cardHead{font-size:13px;font-weight:800;letter-spacing:.26em;text-transform:uppercase;
+  .cardHead{font-size:var(--t-sm);font-weight:800;letter-spacing:.26em;text-transform:uppercase;
             color:var(--signal-hi);}
-  .cardSub{margin-top:8px;font-size:13.5px;font-weight:600;color:#93aac6;}
+  .cardSub{margin-top:8px;font-size:var(--t-sm);font-weight:600;color:#93aac6;}
   .taskList{margin-top:20px;display:flex;flex-direction:column;gap:10px;text-align:left;}
-  .task{padding:14px 15px;border-radius:16px;background:rgba(255,255,255,.05);
-        border:1px solid rgba(255,255,255,.08);}
+  .task{padding:14px 15px;border-radius:var(--r-ctl);background:rgba(255,255,255,.05);
+        border:1px solid var(--edge-2);}
   .task.done{border-color:rgba(35,230,217,.45);background:rgba(35,230,217,.07);}
   .taskTop{display:flex;align-items:center;gap:10px;}
   .taskTick{width:22px;height:22px;flex:0 0 auto;border-radius:50%;
@@ -1149,22 +1219,22 @@
   .task.done .taskTick{border-color:var(--signal-hi);background:var(--signal-hi);}
   .taskTick svg{width:12px;height:12px;color:#00272c;opacity:0;}
   .task.done .taskTick svg{opacity:1;}
-  .taskName{flex:1;font-size:15.5px;font-weight:700;color:#eaf4ff;}
-  .taskNum{font-size:13px;font-weight:800;color:#93aac6;}
+  .taskName{flex:1;font-size:var(--t-md);font-weight:700;color:#eaf4ff;}
+  .taskNum{font-size:var(--t-sm);font-weight:800;color:#93aac6;}
   .task.done .taskNum{color:var(--signal-hi);}
   .taskBar{margin-top:11px;height:6px;border-radius:var(--r-pill);background:rgba(255,255,255,.09);
            overflow:hidden;}
   .taskBar i{display:block;height:100%;border-radius:var(--r-pill);
              background:linear-gradient(90deg,var(--signal-lo),var(--signal-hi));
              box-shadow:0 0 12px rgba(35,230,217,.7);}
-  #dailyClaim{font-size:20px;}
+  #dailyClaim{font-size:var(--t-xl);}
   #dailyScreen .card::before{
     background:linear-gradient(90deg,transparent,rgba(120,255,245,.9),transparent);
     box-shadow:0 0 22px rgba(35,230,217,.85);
   }
-  .rewardLine{margin-top:18px;font-size:12px;font-weight:800;letter-spacing:.16em;
+  .rewardLine{margin-top:18px;font-size:var(--t-sm);font-weight:800;letter-spacing:.16em;
               text-transform:uppercase;color:var(--gold);}
-  .pauseTitle{font-size:17px;font-weight:800;letter-spacing:.28em;text-transform:uppercase;
+  .pauseTitle{font-size:var(--t-lg);font-weight:800;letter-spacing:.28em;text-transform:uppercase;
               color:var(--signal-hi);}
 
   
@@ -1179,11 +1249,11 @@
   #toast{
     position:absolute;left:50%;bottom:150px;transform:translate(-50%,14px);
     z-index:60;pointer-events:none;opacity:0;transition:opacity .2s ease,transform .2s ease;
-    padding:18px 26px;border-radius:20px;width:max-content;max-width:min(420px,88vw);
+    padding:18px 26px;border-radius:var(--r-btn);width:max-content;max-width:min(420px,88vw);
     text-align:center;line-height:1.35;
     background:rgba(14,26,44,.92);border:1px solid rgba(122,224,255,.28);
     -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
-    font-size:17px;font-weight:700;letter-spacing:-.01em;color:#eef7ff;
+    font-size:var(--t-lg);font-weight:700;letter-spacing:-.01em;color:#eef7ff;
     box-shadow:0 22px 54px rgba(0,0,0,.8),0 0 40px -14px rgba(35,230,217,.7);
   }
   #toast.show{opacity:1;transform:translate(-50%,0);}
@@ -1203,8 +1273,8 @@
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:6px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;
   }
-  #zoneHint .zh b{font-size:13px;}
-  #zoneHint .zh span{font-size:9.5px;letter-spacing:.18em;color:var(--dim-2);}
+  #zoneHint .zh b{font-size:var(--t-sm);}
+  #zoneHint .zh span{font-size:var(--t-micro);letter-spacing:.18em;color:var(--dim-2);}
   #zoneHint .zhL{color:var(--signal);
     background:linear-gradient(90deg,rgba(35,230,217,.07),transparent 72%);}
   #zoneHint .zhR{color:var(--flare);
@@ -1223,7 +1293,7 @@
   }
   .secWrap{width:min(420px,90%);margin:auto;padding:32px 0;text-align:center;}
   .secKick{
-    font-size:9.5px;font-weight:800;letter-spacing:.44em;text-transform:uppercase;
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.44em;text-transform:uppercase;
     color:var(--dim-2);
   }
   .secName{
@@ -1232,7 +1302,7 @@
     text-shadow:0 0 34px rgba(92,255,242,.42);
   }
   .secSub{
-    margin-top:7px;font-size:10px;font-weight:800;letter-spacing:.3em;
+    margin-top:7px;font-size:var(--t-tiny);font-weight:800;letter-spacing:.3em;
     text-transform:uppercase;color:var(--dim-2);
   }
   .secRule{
@@ -1243,22 +1313,22 @@
     display:flex;align-items:center;justify-content:center;gap:11px;flex-wrap:wrap;
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
   }
-  .secDist span{font-size:14px;font-weight:700;color:var(--dim-2);text-decoration:line-through;}
+  .secDist span{font-size:var(--t-md);font-weight:700;color:var(--dim-2);text-decoration:line-through;}
   .secDist svg{width:26px;height:10px;color:var(--dim-2);flex:0 0 auto;}
-  .secDist b{font-size:21px;font-weight:800;color:var(--ink);}
+  .secDist b{font-size:var(--t-xl);font-weight:800;color:var(--ink);}
   .secDistLab{
-    margin-top:6px;font-size:9.5px;font-weight:800;letter-spacing:.28em;
+    margin-top:6px;font-size:var(--t-micro);font-weight:800;letter-spacing:.28em;
     text-transform:uppercase;color:var(--dim-2);
   }
   .secLog{
     margin:26px auto 0;max-width:370px;text-align:left;
-    font-size:14px;line-height:1.7;font-weight:500;color:#cfe0f4;
+    font-size:var(--t-md);line-height:1.7;font-weight:500;color:#cfe0f4;
   }
   .secLog p{margin:0 0 13px;}
   .secLog p:last-child{margin-bottom:0;}
   .secSig{
     margin:16px auto 26px;max-width:370px;text-align:left;
-    font-size:10px;font-weight:800;letter-spacing:.28em;color:var(--signal);
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.28em;color:var(--signal);
   }
 
   /* ============ THE LOGBOOK ============
@@ -1275,7 +1345,7 @@
     width:min(430px,92%);margin:auto;padding:34px 0;text-align:center;
   }
   .homeKick{
-    font-size:9.5px;font-weight:800;letter-spacing:.44em;text-transform:uppercase;
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.44em;text-transform:uppercase;
     color:var(--dim-2);
   }
   .homeTitle{
@@ -1289,11 +1359,11 @@
   }
   .homeGrid{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;}
   .homeGrid b{
-    display:block;font-size:26px;font-weight:800;color:var(--ink);
+    display:block;font-size:var(--t-2xl);font-weight:800;color:var(--ink);
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
   }
   .homeGrid span{
-    display:block;margin-top:4px;font-size:9.5px;font-weight:800;letter-spacing:.2em;
+    display:block;margin-top:4px;font-size:var(--t-micro);font-weight:800;letter-spacing:.2em;
     text-transform:uppercase;color:var(--dim-2);
   }
   .homeBig{margin-top:28px;}
@@ -1304,11 +1374,11 @@
     text-shadow:0 0 34px rgba(35,230,217,.45);
   }
   .homeBig span{
-    display:block;margin-top:9px;font-size:11px;font-weight:700;letter-spacing:.1em;
+    display:block;margin-top:9px;font-size:var(--t-fine);font-weight:700;letter-spacing:.1em;
     color:var(--dim);
   }
   .homeEcho{
-    margin:28px auto 26px;max-width:360px;font-size:13.5px;line-height:1.66;
+    margin:28px auto 26px;max-width:360px;font-size:var(--t-sm);line-height:1.66;
     font-weight:500;color:#c3d6ee;font-style:italic;
   }
 
@@ -1330,16 +1400,16 @@
     text-align:center;
   }
   #arrHome span{
-    display:block;font-size:9.5px;font-weight:800;letter-spacing:.42em;
+    display:block;font-size:var(--t-micro);font-weight:800;letter-spacing:.42em;
     text-transform:uppercase;color:var(--dim-2);
   }
   #arrHome b{
-    display:block;margin-top:7px;font-size:44px;font-weight:200;line-height:1;
+    display:block;margin-top:7px;font-size:clamp(26.4px,10.23vw,44px);font-weight:200;line-height:1;
     color:var(--ink);text-shadow:0 0 40px rgba(140,200,255,.55);
   }
   #arrLog{width:min(560px,100%);text-align:center;}
   #arrLog p{
-    margin:0 0 15px;font-size:15px;font-weight:500;line-height:1.62;
+    margin:0 0 15px;font-size:var(--t-md);font-weight:500;line-height:1.62;
     color:#dbe9fb;text-shadow:0 2px 22px rgba(0,0,0,.95);
     opacity:0;transform:translateY(9px);
     transition:opacity 1.5s ease, transform 1.5s cubic-bezier(.2,.9,.3,1);
@@ -1356,10 +1426,6 @@
     position:absolute;top:0;right:0;bottom:0;left:0;z-index:26;
     background:#000;opacity:0;pointer-events:none;
   }
-  @media (max-width:360px){
-    #arrHome b{font-size:36px;}
-    #arrLog p{font-size:13.5px;margin-bottom:12px;}
-  }
   /* A phone on its side. The planet has moved to the left third (arrivalFit
      does that half), so the words take a column of their own on the right
      instead of being written across an ocean. */
@@ -1370,9 +1436,9 @@
       background:linear-gradient(90deg,transparent 34%,rgba(2,4,10,.78) 86%);
     }
     #arrHome{position:static;text-align:right;margin-bottom:18px;}
-    #arrHome b{font-size:34px;}
+    #arrHome b{font-size:var(--t-3xl);}
     #arrLog{width:min(54%,470px);text-align:right;}
-    #arrLog p{font-size:13.5px;margin-bottom:11px;}
+    #arrLog p{font-size:var(--t-sm);margin-bottom:11px;}
     /* .btn is full width by default, which here means a button laid across
        the Atlantic. */
     #arrGo{align-self:flex-end;margin-top:10px;width:auto;min-width:180px;}
@@ -1413,7 +1479,7 @@
     animation:cdTick var(--cd-step,.92s) cubic-bezier(.16,1,.3,1) both;
   }
   #countCap{
-    margin-top:22px;font-size:11px;font-weight:800;letter-spacing:.42em;
+    margin-top:22px;font-size:var(--t-fine);font-weight:800;letter-spacing:.42em;
     text-transform:uppercase;color:var(--dim-2);
   }
   /* the pulse itself — one ring per heartbeat, out and gone */
@@ -1468,14 +1534,14 @@
     position:absolute;left:50%;top:12%;transform:translate(-50%,-14px);
     z-index:22;pointer-events:none;opacity:0;transition:opacity .3s ease,transform .3s ease;
     width:min(360px,88vw);text-align:center;padding:22px 20px;border-radius:var(--r-card);
-    background:var(--glass);border:1px solid var(--hair);
+    background:var(--glass);border:1px solid var(--edge);
     -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
     box-shadow:0 16px 50px rgba(0,0,0,.7);
   }
   #tutHint.show{opacity:1;transform:translate(-50%,0);}
-  .tutBig{font-size:15px;font-weight:900;letter-spacing:.22em;text-transform:uppercase;
+  .tutBig{font-size:var(--t-md);font-weight:900;letter-spacing:.22em;text-transform:uppercase;
           color:var(--signal);}
-  .tutSub{margin-top:10px;font-size:13px;font-weight:600;line-height:1.6;color:var(--dim);}
+  .tutSub{margin-top:10px;font-size:var(--t-sm);font-weight:600;line-height:1.6;color:var(--dim);}
   /* THE PRIMER — a mechanic explained once, with the world stopped.
      A toast cannot teach a rule. It lasts two seconds, it appears while the
      player is mid-rotation with a ring closing on them, and the one thing they
@@ -1494,25 +1560,25 @@
   #primerCard{
     width:min(380px,90vw);text-align:center;padding:26px 24px 20px;
     border-radius:var(--r-card);background:var(--glass);
-    border:1px solid var(--hair);border-top:2px solid var(--signal);
+    border:1px solid var(--edge);border-top:2px solid var(--signal);
     -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
     box-shadow:0 20px 60px rgba(0,0,0,.8);
     animation:primerIn .26s cubic-bezier(.2,.9,.3,1.2) both;
   }
   @keyframes primerIn{from{opacity:0;transform:translateY(14px) scale(.95);}
                       to{opacity:1;transform:none;}}
-  #primerKicker{font-size:9.5px;font-weight:800;letter-spacing:.34em;
+  #primerKicker{font-size:var(--t-micro);font-weight:800;letter-spacing:.34em;
                 text-transform:uppercase;color:var(--dim-2);}
-  #primerTitle{margin-top:9px;font-size:19px;font-weight:900;letter-spacing:.14em;
+  #primerTitle{margin-top:9px;font-size:var(--t-xl);font-weight:900;letter-spacing:.14em;
                text-transform:uppercase;color:var(--signal);}
-  #primerBody{margin-top:14px;font-size:13.5px;font-weight:600;line-height:1.65;color:var(--dim);}
+  #primerBody{margin-top:14px;font-size:var(--t-sm);font-weight:600;line-height:1.65;color:var(--dim);}
   #primerBody p{margin:0 0 9px;}
   #primerBody p:last-child{margin-bottom:0;}
   #primerBody b{color:#eaf3ff;font-weight:800;}
   #primerGo{
     margin-top:20px;width:100%;padding:14px;border:0;border-radius:var(--r-pill);
     background:var(--signal);color:#04101d;
-    font-size:13px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;
+    font-size:var(--t-sm);font-weight:900;letter-spacing:.2em;text-transform:uppercase;
     cursor:pointer;font-family:inherit;
   }
   @media (prefers-reduced-motion: reduce){ #primerCard{animation:none;} }
@@ -1526,15 +1592,15 @@
   }
   .fatalCard{
     width:min(420px,92vw);padding:28px 24px;border-radius:var(--r-card);
-    background:var(--glass);border:1px solid var(--hair);border-top:2px solid var(--signal);
+    background:var(--glass);border:1px solid var(--edge);border-top:2px solid var(--signal);
     box-shadow:0 20px 60px rgba(0,0,0,.8);
   }
-  .fatalTitle{font-size:20px;font-weight:900;letter-spacing:.06em;color:var(--signal);
+  .fatalTitle{font-size:var(--t-xl);font-weight:900;letter-spacing:.06em;color:var(--signal);
               text-align:center;line-height:1.3;}
-  .fatalBody{margin-top:16px;font-size:14px;font-weight:600;line-height:1.7;color:var(--dim);}
+  .fatalBody{margin-top:16px;font-size:var(--t-md);font-weight:600;line-height:1.7;color:var(--dim);}
   .fatalBody b{color:#eaf3ff;font-weight:800;}
   #loadMsg{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;align-items:center;justify-content:center;
-    color:var(--dim);font-size:10.5px;font-weight:800;letter-spacing:.34em;
+    color:var(--dim);font-size:var(--t-tiny);font-weight:800;letter-spacing:.34em;
     text-transform:uppercase;z-index:20;text-align:center;padding:0 24px;}
   /* A full-screen mix-blend-mode layer forces the compositor to keep everything
      under it in one blended group, every frame. It is worth it while the effects
@@ -1547,25 +1613,15 @@
   }
   body.noFx #grain{display:none;}
 
+  /* This block used to restate fifteen sizes at 380px — a second, smaller
+     layout that snapped into place one pixel below the breakpoint. Fourteen
+     of them are tokens now and scale continuously. Only the two that are
+     genuinely a DENSITY choice rather than a scale one are left. */
   @media (max-width:380px){
-    .hudChip{height:42px;padding:0 12px;}
-    .hudChip b{font-size:17px;}
-    .iconBtn{width:42px;height:42px;}
-    .btn{min-height:60px;font-size:22px;}
-    .btn.ghost{min-height:56px;font-size:18px;}
-    .infoCard b{font-size:22px;}
-    .infoCard.go b{font-size:33px;}
     .infoCard .icoBig{width:33px;height:33px;}
-    #scoreVal{font-size:23px;}
-    .pill{height:46px;padding:0 14px;}
-    #lvVal{font-size:22px;}
-    .sysBtn{width:56px;height:56px;}
-    .goScore{font-size:68px;}
-    .setTitle{font-size:27px;}
-    .setRow{font-size:18px;min-height:60px;}
   }
   @media (max-height:680px){
-    .goScore{font-size:56px;}
+    .goScore{font-size:clamp(33.6px,13.02vw,56px);}
     .btn{min-height:56px;}
     .starRow svg{width:32px;height:32px;}
     /* squares stop being square before they stop fitting */
@@ -1588,9 +1644,9 @@
     .infoCard{aspect-ratio:auto;min-height:0;padding:10px 12px;}
     .infoCard .icoBig{width:24px;height:24px;}
     .infoCard .sub{display:none;}
-    .infoCard b{font-size:20px;}
-    .infoCard.go b{font-size:26px;}
-    .brand{font-size:34px;}
+    .infoCard b{font-size:var(--t-xl);}
+    .infoCard.go b{font-size:var(--t-2xl);}
+    .brand{font-size:var(--t-3xl);}
     .menuFoot{padding-top:6px;}
   }
   .overlay.screen{overflow-y:auto;-webkit-overflow-scrolling:touch;}
@@ -2330,7 +2386,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.4 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.5 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
