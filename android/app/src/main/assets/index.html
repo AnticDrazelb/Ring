@@ -2916,6 +2916,15 @@
 "use strict";
 
 window.addEventListener('error', function(e){
+  /* ONLY WHILE BOOTING. This is the loading line: it exists so a page that
+     dies before it can draw says something instead of sitting black. Once the
+     game is running it must stay out of the way, and it did not — an async
+     throw at any point in a session unhid it, so a raw
+     "error: uncaught typeerror..." painted itself in grey caps across the
+     death card. The listener below already decided that a working game should
+     not be replaced by an apology over one late throw; this one was
+     contradicting it. */
+  if(window.__bootOK) return;
   var el = document.getElementById('loadMsg');
   if(!el) return;
   el.classList.remove('hidden');
