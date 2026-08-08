@@ -262,6 +262,51 @@ returns false, the ad SDK is never started, and the app is silently ad-free.
 
 ---
 
+## No fill is not a state you can sit in
+
+Two defects, and together they turn one bad second into a dead session.
+
+**A failed load was never retried.** `onAdFailedToLoad` set the slot to null,
+logged, and stopped. Nothing tried again until the next `onResume()` — and
+asking for an ad answers `nofill` immediately rather than loading one, so from
+the player's side the offer was simply broken for the rest of the session. One
+slow network while the consent form was up was enough to do it. There is now a
+backoff ladder — 2s, 6s, 15s, 40s — reset on success, on resume, and whenever a
+player asks, because a player asking is a fresh signal and should not inherit a
+spent ladder.
+
+**The offer did not know whether there was an ad behind it.** WATCH AD and
+*Watch an ad to continue* are drawn from policy — cooldowns, caps,
+once-per-account — and policy has no idea what the SDK has loaded. So the app
+offered something it could not deliver and then said *No ad available right
+now*, which is worse than not offering. `AdHost` now reports the chamber on
+every change and the page hides an offer it cannot honour; when the ad lands
+seconds later, the chip and the button appear on their own.
+
+A host that never reports, and the browser simulator, both read as available —
+unknown must not mean hidden.
+
+### Reading the failure
+
+`onAdFailedToLoad` now logs the **code**, which is the actionable half:
+
+```
+adb logcat -s RingshiftAds
+W/RingshiftAds: rewarded load failed [3] No ad config...
+```
+
+| code | |
+|---|---|
+| 0 | internal SDK error |
+| 1 | invalid request — usually a wrong unit id, or an app id that does not match the account |
+| 2 | network |
+| 3 | no fill |
+
+And Settings shows the chamber live: `ADS · live host · IR loaded · 2 shown ·
+ready`. `-R` means the interstitial slot is empty, `--` means both are.
+
+---
+
 ## A ten second guard that ate every reward
 
 The most expensive bug of the lot, and the shortest to describe.

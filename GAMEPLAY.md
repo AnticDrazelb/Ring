@@ -1136,6 +1136,19 @@ limit, not a paywall.
 arrive in that order, and paying out on the first would unlock a ship behind
 an ad the player is still watching.
 
+### An offer is only made if it can be kept
+
+The two opt-in placements are drawn from policy, and policy knows about
+cooldowns and caps and nothing at all about whether the ad SDK actually has
+something loaded. So both used to appear regardless, and tapping one could
+answer *no ad available* — the game breaking a promise it made a second
+earlier.
+
+The host reports what is in the chamber whenever it changes. **WATCH AD** and
+**Watch an ad to continue** are not shown unless there is an ad to give, and
+they appear on their own the moment one lands. Nothing is ever offered and then
+refused.
+
 ### The game does not depend on any of it
 
 There is no ad SDK in a browser, so `window.__rsAdHost` does not exist, so

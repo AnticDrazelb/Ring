@@ -1,6 +1,8 @@
 package com.anticdrazelb.ringshift
 
 import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
@@ -47,7 +49,10 @@ class AdHost(
     private val onResult: (String, String) -> Unit,
     /** Called on the main thread with true just before an ad covers the
      *  screen and false once it is gone. Exactly once each, per shown ad. */
-    private val onCover: (Boolean) -> Unit = {}
+    private val onCover: (Boolean) -> Unit = {},
+    /** Called whenever the chamber changes: is an interstitial / a rewarded ad
+     *  actually loaded and showable right now. */
+    private val onStock: (Boolean, Boolean) -> Unit = { _, _ -> }
 ) {
 
     companion object {
@@ -60,6 +65,31 @@ class AdHost(
     private var loadingInterstitial = false
     private var loadingRewarded = false
     private var covering = false
+    private var retryInterstitial = 0
+    private var retryRewarded = 0
+    private val main = Handler(Looper.getMainLooper())
+
+    /* A LOAD THAT FAILS ONCE MUST NOT END THE SESSION.
+     *
+     * The first version gave up: on failure the slot was left empty and
+     * nothing tried again until the next resume or the next time the player
+     * asked for an ad — and asking answers "nofill" immediately, so from the
+     * player's side the offer was simply broken for the rest of the session.
+     * One slow network during the consent form was enough.
+     *
+     * A load can fail for reasons that pass: no network at the moment the app
+     * started, a mediation adapter timing out, an ad unit minutes old and not
+     * yet filling. Backing off and trying again costs nothing and is the
+     * difference between "no ads today" and "no ads for four seconds". */
+    private val RETRY_MS = longArrayOf(2_000, 6_000, 15_000, 40_000)
+
+    /** Is there actually an ad in the chamber, right now. */
+    val interstitialReady: Boolean get() = interstitial != null
+    val rewardedReady: Boolean get() = rewarded != null
+
+    private fun stock() {
+        onStock(interstitial != null, rewarded != null)
+    }
 
     /** True from just before `show()` until the ad is dismissed or fails.
      *
@@ -139,8 +169,12 @@ class AdHost(
      */
     fun preload() {
         if (!ready) return
+        // A resume is a new chance: forget how badly the last attempts went.
+        retryInterstitial = 0
+        retryRewarded = 0
         loadInterstitial()
         loadRewarded()
+        stock()
     }
 
     private fun loadInterstitial() {
@@ -151,12 +185,20 @@ class AdHost(
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
                     loadingInterstitial = false
+                    retryInterstitial = 0
                     interstitial = ad
+                    Log.i(TAG, "interstitial ready")
+                    stock()
                 }
                 override fun onAdFailedToLoad(e: LoadAdError) {
                     loadingInterstitial = false
                     interstitial = null
-                    Log.i(TAG, "interstitial no fill: ${e.message}")
+                    /* The CODE is the half that is actionable: 3 is no fill,
+                     * 2 is the network, 1 is a bad request — a wrong unit id
+                     * or an app id that does not match. */
+                    Log.w(TAG, "interstitial load failed [${e.code}] ${e.message}")
+                    stock()
+                    retryLater(false)
                 }
             }
         )
@@ -170,15 +212,34 @@ class AdHost(
             object : RewardedInterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedInterstitialAd) {
                     loadingRewarded = false
+                    retryRewarded = 0
                     rewarded = ad
+                    Log.i(TAG, "rewarded ready")
+                    stock()
                 }
                 override fun onAdFailedToLoad(e: LoadAdError) {
                     loadingRewarded = false
                     rewarded = null
-                    Log.i(TAG, "rewarded no fill: ${e.message}")
+                    Log.w(TAG, "rewarded load failed [${e.code}] ${e.message}")
+                    stock()
+                    retryLater(true)
                 }
             }
         )
+    }
+
+    private fun retryLater(isRewarded: Boolean) {
+        val n = if (isRewarded) retryRewarded else retryInterstitial
+        if (n >= RETRY_MS.size) {
+            Log.w(TAG, (if (isRewarded) "rewarded" else "interstitial") +
+                    " gave up for now; will try again on resume")
+            return
+        }
+        val delay = RETRY_MS[n]
+        if (isRewarded) retryRewarded = n + 1 else retryInterstitial = n + 1
+        main.postDelayed({
+            if (isRewarded) loadRewarded() else loadInterstitial()
+        }, delay)
     }
 
     /** Called from the bridge. Always answers, exactly once. */
@@ -191,8 +252,14 @@ class AdHost(
 
     private fun showInterstitial(tag: String) {
         val ad = interstitial
-        if (ad == null) { loadInterstitial(); done(tag, "nofill"); return }
+        if (ad == null) {
+            // A player asking is a fresh signal; do not hold a spent backoff
+            // ladder against them.
+            retryInterstitial = 0
+            loadInterstitial(); done(tag, "nofill"); return
+        }
         interstitial = null                       // one shot; the next is loaded on dismiss
+        stock()
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 cover(false); loadInterstitial(); done(tag, "shown")
@@ -207,8 +274,12 @@ class AdHost(
 
     private fun showRewarded(tag: String) {
         val ad = rewarded
-        if (ad == null) { loadRewarded(); done(tag, "nofill"); return }
+        if (ad == null) {
+            retryRewarded = 0
+            loadRewarded(); done(tag, "nofill"); return
+        }
         rewarded = null
+        stock()
         /* `earned` is latched on the reward callback and reported on DISMISS,
          * not on the callback itself. The two arrive in that order and the
          * game must not be handed a reward while the ad is still covering the

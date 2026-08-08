@@ -146,7 +146,14 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             },
-            onCover = { on -> adCover(on) }
+            onCover = { on -> adCover(on) },
+            onStock = { i, r ->
+                /* The page must not offer what cannot be delivered. WATCH AD
+                 * and "Watch an ad to continue" are drawn from policy, and
+                 * policy has no idea whether the chamber is loaded. */
+                if (pageReady) web.evaluateJavascript(
+                    "window.__rsAdStock && window.__rsAdStock($i, $r)", null)
+            }
         )
 
         /* CONSENT FIRST, ADS SECOND, AND THE GAME REGARDLESS.

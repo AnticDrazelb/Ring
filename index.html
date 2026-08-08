@@ -2732,7 +2732,7 @@
 
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.8 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.9 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -6160,8 +6160,11 @@ function adsLine(){
       : 'ADS \u00b7 none in a browser \u00b7 use Ad preview above';
   }
   var st = adState(), why = adBlockedBy(true);
+  var chamber = !adStockKnown ? 'stock unknown'
+    : ((adStock.interstitial ? 'I' : '-') + (adStock.rewarded ? 'R' : '-') + ' loaded');
   return 'ADS \u00b7 ' + (AD_SIM ? 'SIMULATED \u00b7 ' : 'live host \u00b7 ') +
-         st.n + ' shown \u00b7 ' + (why ? 'next: ' + why : 'ready') +
+         chamber + ' \u00b7 ' + st.n + ' shown \u00b7 ' +
+         (why ? 'next: ' + why : 'ready') +
          (st.ship ? ' \u00b7 ship unlocked' : '');
 }
 
@@ -6182,6 +6185,41 @@ window.__rsAdsReady = function(){
   }catch(e){}
   return true;
 };
+
+/* IS THERE ACTUALLY AN AD TO GIVE.
+
+   Both opt-in placements are drawn from policy — the cooldowns, the caps, the
+   once-per-account rule — and policy has no idea whether the SDK has anything
+   loaded. So WATCH AD and "Watch an ad to continue" appeared whether or not
+   the chamber was full, and tapping one answered "No ad available right now",
+   which is the app breaking a promise it made a second earlier.
+
+   The host reports the chamber whenever it changes. An offer that cannot be
+   honoured is not shown.
+
+   `adStockKnown` matters: a host that never reports must not silently hide
+   every offer, and neither must the browser simulator, which has no concept of
+   inventory. Unknown means available. */
+var adStock = {interstitial:true, rewarded:true}, adStockKnown = false;
+window.__rsAdStock = function(i, r){
+  adStock.interstitial = !!i;
+  adStock.rewarded = !!r;
+  adStockKnown = true;
+  /* Redraw whatever is on screen: the chamber refilling is the moment an
+     offer becomes real, and it lands seconds after the screen was built. */
+  try{
+    var hs = document.getElementById('hangarScreen');
+    if(hs && !hs.classList.contains('hidden')) buildHangar();
+    refreshLifeUI();
+    var al = document.getElementById('setAds');
+    if(al) al.textContent = adsLine();
+  }catch(e){}
+  return true;
+};
+function adInStock(kind){
+  if(!adStockKnown) return true;
+  return kind === 'rewarded' ? adStock.rewarded : adStock.interstitial;
+}
 
 /* THE HOST SAYS AN AD IS ON SCREEN.
 
@@ -6247,6 +6285,7 @@ function adOnDeath(then){
 function adContinueOffer(n){
   var a = adState(), now = Date.now();
   if(!adsLive()) return false;
+  if(!adInStock('rewarded')) return false;      // nothing to hand over
   if((store.credits||0) >= reviveCost) return false;   // they can just pay
   if(revivesUsed >= 3) return false;
   var last = a.cont[n] || 0;
@@ -6264,6 +6303,7 @@ function adContinueTake(n, then){
 function adShipOffer(hull){
   var a = adState();
   if(!adsLive()) return false;
+  if(!adInStock('rewarded')) return false;      // nothing to hand over
   if(a.ship) return false;                       // already spent, for good
   if(!hull || hull.need <= 0) return false;      // the first hull is free
   if(totalStars() >= hull.need) return false;    // already earned it
