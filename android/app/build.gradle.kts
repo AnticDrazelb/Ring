@@ -84,8 +84,8 @@ android {
         minSdk = 24
         targetSdk = 35
 
-        versionCode = 55
-        versionName = "5.5"
+        versionCode = 56
+        versionName = "5.6"
 
         // No instrumentation tests: the thing under test is a web page, and it
         // has its own headless suite driven by Playwright.

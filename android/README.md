@@ -243,6 +243,53 @@ be. The game detects and explains both failure modes itself.
 
 ---
 
+## Diagnosing ads on a device
+
+Settings prints two lines under the version. The second is the ad state, and it
+exists because every way ads can fail is silent and they all look identical
+from the sofa:
+
+```
+ADS · live host · 3 shown · next: cooldown
+ADS · no host · consent declined, offline, or still starting
+ADS · none in a browser · use Ad preview above
+```
+
+**"no host" in the UK almost always means the GDPR message is not published.**
+UMP correctly reports consent REQUIRED, has no form to show, `canRequestAds()`
+returns false, the ad SDK is never started, and the app is silently ad-free.
+`adb logcat -s RingshiftConsent` says so explicitly.
+
+---
+
+## Three ways an opt-in ad can be wired correctly and still never be seen
+
+All three shipped, and all three were invisible rather than broken.
+
+1. **A CSS class collision.** The hangar's WATCH AD chip had been
+   `.lockBadge.adBadge` since the ads went in. The browser preview badge added
+   later claimed the bare `.adBadge` with `position:fixed` on it. Specificity
+   resolves per *property*, not per rule, so the chip kept its colours and
+   inherited the fixed positioning — torn out of the card it labels and parked
+   at the bottom-left of the screen.
+2. **A button that looked disabled.** The rewarded continue fired correctly
+   when pressed, but the death card rendered one way: *Continue this run · 25*,
+   greyed out when you could not afford it. Nobody presses a locked button with
+   a price on it. It now says **Watch an ad to continue** whenever that is what
+   it does.
+3. **The host arriving after the screen was drawn.** Consent, then
+   `MobileAds.initialize`, is two to five seconds of network on a background
+   thread — and both opt-in offers are drawn from "do ads exist" at the moment
+   their screen was built. Open the hangar quickly and the chip was never
+   there, and nothing redrew it. The host now calls `window.__rsAdsReady()`
+   when it attaches.
+
+None of the three is detectable from the ad policy's unit tests, which is
+where the coverage was: eighteen assertions all passing on functions that
+returned exactly the right answers to a UI that never asked.
+
+---
+
 ## Two things a real device found that a browser could not
 
 **Haptics that were never felt.** A Galaxy S10+ reported "way less haptics than

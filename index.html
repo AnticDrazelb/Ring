@@ -250,6 +250,13 @@
   }
   .btn .cost svg{width:20px;height:20px;}
   #reviveBtn{font-size:var(--t-xl);white-space:nowrap;}
+  /* Watching an ad is not spending gold, and it should not look like it. */
+  #reviveBtn.adOffer{
+    background:linear-gradient(180deg,#7ef7c0,#22d69a);color:#01251a;
+    box-shadow:0 0 0 1px rgba(150,255,220,.5),0 0 38px -8px rgba(40,230,170,.9);
+  }
+  #reviveBtn.adOffer .cost{background:rgba(0,0,0,.14);}
+  #reviveBtn.adOffer .cost svg{width:15px;height:15px;}
   .btn .bIcon{width:24px;height:24px;flex:0 0 auto;}
   .btn.line .bIcon{color:var(--signal-hi);}
   .btn.ghost .bIcon{color:#9db3ce;}
@@ -1540,7 +1547,7 @@
   /* the corner badge that says the simulator is on. Present the whole time it
      is, because "why am I seeing a placeholder" and "why am I NOT seeing one"
      are both questions this answers. */
-  .adBadge{
+  .simBadge{
     position:fixed;z-index:8500;pointer-events:none;
     left:calc(var(--sa-left, env(safe-area-inset-left, 0px)) + 10px);
     /* clear of the footer: every screen with buttons puts them along the
@@ -2709,11 +2716,15 @@
 
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.5 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.6 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
       <div class="setVer" id="setGpu">&nbsp;</div>
+      <!-- "Are ads even running?" had no answer on a device. Consent declined,
+           no network, an unpublished GDPR message and an SDK still starting all
+           look identical from the sofa: nothing happens. This says which. -->
+      <div class="setVer" id="setAds">&nbsp;</div>
     </div>
 
     <div class="setFoot">
@@ -5916,7 +5927,7 @@ function adSimBadge(){
   if(!AD_SIM){ if(el) el.parentNode.removeChild(el); return; }
   if(!el){
     el = document.createElement('div');
-    el.id = 'adBadge'; el.className = 'adBadge';
+    el.id = 'adBadge'; el.className = 'simBadge';
     document.body.appendChild(el);
   }
   el.textContent = 'AD PREVIEW · ' + AD_SIM.toUpperCase();
@@ -6059,6 +6070,43 @@ function adRequest(kind, forced, done){
   try{ host.request(kind, tag); }
   catch(e){ finish('threw'); }
 }
+/* WHAT THE ADS ARE ACTUALLY DOING, ON THE DEVICE, IN ONE LINE.
+
+   Every way this can fail is silent and they all look the same from the sofa:
+   consent declined, consent required with no message published in the AdMob
+   console, no network, an SDK still starting, or a cooldown. Printed under the
+   GPU line in Settings so the answer takes five seconds instead of a logcat
+   session. */
+function adsLine(){
+  if(!adsLive()){
+    return nativeHost()
+      ? 'ADS \u00b7 no host \u00b7 consent declined, offline, or still starting'
+      : 'ADS \u00b7 none in a browser \u00b7 use Ad preview above';
+  }
+  var st = adState(), why = adBlockedBy(true);
+  return 'ADS \u00b7 ' + (AD_SIM ? 'SIMULATED \u00b7 ' : 'live host \u00b7 ') +
+         st.n + ' shown \u00b7 ' + (why ? 'next: ' + why : 'ready') +
+         (st.ship ? ' \u00b7 ship unlocked' : '');
+}
+
+/* THE HOST ARRIVES SECONDS AFTER THE GAME DOES.
+   MobileAds.initialize is network work on a background thread; consent runs
+   before it. So `window.__rsAdHost` typically appears two to five seconds
+   after the menu is already on screen — and every opt-in offer is drawn from
+   `adsLive()` at the moment its screen was built. Open the hangar quickly and
+   the WATCH AD chip is simply not there, and nothing ever redraws it.
+
+   The host calls this the moment it attaches. Anything whose contents depend
+   on ads existing gets rebuilt. */
+window.__rsAdsReady = function(){
+  try{
+    var hs = document.getElementById('hangarScreen');
+    if(hs && !hs.classList.contains('hidden')) buildHangar();
+    refreshLifeUI();          // repaints the death card's Continue button
+  }catch(e){}
+  return true;
+};
+
 /* Called by the host, once, per request. */
 window.__rsAdResult = function(tag, outcome){
   var f = adPending[tag];
@@ -9380,6 +9428,10 @@ function saveGif(blob, name, t){
   }catch(e){ shareTextOnly(t); }
 }
 
+function playSvg(){
+  return '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">' +
+         '<path d="M8 5.5l11 6.5-11 6.5z"/></svg>';
+}
 function coinSvg(){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
          '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h5M9.5 14.5h5"/></svg>';
@@ -9405,12 +9457,23 @@ function refreshLifeUI(){
     if(!dailyMode) rt.textContent = hasCheckpoint()
       ? 'Retry from ring ' + cp.rings
       : 'Retry level ' + plan.n;
+    /* THE CONTINUE BUTTON HAS TO SAY WHICH CURRENCY IT WANTS.
+       It used to render one way: "Continue this run · 25", greyed out when you
+       could not afford it. The rewarded continue was wired underneath and
+       fired correctly when pressed — but a locked button with a price on it is
+       a button nobody presses, so an entire placement sat behind a control
+       that looked disabled. If an ad is on the table, the button says so. */
     var rv = document.getElementById('reviveBtn');
     var canShow = revivesUsed < 3 && pendingDeath <= 0;
     rv.classList.toggle('hidden', !canShow);
     if(canShow){
-      rv.classList.toggle('locked', (store.credits||0) < reviveCost);
-      rv.innerHTML = 'Continue this run <span class="cost">' + coinSvg() + reviveCost + '</span>';
+      var paid = (store.credits||0) >= reviveCost;
+      var adOK = !paid && adContinueOffer(plan && plan.n);
+      rv.classList.toggle('locked', !paid && !adOK);
+      rv.classList.toggle('adOffer', !!adOK);
+      rv.innerHTML = adOK
+        ? '<span class="cost">' + playSvg() + '</span>Watch an ad to continue'
+        : 'Continue this run <span class="cost">' + coinSvg() + reviveCost + '</span>';
     }
   }
 }
@@ -11911,6 +11974,8 @@ function showSettings(from){
      whole point is that it says what is happening NOW. */
   var gl = document.getElementById('setGpu');
   if(gl) gl.textContent = gpuLine();
+  var al = document.getElementById('setAds');
+  if(al) al.textContent = adsLine();
   adSimApply();          // shows the preview group in a browser, hides it in the app
   if(window.syncSegs) syncSegs();
   if(window.__rsPrivacySync) window.__rsPrivacySync();

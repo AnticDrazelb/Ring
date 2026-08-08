@@ -1105,10 +1105,10 @@ Four placements. The rules around them are the design; an ad plan is not
 
 | | Where | Type |
 |---|---|---|
-| **Hangar** | Unlock the second hull without the 25 stars | Opt-in rewarded, **once per account** |
+| **Hangar** | Unlock DELTA without the 25 stars — a **WATCH AD** chip on its card | Opt-in rewarded, **once per account** |
 | **Progression** | Leaving the clear card, every third level | Interstitial |
 | **Death** | Every fifth death, lifetime | Interstitial |
-| **Continue** | You died, you have no credits, and you have not used it on this level | Opt-in rewarded, 1 per level, 5 min leash |
+| **Continue** | You died, you have no credits, and you have not used it on this level — the Continue button reads **Watch an ad to continue** | Opt-in rewarded, 1 per level, 5 min leash |
 
 ### The four rules that matter more than the placements
 

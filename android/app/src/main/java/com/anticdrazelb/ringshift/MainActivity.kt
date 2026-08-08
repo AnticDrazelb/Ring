@@ -438,6 +438,11 @@ class MainActivity : ComponentActivity() {
               window.__rsAdHost = { request: function(kind, tag){
                 rsHost.postMessage(JSON.stringify({kind:kind, tag:tag}));
               }};
+              /* The SDK finishes two to five seconds after the menu is up, and
+                 the hangar's WATCH AD chip and the death card's Continue
+                 button are both drawn from "do ads exist" at the moment their
+                 screen was built. Tell the page so it can redraw them. */
+              if (window.__rsAdsReady) window.__rsAdsReady();
             })();
             """.trimIndent(), null
         )
