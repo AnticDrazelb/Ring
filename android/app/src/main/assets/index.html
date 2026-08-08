@@ -1533,7 +1533,10 @@
   /* the simulator's placeholder. Deliberately ugly-adjacent: it must never
      be mistaken for a designed screen or for a broken one. */
   .adSim{
-    position:fixed;top:0;right:0;bottom:0;left:0;z-index:9000;
+    /* Above .adBlank, which the simulator now raises for the same reason the
+       device does — so the preview shows a black surround with the ad on top
+       of it, which is what a phone shows. */
+    position:fixed;top:0;right:0;bottom:0;left:0;z-index:9900;
     display:flex;align-items:center;justify-content:center;
     background:rgba(2,4,10,.94);
   }
@@ -1555,6 +1558,11 @@
   /* the corner badge that says the simulator is on. Present the whole time it
      is, because "why am I seeing a placeholder" and "why am I NOT seeing one"
      are both questions this answers. */
+  /* Over everything, including the ad simulator's own placeholder. */
+  .adBlank{
+    position:fixed;top:0;right:0;bottom:0;left:0;z-index:9800;
+    background:#000;pointer-events:none;
+  }
   .simBadge{
     position:fixed;z-index:8500;pointer-events:none;
     left:calc(var(--sa-left, env(safe-area-inset-left, 0px)) + 10px);
@@ -2724,7 +2732,7 @@
 
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.7 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.8 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -5959,6 +5967,13 @@ function adSimHost(){
     };
     if(AD_SIM === 'nofill'){ setTimeout(function(){ answer('nofill'); }, 300); return; }
 
+    /* The real host tells the page when an ad is on screen, and that signal
+       now governs the timeout. If the simulator did not send it, the browser
+       would keep testing a path the device does not take — which is exactly
+       how a ten second guard survived long enough to eat every reward on a
+       real phone while every test here passed. */
+    if(window.__rsAdOpen) window.__rsAdOpen(true);
+
     var rewarded = (kind === 'rewarded');
     var wrap = document.createElement('div');
     wrap.className = 'adSim';
@@ -5986,6 +6001,7 @@ function adSimHost(){
     btn.addEventListener('click', function(){
       clearInterval(tick);
       if(wrap.parentNode) wrap.parentNode.removeChild(wrap);
+      if(window.__rsAdOpen) window.__rsAdOpen(false);
       answer(rewarded ? (AD_SIM === 'skip' ? 'skipped' : 'earned') : 'shown');
     });
   }};
@@ -6058,7 +6074,43 @@ function adSimPeek(kind){
    A ten second guard sits under it. If the SDK never answers — no fill, a
    dead network, a bug in a version of Play Services we have never seen — the
    game must not be left with a modal it cannot dismiss. */
-var adSeq = 0, adPending = {};
+/* THE TEN SECOND GUARD THAT ATE EVERY REWARD.
+
+   The guard exists because "the SDK always answers" is not a promise the SDK
+   makes: no fill, a dead network or a bad version of Play Services can leave
+   a request hanging, and the game must not sit behind a modal forever.
+
+   It was armed for ten seconds across the WHOLE life of the request — request
+   to outcome. That is fine for a request that is never shown. It is nonsense
+   for one that is: a rewarded interstitial gates its reward behind an eight
+   second countdown and then waits for the player to press the close button, so
+   from tap to `earned` is comfortably twenty or thirty seconds. The timeout
+   won every time, resolved the request as 'timeout', and by the time the real
+   'earned' arrived the request had already settled and it was dropped.
+
+   Watch the whole ad, close it, get nothing. Both rewarded placements, every
+   time, on every device — while the browser simulator passed, because its
+   placeholder resolves in under three seconds and never crossed the line.
+
+   So the guard now covers the part it was written for: the wait for an ad to
+   APPEAR. The host says when one is on screen, and while it is there nothing
+   is being waited on — the player is watching. On dismissal a short grace
+   window covers the gap before the outcome lands. */
+var AD_WAIT_SHOW  = 12000;   // asked for, not yet on screen
+var AD_WAIT_AFTER = 8000;    // dismissed, outcome not yet reported
+var adSeq = 0, adPending = {}, adTimer = null, adCurTag = null;
+
+function adDisarm(){
+  if(adTimer){ clearTimeout(adTimer); adTimer = null; }
+}
+function adArm(tag, ms){
+  adDisarm();
+  adTimer = setTimeout(function(){
+    var f = adPending[tag];
+    if(f) f('timeout');
+  }, ms);
+}
+
 function adRequest(kind, forced, done){
   done = done || function(){};
   var why = adBlockedBy(forced);
@@ -6077,12 +6129,20 @@ function adRequest(kind, forced, done){
     if(settled) return;
     settled = true;
     adInFlight = false;
+    adDisarm();
+    if(adCurTag === tag) adCurTag = null;
     delete adPending[tag];
+    /* Whatever happened, the screen is ours again. If the host somehow never
+       reports the ad closing — a crash in the SDK, a killed ad process — the
+       blackout must not outlive the request that raised it. adCurTag is
+       already null here, so this cannot re-arm anything. */
+    if(adCover && window.__rsAdOpen) window.__rsAdOpen(false);
     if(outcome === 'shown' || outcome === 'earned') adRecordShown();
     done(outcome);
   };
   adPending[tag] = finish;
-  setTimeout(function(){ finish('timeout'); }, 10000);
+  adCurTag = tag;
+  adArm(tag, AD_WAIT_SHOW);
   try{ host.request(kind, tag); }
   catch(e){ finish('threw'); }
 }
@@ -6134,6 +6194,27 @@ window.__rsAdsReady = function(){
 var adCover = false;
 window.__rsAdOpen = function(on){
   adCover = !!on;
+
+  /* THE CANVAS KEEPS ITS LAST FRAME. Stopping the render loop stops new
+     frames; it does not clear the one already on the screen, so wherever the
+     ad's window does not reach — and it never reaches the top of an immersive
+     window, because AdActivity lays out inside the system bars — a frozen
+     frame of the game was showing around it. An opaque black sheet over
+     everything is what "the app is not on screen right now" should look
+     like. */
+  var el = document.getElementById('adBlank');
+  if(adCover && !el){
+    el = document.createElement('div');
+    el.id = 'adBlank'; el.className = 'adBlank';
+    document.body.appendChild(el);
+  } else if(!adCover && el){
+    el.parentNode.removeChild(el);
+  }
+
+  /* And the timeout. While an ad is on screen the game is waiting on a
+     player, not on a network, and must not give up on them. */
+  if(adCover) adDisarm();
+  else if(adCurTag) adArm(adCurTag, AD_WAIT_AFTER);
   return true;
 };
 

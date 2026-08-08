@@ -262,6 +262,50 @@ returns false, the ad SDK is never started, and the app is silently ad-free.
 
 ---
 
+## A ten second guard that ate every reward
+
+The most expensive bug of the lot, and the shortest to describe.
+
+`adRequest()` armed a ten second timeout, because "the SDK always answers" is
+not a promise the SDK makes — no fill, a dead network, a bad Play Services can
+leave a request hanging and the game must not sit behind a modal forever.
+
+It was armed across the **whole** life of the request: ask, to outcome. Fine
+for a request that is never shown. Nonsense for one that is — a rewarded
+interstitial gates its reward behind an eight second countdown and then waits
+for the player to press close, so tap to `earned` is twenty or thirty seconds.
+The timeout won every time, settled the request as `timeout`, and the real
+`earned` arriving later was dropped on the floor because the request had
+already resolved.
+
+Watch the whole ad, close it, get nothing. Both rewarded placements, every
+time, on every device.
+
+And the browser simulator passed the whole way through, because its
+placeholder resolves in under three seconds and never crossed the line.
+
+The guard now covers only what it was written for — the wait for an ad to
+*appear*:
+
+| | |
+|---|---|
+| `AD_WAIT_SHOW` 12s | asked for, not yet on screen |
+| *(disarmed)* | on screen — the game is waiting on a player, not a network |
+| `AD_WAIT_AFTER` 8s | dismissed, outcome not yet reported |
+
+The host's existing `window.__rsAdOpen(true/false)` is what moves it between
+those states, and **the simulator now sends the same signal** so the browser
+exercises the path the device takes. The regression test holds an ad open for
+sixteen seconds — six past the old guard — and asserts the ship still unlocks
+and the run still resumes.
+
+While the page is blanked it now really is blank: stopping the render loop
+stops new frames but leaves the last one on the screen, so a frozen frame of
+the game was showing in the strip above the ad. An opaque sheet goes over
+everything for as long as an ad is up.
+
+---
+
 ## `WebView.pauseTimers()` froze the ads
 
 The single worst bug in this project so far, and it reads as correct code.
