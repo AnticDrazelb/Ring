@@ -169,6 +169,23 @@
   }
   .iconBtn svg{width:23px;height:23px;}
   .iconBtn:active{transform:scale(.94);}
+  /* The chip is a button now, so it owes the same 48px of thumb the icon
+     buttons pay — the visible capsule stays at chip height and the hit area
+     is grown around it, exactly as .iconBtn does. */
+  #menuRecord{position:relative;}
+  #menuRecord::after{
+    content:'';position:absolute;left:0;top:50%;width:100%;height:48px;
+    transform:translateY(-50%);
+  }
+
+  /* the campaign grade, riding on the chip that opens the record */
+  .chipGrade{
+    font-style:normal;margin-left:6px;padding-left:7px;
+    border-left:1px solid var(--edge-2);
+    font-size:var(--t-sm);font-weight:900;letter-spacing:-.02em;line-height:1;
+  }
+  .chipGrade:empty{display:none;}
+
   .hudChip.streakChip{color:var(--signal);}
   .hudChip.streakChip b{color:var(--signal-hi);}
 
@@ -383,6 +400,10 @@
     #startScreen .hudChip{padding:0 8px;gap:4px;}
   }
   @media (max-width:430px){ #menuScreen .hudChip .chipLab{display:none;} }
+  /* The grade letter on the chip is a glance, not the feature — the chip opens
+     the record either way. It is the first thing to go when the tray runs out
+     of room, which on a 360px phone showing both chips is twenty pixels. */
+  @media (max-width:380px){ .chipGrade{display:none;} }
   /* The tray holds seven controls and every one of them is a 44px touch target
      that must not shrink, so on a narrow window it sheds READOUTS instead —
      the two that are shown in full somewhere else — rather than clipping a
@@ -569,6 +590,17 @@
     border:1px solid var(--edge-on);color:var(--signal-hi);
     font-size:var(--t-tiny);font-weight:800;letter-spacing:.13em;text-transform:uppercase;
   }
+  /* same tag metrics as .nextTag beside it, one lit letter inside */
+  .gradeTag{
+    display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;
+    height:var(--h-tag);padding:0 11px;border-radius:var(--r-pill);
+    border:1px solid var(--edge-2);background:rgba(255,255,255,.045);
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--dim-2);
+  }
+  .gradeTag i{font-style:normal;font-size:var(--t-sm);font-weight:900;letter-spacing:-.02em;}
+  .gradeTag.hidden{display:none;}
+
   .nextName{flex:1 1 auto;min-width:0;font-size:var(--t-xl);font-weight:800;color:#fff;
             letter-spacing:-.01em;line-height:1.15;}
   .nextName span{color:#fff;}
@@ -1373,6 +1405,26 @@
     margin-top:6px;font-size:var(--t-micro);font-weight:800;letter-spacing:.28em;
     text-transform:uppercase;color:var(--dim-2);
   }
+  /* the closed sector's mark, on its own strip inside the card */
+  .secGrade{
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    margin:20px auto 0;padding:11px 16px;max-width:370px;
+    border-radius:var(--r-card);background:rgba(255,255,255,.045);
+    border:1px solid var(--edge-2);
+  }
+  .secGrade.hidden{display:none;}
+  .secGrade b{font-size:var(--t-2xl);font-weight:900;line-height:1;letter-spacing:-.03em;}
+  .secGrade b.gS{text-shadow:0 0 24px rgba(255,211,77,.6);}
+  .secGrade span{text-align:left;min-width:0;}
+  .secGrade i{
+    display:block;font-style:normal;font-size:var(--t-tiny);font-weight:800;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--ink);
+  }
+  .secGrade em{
+    display:block;margin-top:3px;font-style:normal;font-size:var(--t-micro);
+    font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim-2);
+  }
+
   .secLog{
     margin:22px auto 0;max-width:370px;text-align:left;
     font-size:var(--t-md);line-height:1.62;font-weight:500;color:#cfe0f4;
@@ -1401,6 +1453,10 @@
     font-size:var(--t-micro);font-weight:800;letter-spacing:.44em;text-transform:uppercase;
     color:var(--dim-2);
   }
+  /* Sized for HOME. RECORD is two letters longer and ran off both edges of a
+     430px phone, so the longer word gets its own size rather than the shorter
+     one being shrunk to accommodate it. */
+  .homeTitle.long{font-size:clamp(34px,11.2vw,58px);letter-spacing:.13em;text-indent:.13em;}
   .homeTitle{
     margin-top:12px;font-size:clamp(52px,17vw,84px);font-weight:900;line-height:1;
     letter-spacing:.16em;text-indent:.16em;color:var(--signal-hi);
@@ -1410,6 +1466,67 @@
     margin:22px auto;width:min(58%,220px);height:1px;
     background:linear-gradient(90deg,transparent,var(--hair),transparent);
   }
+
+  /* ---- GRADES -------------------------------------------------------
+     One colour ramp for the whole ladder, used identically on the record
+     screen, the briefing panel and the clear card, so a letter means the
+     same thing everywhere you meet it. */
+  .gS,b.gS   {color:#ffd34d;}   /* gold, and only S is gold */
+  .gAp,b.gAp {color:#5cfff2;}
+  .gA,b.gA   {color:#5cfff2;}
+  .gBp,b.gBp {color:#8ad8ff;}
+  .gB,b.gB   {color:#8ad8ff;}
+  .gC,b.gC   {color:#9fb6d2;}
+  .gD,b.gD   {color:#5b739a;}
+
+  /* on the clear card: the letter, and one line saying what earned it */
+  .clearGrade{
+    display:flex;align-items:center;justify-content:center;gap:11px;
+    margin:14px auto 0;max-width:340px;
+  }
+  .clearGrade b{font-size:var(--t-3xl);font-weight:900;line-height:1;letter-spacing:-.03em;}
+  .clearGrade b.gS{text-shadow:0 0 26px rgba(255,211,77,.6);}
+  .clearGrade span{
+    text-align:left;font-size:var(--t-fine);font-weight:700;line-height:1.35;color:var(--dim);
+  }
+
+  .gradeHero{margin:20px 0 24px;}
+  .gradeMark{
+    display:block;font-size:clamp(58px,18.5vw,96px);font-weight:900;line-height:.94;
+    letter-spacing:-.03em;
+  }
+  .gradeMark:not([class*=" g"]){color:var(--dim-2);}
+  .gradeMark.gS{text-shadow:0 0 46px rgba(255,211,77,.5);}
+  .gradeMark.gAp,.gradeMark.gA{text-shadow:0 0 42px rgba(92,255,242,.4);}
+  .gradeHero span{
+    display:block;margin-top:10px;font-size:var(--t-tiny);font-weight:800;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--dim-2);
+  }
+  .homeGrid + .homeGrid{margin-top:20px;}
+  .homeGrid b.tiny{font-size:var(--t-md);letter-spacing:.02em;}
+
+  .secStripHead{
+    margin:30px 0 12px;font-size:var(--t-tiny);font-weight:800;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--neon-hi);
+  }
+  /* Twenty-five cells that must fit any phone: a grid that wraps on its own
+     rather than a row that overflows. */
+  .secStrip{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(46px,1fr));
+    gap:6px;max-width:400px;margin:0 auto;
+  }
+  .secCell{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;padding:8px 2px 6px;border-radius:var(--r-chip);
+    background:rgba(255,255,255,.05);border:1px solid var(--edge-2);
+  }
+  .secCell b{font-size:var(--t-md);font-weight:900;letter-spacing:-.02em;color:var(--ink);}
+  .secCell span{
+    font-size:var(--t-micro);font-weight:800;letter-spacing:.06em;color:var(--dim-2);
+    font-variant-numeric:tabular-nums;
+  }
+  .secCell.none{background:rgba(255,255,255,.02);}
+  .secCell.none b{color:#33445e;}
   .homeGrid{display:flex;justify-content:center;gap:26px;flex-wrap:wrap;}
   .homeGrid b{
     display:block;font-size:var(--t-2xl);font-weight:800;color:var(--ink);
@@ -2092,6 +2209,12 @@
         <b id="secTo">2,410,000 ly</b>
       </div>
       <div class="secDistLab">to Earth</div>
+      <!-- The sector you just finished, marked. The card is the chapter
+           break, so it is where the chapter's grade belongs. -->
+      <div class="secGrade hidden" id="secGrade">
+        <b id="secGradeMark">A</b>
+        <span><i id="secGradeName">ANDROMEDA</i><em id="secGradeWhy">10 worlds</em></span>
+      </div>
       <div class="secLog" id="secLog"></div>
       <div class="secSig">— ECHO</div>
       <button class="btn primary" id="secGo">Continue</button>
@@ -2102,15 +2225,36 @@
        receipt. -->
   <div id="homeScreen" class="overlay screen hidden">
     <div class="homeWrap">
-      <div class="homeKick">Transit complete</div>
-      <div class="homeTitle">HOME</div>
+      <div class="homeKick" id="homeKick">The record</div>
+      <div class="homeTitle" id="homeTitle">RECORD</div>
       <div class="homeRule"></div>
+
+      <!-- The headline. Your standard across the worlds you have cleared,
+           with the denominator underneath so an unfinished campaign can
+           never be mistaken for a finished one. -->
+      <div class="gradeHero">
+        <b class="gradeMark" id="homeGrade">&mdash;</b>
+        <span id="homeGradeSub">no worlds cleared yet</span>
+      </div>
+
       <div class="homeGrid">
-        <div><b id="homeWorlds">246</b><span>Worlds</span></div>
+        <div><b id="homeWorlds">0</b><span>Cleared</span></div>
         <div><b id="homeStars">0</b><span>Stars</span></div>
         <div><b id="homeBest">0</b><span>Best signal</span></div>
       </div>
-      <div class="homeBig">
+      <div class="homeGrid">
+        <div><b id="homeTime">0m</b><span>Time flown</span></div>
+        <div><b id="homeDeaths">0</b><span>Deaths</span></div>
+        <div><b id="homeEss">0</b><span>S grades</span></div>
+      </div>
+
+      <!-- Twenty-five sectors, one cell each. The shape of the whole
+           campaign at a glance: where you were sharp, where you ground it
+           out, and how far you have got. -->
+      <div class="secStripHead">By sector</div>
+      <div class="secStrip" id="homeStrip"></div>
+
+      <div class="homeBig" id="homeBigWrap">
         <b id="homeDist">2,537,000</b><span>light years, Andromeda to Earth</span>
       </div>
       <div class="homeEcho" id="homeEcho"></div>
@@ -2172,13 +2316,6 @@
            the tray rather than the grid below because that grid is four
            squares by design, and a fifth tile would break the shape the whole
            menu was built around. -->
-      <button class="iconBtn hidden" id="menuLogbook" aria-label="Logbook">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-             stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="8.4"/>
-          <path d="M3.6 12h16.8M12 3.6a13 13 0 0 1 0 16.8M12 3.6a13 13 0 0 0 0 16.8"/>
-        </svg>
-      </button>
       <button class="iconBtn" id="menuManual" aria-label="Flight manual">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
              stroke-linecap="round" stroke-linejoin="round">
@@ -2191,10 +2328,18 @@
         <svg viewBox="0 0 24 24" class="ic gold" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="#ffd34d"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#a97f10" stroke-width="1.4"/><path d="M12 7.4v9.2M9.9 9.6h3.4a1.7 1.7 0 0 1 0 3.4h-2.6a1.7 1.7 0 0 0 0 3.4h3.6" fill="none" stroke="#8a660c" stroke-width="1.6" stroke-linecap="round"/></svg>
         <b id="menuCredits">0</b>
       </div>
-      <div class="hudChip">
+      <!-- THE WAY INTO THE RECORD.
+
+           A separate icon for it made a fifth control in a tray that already
+           held four, and the row ran off a 390px phone. This chip already
+           answers "how good are you" with one number; tapping it for the
+           whole answer costs nothing, and the grade rides on it so the
+           record is visible without being opened. -->
+      <button class="hudChip" id="menuRecord" aria-label="Record">
         <svg viewBox="0 0 24 24" class="ic gold" aria-hidden="true"><path d="M7 3h10v2h3.5v2.2A4.8 4.8 0 0 1 15.9 12a4.6 4.6 0 0 1-2.9 2.3V17h3.4v2.6H7.6V17H11v-2.7A4.6 4.6 0 0 1 8.1 12 4.8 4.8 0 0 1 3.5 7.2V5H7V3z" fill="currentColor"/></svg>
         <span class="chipLab">Best</span><b id="menuBest">0</b>
-      </div>
+        <i class="chipGrade" id="menuGrade"></i>
+      </button>
     </div>
 
     <div class="menuBody">
@@ -2311,6 +2456,7 @@
           <span class="nextTag" id="nextTag">Selected
             <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M12 2l1.7 4.8L18.5 8.5 13.7 10.2 12 15l-1.7-4.8L5.5 8.5l4.8-1.7L12 2z"/></svg>
           </span>
+          <span class="gradeTag hidden" id="nextGrade"><i>&mdash;</i>grade</span>
           <span class="nextName" id="nextReward">Level 1</span>
         </div>
         <div class="gateRow" id="nextGates"></div>
@@ -2438,7 +2584,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.6 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.7 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -2534,6 +2680,10 @@
         <svg class="s" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
         <svg class="s" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
         <svg class="s" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
+      </div>
+      <!-- The stars say how you flew it. This says what it cost. -->
+      <div class="clearGrade" id="clearGrade">
+        <b id="clearGradeMark">A</b><span id="clearGradeWhy">three stars</span>
       </div>
       <div class="chips">
         <div class="chip">
@@ -2718,17 +2868,21 @@ function freshStore(){
              a set: the route is walked in order, and replaying level 30 does
              not un-read sector two. */
           logs:0, arrived:false,
+          /* Lifetime deaths, for the record screen. Not derivable from the
+             per-level ledger: p - c counts quits and abandons too. */
+          deaths:0,
           /* Per level, for life: plays, clears, the play number the first clear
-             landed on, and total milliseconds spent in it. Keyed by level, four
-             short fields, so a full 250-level campaign is a couple of KB. */
+             landed on, total milliseconds spent in it, and the BEST single
+             clear in milliseconds. Keyed by level, five short fields, so a
+             full 250-level campaign is a couple of KB. */
           lv:{}};
 }
 function lvEntry(n){
   if(!store.lv || typeof store.lv !== 'object') store.lv = {};
   var e = store.lv[n];
-  if(!e || typeof e !== 'object'){ e = {p:0, c:0, f:0, t:0}; store.lv[n] = e; }
+  if(!e || typeof e !== 'object'){ e = {p:0, c:0, f:0, t:0, b:0}; store.lv[n] = e; }
   e.p = Math.max(0, e.p|0); e.c = Math.max(0, e.c|0);
-  e.f = Math.max(0, e.f|0); e.t = Math.max(0, e.t|0);
+  e.f = Math.max(0, e.f|0); e.t = Math.max(0, e.t|0); e.b = Math.max(0, e.b|0);
   return e;
 }
 /* Time is banked from a scratch accumulator rather than written every frame,
@@ -2795,7 +2949,7 @@ function sanitiseStore(s){
     var e = s.lv[lk];
     if(!e || typeof e !== 'object' || Array.isArray(e)){ delete s.lv[lk]; continue; }
     e.p = num(e.p, 0, 0, 1e9); e.c = num(e.c, 0, 0, 1e9);
-    e.f = num(e.f, 0, 0, 1e9); e.t = num(e.t, 0, 0, 1e12);
+    e.f = num(e.f, 0, 0, 1e9); e.t = num(e.t, 0, 0, 1e12); e.b = num(e.b, 0, 0, 1e12);
   }
   if(s.daily !== null && (typeof s.daily !== 'object' || Array.isArray(s.daily))) s.daily = null;
   ['muted','tutSeen'].concat(Object.keys(SET_DEFAULTS)).forEach(function(k){
@@ -5246,6 +5400,145 @@ function fmtLyShort(ly){
 function sectorName(n){ var s = JOURNEY[sectorOf(n)]; return s.n; }
 function sectorSub(n){  var s = JOURNEY[sectorOf(n)]; return s.sub; }
 
+
+/* ============================================================
+   GRADES
+
+   Stars say how well you flew a level. They do not say how many attempts it
+   took, and across 246 levels that is most of the story: anyone can
+   three-star a level on the fortieth go. A grade is the star rating with the
+   cost of earning it folded back in.
+
+     S    3 stars, cleared on your first or second attempt, under par
+     A+   3 stars, cleared on your first or second attempt
+     A    3 stars
+     B+   2 stars, cleared within four attempts
+     B    2 stars
+     C    1 star
+     D    not cleared
+
+   PAR. A level's length is not a matter of skill — rings arrive on a cadence
+   and you fly through however many the target says. There is exactly one way
+   to make a level shorter, and that is overdrive: it raises your speed by
+   OVER_SPEED, which tightens the ring cadence by speed/(speed+OVER_SPEED),
+   so the whole level arrives sooner.
+
+   That saving is worth 22% at level 1 and only 9.5% at the difficulty cap,
+   because the bonus is a constant added to a speed that keeps climbing. A
+   flat "beat 90% of the base time" would therefore be free early and
+   impossible late. So par is not a multiplier — it is a STATEMENT ABOUT
+   OVERDRIVE, evaluated per level:
+
+       par = the level flown with overdrive up for half of it
+
+   which is the same demand at level 1 and level 246, and self-tunes if the
+   pace curve is ever retuned. */
+var GRADES   = ['S','A+','A','B+','B','C','D'];
+var GRADE_PT = {S:6, 'A+':5, A:4, 'B+':3, B:2, C:1, D:0};
+var PAR_OVER = 0.5;              // the fraction of the level par assumes you spent in overdrive
+
+/* The level's clock as the ledger measures it: it starts at GO, not at "3",
+   and it stops when the last ring is cleared. */
+function parMs(n){
+  var sp = levelPlan(n);
+  var pc = paceAt(Math.min(DIFF_CAP, sp.intensity));
+  var base = LEAD_IN + sp.target * pc.cadence;
+  var save = 1 - (pc.cadenceOver / pc.cadence);      // what a whole level of overdrive is worth
+  return Math.round(base * (1 - PAR_OVER * save) * 1000);
+}
+
+/* The best single clear, in ms. Saves written before this field existed do
+   not have one — but if a level was played exactly once and cleared, its
+   lifetime total IS that clear, so those recover instead of being written
+   off. Anything else reads as "no time on record" and cannot reach S until
+   it is flown again. */
+function bestMs(n){
+  var e = (store.lv && store.lv[n]) || null;
+  if(!e) return 0;
+  if(e.b) return e.b;
+  if(e.p === 1 && e.c === 1 && e.t > 0) return e.t;
+  return 0;
+}
+
+function gradeOf(n){
+  var st = (store.stars && store.stars[n]) || 0;
+  if(st < 1) return 'D';
+  var e = (store.lv && store.lv[n]) || {f:0, p:0};
+  var first = e.f || 0;                 // the attempt the first clear landed on
+  if(st >= 3){
+    if(first && first <= 2){
+      var b = bestMs(n);
+      if(b && b < parMs(n)) return 'S';
+      return 'A+';
+    }
+    return 'A';
+  }
+  if(st === 2) return (first && first < 5) ? 'B+' : 'B';
+  return 'C';
+}
+
+/* Mean grade points, mapped back onto the ladder. Rounded to the nearest
+   band rather than floored, so a sector of straight A+ with one A does not
+   read as an A. */
+function gradeFromPts(avg){
+  var best = 'D', bd = 99;
+  for(var i=0;i<GRADES.length;i++){
+    var d = Math.abs(GRADE_PT[GRADES[i]] - avg);
+    if(d < bd){ bd = d; best = GRADES[i]; }
+  }
+  return best;
+}
+
+/* One sector: ten levels, or six for the last. Returns null until at least
+   one of them has been cleared — an untouched sector has no standard yet,
+   which is a different thing from a bad one. */
+function sectorGrade(si){
+  var from = si*10 + 1, to = Math.min(LAST_LEVEL, from + (si === JOURNEY.length-1 ? 5 : 9));
+  var sum = 0, n = 0, done = 0;
+  for(var i=from;i<=to;i++){
+    var g = gradeOf(i);
+    sum += GRADE_PT[g]; n++;
+    if(g !== 'D') done++;
+  }
+  return {from:from, to:to, of:n, cleared:done,
+          grade: done ? gradeFromPts(sum/n) : null,
+          pts: n ? sum/n : 0};
+}
+
+/* THE HEADLINE IS YOUR STANDARD, NOT YOUR PROGRESS.
+
+   Averaged over the levels you have actually cleared. Averaging over all 246
+   would read D for the first two hundred levels, which measures how far you
+   have got — and the map already does that, twice. The denominator is
+   printed beside it so an unfinished campaign is never mistaken for a
+   finished one, and at 246 of 246 the two are the same number. */
+function campaignGrade(){
+  var sum = 0, cleared = 0, best = 0, worst = 6;
+  for(var n=1;n<=LAST_LEVEL;n++){
+    var g = gradeOf(n);
+    if(g === 'D') continue;
+    sum += GRADE_PT[g]; cleared++;
+    if(GRADE_PT[g] > best) best = GRADE_PT[g];
+    if(GRADE_PT[g] < worst) worst = GRADE_PT[g];
+  }
+  return {grade: cleared ? gradeFromPts(sum/cleared) : null,
+          cleared:cleared, of:LAST_LEVEL, pts: cleared ? sum/cleared : 0};
+}
+
+/* Every millisecond the ledger has banked, which is time on a level with the
+   clock running — not time spent in menus, and not the countdown. */
+function totalPlayMs(){
+  var ms = 0;
+  for(var k in store.lv){ var e = store.lv[k]; if(e && e.t) ms += e.t; }
+  return ms;
+}
+function fmtSpan(ms){
+  var s = Math.round(ms/1000), h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  if(h) return h + 'h ' + m + 'm';
+  if(m) return m + 'm ' + (s%60) + 's';
+  return s + 's';
+}
+
 /* ============ LEVELS ============
    Infinite, in blocks of ten. A block is a SECTOR and owns one theme — the
    map banner and the level you actually load now agree, which they did not
@@ -6440,6 +6733,7 @@ function payRunCredits(rate){
 function die(){
   if(state !== S_PLAY) return;
   state = S_OVER;
+  store.deaths = (store.deaths||0) + 1;
   if(dailyMode) finishDaily();
   exitOverdrive();
   stopMusic();
@@ -9427,6 +9721,19 @@ function showBriefing(n){
     tag.classList.toggle('locked', locked);
     tag.innerHTML = (locked ? 'Locked' : cleared ? 'Cleared' : 'Next up') + ' ' + TAG_SPARK;
   }
+  /* The grade sits beside the status, not inside it: "Cleared" is whether,
+     this is how well. Hidden on a world you have not cleared, because D is
+     not a mark you earned, it is the absence of one. */
+  var gt = document.getElementById('nextGrade');
+  if(gt){
+    var g = gradeOf(n);
+    gt.classList.toggle('hidden', g === 'D');
+    if(g !== 'D'){
+      gt.innerHTML = '<i class="g' + g.replace('+','p') + '">' + g + '</i>grade';
+      var bm = bestMs(n);
+      gt.title = bm ? 'best ' + (bm/1000).toFixed(1) + 's · par ' + (parMs(n)/1000).toFixed(1) + 's' : '';
+    }
+  }
   document.getElementById('nextReward').innerHTML =
     'Level ' + n + ' · <span>' + sp.theme.name.toUpperCase() + '</span>';
   var sBest = starsFor(n);
@@ -10529,8 +10836,17 @@ function showMenu(){
   if(mLv)  mLv.textContent  = store.arrived ? 'Arrived' : fmtLyShort(lyAt(store.level));
   if(mWhere) mWhere.textContent = store.arrived ? 'EARTH · JOURNEY COMPLETE'
                                 : sectorName(store.level);
-  var lb = document.getElementById('menuLogbook');
-  if(lb) lb.classList.toggle('hidden', !store.arrived);
+  /* The record used to be reachable only once store.arrived was set. A record
+     you cannot look at until you have finished is a trophy; the point of
+     grading every level is to see where you stand while there is still
+     something to do about it. */
+  var mg = document.getElementById('menuGrade'), cgm = campaignGrade();
+  if(mg){
+    mg.textContent = cgm.grade || '';
+    mg.className = 'chipGrade' + (cgm.grade ? ' g' + cgm.grade.replace('+','p') : '');
+  }
+  var mr = document.getElementById('menuRecord');
+  if(mr) mr.setAttribute('aria-label', store.arrived ? 'Logbook' : 'Record');
 }
 
 function showStart(){          // the level map
@@ -10776,6 +11092,10 @@ function levelClear(){
   var lvl = lvEntry(plan.n);
   lvl.c++;
   if(!lvl.f) lvl.f = lvl.p;        // the play number the first clear landed on
+  /* This run's own seconds, read before flushLevelTime folds them into the
+     lifetime total. The clock started at GO, not at the countdown. */
+  var runMs = Math.round(lvSecs * 1000);
+  if(runMs > 0 && (!lvl.b || runMs < lvl.b)) lvl.b = runMs;
   flushLevelTime();
   recordPts(plan.n, score);
   if(store.level > (store.bestLevel||1)) store.bestLevel = store.level;
@@ -10818,6 +11138,23 @@ function showLevelClear(earned, earnedCredits){
     : 'Matched ' + pct + '% · ' + Math.round(STAR2_RATE*100) + '% for two stars, ' +
       Math.round(STAR3_RATE*100) + '% for three'
       + (best > earned ? ' · best ' + best + '★' : '');
+  /* The grade for this world, read back out of the ledger the clear just
+     wrote, so the card shows the mark you now hold rather than the one you
+     held walking in. */
+  var gr = gradeOf(plan.n), gEl = document.getElementById('clearGradeMark');
+  gEl.textContent = gr;
+  gEl.className = 'g' + gr.replace('+','p');
+  var lg = store.lv[plan.n] || {f:0}, bm = bestMs(plan.n), pm = parMs(plan.n);
+  document.getElementById('clearGradeWhy').textContent =
+      gr === 'S'  ? 'three stars, ' + (lg.f === 1 ? 'first try' : 'second try') +
+                    ', ' + (bm/1000).toFixed(1) + 's under a ' + (pm/1000).toFixed(0) + 's par'
+    : gr === 'A+' ? 'three stars in ' + lg.f + (lg.f === 1 ? ' try' : ' tries') +
+                    (bm ? ' \u00b7 ' + (bm/1000).toFixed(0) + 's against a ' +
+                          (pm/1000).toFixed(0) + 's par' : '')
+    : gr === 'A'  ? 'three stars in ' + lg.f + ' tries'
+    : gr === 'B+' ? 'two stars in ' + lg.f + (lg.f === 1 ? ' try' : ' tries')
+    : gr === 'B'  ? 'two stars in ' + lg.f + ' tries'
+    :               'cleared \u00b7 one star';
   document.querySelector('#levelScreen .clearTag').textContent = 'Level ' + plan.n + ' clear';
   var tag = nxt.extreme ? '<span class="extremeTag">EXTREME</span>'
           : nxt.hard    ? '<span class="hardTag">HARD</span>' : 'standard';
@@ -11085,6 +11422,21 @@ function showSectorCard(){
   document.getElementById('secSub').textContent  = J.sub;
   document.getElementById('secFrom').textContent = fmtLy(JOURNEY[s-1] ? JOURNEY[s-1].ly : JOURNEY[0].ly);
   document.getElementById('secTo').textContent   = fmtLy(J.ly);
+  /* The sector CLOSED, which is the one before the one just entered. On the
+     first crossing there is no closed sector behind you, so there is nothing
+     to mark and the block stays down. */
+  var gw = document.getElementById('secGrade');
+  var closed = s - 1;
+  var cg = closed >= 0 ? sectorGrade(closed) : null;
+  gw.classList.toggle('hidden', !(cg && cg.grade));
+  if(cg && cg.grade){
+    var gm = document.getElementById('secGradeMark');
+    gm.textContent = cg.grade;
+    gm.className = 'g' + cg.grade.replace('+','p');
+    document.getElementById('secGradeName').textContent = JOURNEY[closed].n;
+    document.getElementById('secGradeWhy').textContent =
+      cg.cleared + ' of ' + cg.of + ' worlds cleared';
+  }
   var body = document.getElementById('secLog');
   body.innerHTML = '';
   for(var i=0;i<J.log.length;i++){
@@ -11105,17 +11457,55 @@ function showHomeCard(){
   state = S_MENU;                      // the loop can idle again; nothing is flying
   hideAllScreens();
   setTunnel(false);
-  document.getElementById('homeWorlds').textContent = LAST_LEVEL;
-  document.getElementById('homeStars').textContent  = totalStars();
-  document.getElementById('homeBest').textContent   = fmtChip(store.high);
-  document.getElementById('homeDist').textContent   = Math.round(JOURNEY[0].ly).toLocaleString('en-GB');
-  document.getElementById('homeEcho').textContent   =
+  var el = function(id){ return document.getElementById(id); };
+  var arrived = !!store.arrived;
+
+  /* The screen is the same either way — it is the campaign's record. Arriving
+     only changes what it is called and adds the two things that only mean
+     anything once you are home. */
+  el('homeKick').textContent  = arrived ? 'Transit complete' : 'The campaign so far';
+  var ht = el('homeTitle');
+  ht.textContent = arrived ? 'HOME' : 'RECORD';
+  ht.classList.toggle('long', !arrived);
+  el('homeBigWrap').classList.toggle('hidden', !arrived);
+  el('homeEcho').classList.toggle('hidden', !arrived);
+
+  var cg = campaignGrade();
+  var gm = el('homeGrade');
+  gm.textContent = cg.grade || '\u2014';
+  gm.className = 'gradeMark' + (cg.grade ? ' g' + cg.grade.replace('+','p') : '');
+  el('homeGradeSub').textContent = cg.cleared
+    ? 'across ' + cg.cleared + ' of ' + cg.of + ' worlds'
+    : 'no worlds cleared yet';
+
+  el('homeWorlds').textContent = cg.cleared;
+  el('homeStars').textContent  = fmtChip(totalStars());
+  el('homeBest').textContent   = fmtChip(store.high);
+  el('homeTime').textContent   = fmtSpan(totalPlayMs());
+  el('homeDeaths').textContent = fmtChip(store.deaths || 0);
+
+  var strip = '';
+  for(var i=0;i<JOURNEY.length;i++){
+    var sg = sectorGrade(i);
+    strip += '<div class="secCell' + (sg.grade ? '' : ' none') + '">'+
+               '<b class="' + (sg.grade ? 'g' + sg.grade.replace('+','p') : '') + '">'+
+                 (sg.grade || '\u00b7') + '</b>'+
+               '<span>' + (i+1) + '</span>'+
+             '</div>';
+  }
+  el('homeStrip').innerHTML = strip;
+  var ess = 0;
+  for(var gi=1; gi<=LAST_LEVEL; gi++) if(gradeOf(gi) === 'S') ess++;
+  el('homeEss').textContent = ess;
+
+  el('homeDist').textContent = Math.round(JOURNEY[0].ly).toLocaleString('en-GB');
+  el('homeEcho').textContent =
     '\u201cI have been out here a long time. Thank you for the lift.\u201d \u2014 ECHO';
-  document.getElementById('homeScreen').classList.remove('hidden');
-  reflow(document.getElementById('homeScreen'));
+  el('homeScreen').classList.remove('hidden');
+  reflow(el('homeScreen'));
 }
 bindBtn('homeMenuBtn', function(){ tunnelVisible(true); showMenu(); });
-bindBtn('menuLogbook', function(){ showHomeCard(); });
+bindBtn('menuRecord',  function(){ showHomeCard(); });
 bindBtn('homeShare', function(){ doShare(true); });
 bindBtn('clearHomeBtn',function(){ showStart(); });
 bindBtn('clearMenuBtn',function(){ showMenu(); });

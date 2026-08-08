@@ -301,6 +301,101 @@ keep meaning "in one line".
 
 ---
 
+## 13a. Grades
+
+Stars say how *well* you flew a level. They do not say how many attempts it
+took, and across 246 levels that is most of the story — anyone can three-star
+a level on the fortieth go. A grade is the star rating with the cost of
+earning it folded back in.
+
+| | |
+|---|---|
+| **S** | 3★, cleared on your first or second attempt, **under par** |
+| **A+** | 3★, cleared on your first or second attempt |
+| **A** | 3★ |
+| **B+** | 2★, cleared within four attempts |
+| **B** | 2★ |
+| **C** | 1★ |
+| **D** | not cleared |
+
+### Par
+
+A level's *length* is not a matter of skill. Rings arrive on a cadence and you
+fly through however many the target says, so a clear takes about as long
+whoever is holding the phone. There is exactly one thing that shortens it:
+**overdrive** raises your speed by `OVER_SPEED`, which tightens the ring
+cadence by `speed / (speed + OVER_SPEED)`, so the whole level arrives sooner.
+
+That saving is worth **22% at level 1 and only 9.5% at the difficulty cap**,
+because the bonus is a constant added to a speed that keeps climbing. A flat
+"beat 90% of the base time" would therefore be free early and impossible late.
+So par is not a multiplier — it is a statement about overdrive, evaluated per
+level:
+
+> **par = the level flown with overdrive up for half of it**
+
+Which is the same demand at level 1 and level 246, and re-tunes itself if the
+pace curve is ever changed. In practice par runs from about 15s on level 1 to
+30s in the last sectors.
+
+### Where a grade appears
+
+- **The clear card**, the moment you earn it, next to the stars, with one line
+  saying what earned it — *"three stars, first try, 2.4s under a 25s par"*.
+- **The briefing panel** on the map, beside Cleared. It is hidden on a world
+  you have not cleared: D is not a mark you earned, it is the absence of one.
+- **The crossing card**, which grades the sector you just closed.
+- **The record** (§13b).
+
+### Sector and campaign
+
+Grades score 6 down to 0 (S=6 … D=0). A sector's grade is the mean of its ten
+levels, rounded to the nearest band rather than floored — a sector of straight
+A+ with one A reads as A+, not A. A sector you have not touched has no grade
+at all, which is a different thing from a bad one.
+
+The **campaign grade** is the mean over the levels you have *cleared*, with
+the denominator printed beside it. Averaging over all 246 would read D for the
+first two hundred levels, which measures how far you have got — and the map
+already does that, twice. At 246 of 246 the two are the same number.
+
+---
+
+## 13b. The record
+
+A permanent screen off the menu, and the answer to *"I finished it — but to
+what standard?"*
+
+- The **campaign grade**, and how many of the 246 worlds it is drawn from.
+- **Cleared**, **stars**, **best signal**.
+- **Time flown** — every millisecond the ledger has banked, which is time on a
+  level with the clock running. Not menus, and not the countdown.
+- **Deaths** — lifetime, counted at the moment of death. Not derivable from
+  the per-level ledger, because plays-minus-clears counts quits too.
+- **S grades** — how many of the 246 you have taken cleanly.
+- **A strip of 25 sector cells**, one letter each: the shape of the whole
+  campaign at a glance, where you were sharp and where you ground it out.
+
+Once you arrive it becomes the **logbook** as well, keeping the arrival's
+numbers and ECHO's last line underneath the record. It used to appear only
+then. A record you cannot look at until you have finished is a trophy; the
+point of grading every level is to see where you stand while there is still
+something to do about it.
+
+### What the save had to learn
+
+Two fields. Per level, the **best single clear in milliseconds** — the ledger
+already had plays, clears, first-clear attempt and lifetime total, but a
+lifetime total across six attempts cannot be compared to a par. And a
+lifetime **death counter**.
+
+Saves written before this have no best time, so **S is unreachable on a level
+already cleared until it is flown again.** One case recovers on its own: a
+level played exactly once and cleared has a lifetime total that *is* that
+clear, so those grade normally.
+
+---
+
 ## 14. The send-off
 
 Clearing a level does not just stop. The camera coasts to a halt while your
