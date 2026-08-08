@@ -1560,6 +1560,29 @@
     background:rgba(35,230,217,.14);box-shadow:inset 0 0 0 1px rgba(35,230,217,.4);
     color:var(--signal);
   }
+  /* A three or four way choice. A toggle can only say yes or no, and both of
+     the settings that arrived from real-device testing — how hard the phone
+     buzzes, how many pixels to draw — are dials. */
+  .seg{
+    display:flex;width:100%;border-radius:var(--r-chip);overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.13);
+  }
+  .seg button{
+    flex:1 1 0;min-width:0;min-height:var(--h-ctl);padding:0 4px;cursor:pointer;
+    font-size:var(--t-fine);font-weight:800;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--dim);background:transparent;
+    box-shadow:inset -1px 0 0 rgba(255,255,255,.11);
+    transition:color .12s ease,background .12s ease;
+  }
+  .seg button:last-child{box-shadow:none;}
+  /* Four labels in the width three fit in. Measured: at 320px "Standard" in
+     the three-way's type clipped its own button, which is the sort of thing
+     that only shows up on the narrowest phone anyone still owns. */
+  .seg.four button{font-size:var(--t-tiny);letter-spacing:.02em;padding:0 2px;}
+  .seg button.on{
+    color:#03202a;background:linear-gradient(180deg,#5df2ff,#12cfe6);
+    box-shadow:none;
+  }
   .peekRow{display:flex;gap:10px;}
   .peekRow .miniBtn{flex:1 1 0;min-width:0;padding:0 8px;}
 
@@ -2628,12 +2651,19 @@
           <div class="rowTop"><span>Music</span><b id="musVolVal">100%</b></div>
           <input type="range" class="vol" id="musSlider" min="0" max="100" value="100" aria-label="Music volume">
         </div>
-        <label class="setRow"><span>Haptics</span><span class="tog" data-set="haptics"><i></i></span></label>
+        <div class="setRow col"><span>Haptics<small id="hapNote">how hard the phone buzzes</small></span>
+          <span class="seg four" id="hapSeg" role="group" aria-label="Haptics strength">
+            <button data-v="0">Off</button><button data-v="1">Light</button>
+            <button data-v="2">Medium</button><button data-v="3">Strong</button></span></div>
       </div>
 
       <div class="setGroup">
         <div class="setGroupHead">Graphics</div>
         <label class="setRow"><span>Bloom &amp; effects</span><span class="tog" data-set="fx"><i></i></span></label>
+        <div class="setRow col"><span>Resolution<small id="gfxNote">&nbsp;</small></span>
+          <span class="seg" id="gfxSeg" role="group" aria-label="Graphics quality">
+            <button data-v="smooth">Smooth</button><button data-v="auto">Auto</button>
+            <button data-v="sharp">Sharp</button></span></div>
         <label class="setRow"><span>Flicker reduction</span><span class="tog" data-set="flicker"><i></i></span></label>
         <label class="setRow"><span>Screen shake</span><span class="tog" data-set="shake"><i></i></span></label>
         <label class="setRow"><span>Colour-blind glyphs<small id="glyphNote"></small></span><span class="tog" data-set="glyphs"><i></i></span></label>
@@ -2679,7 +2709,7 @@
 
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.4 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.5 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -2955,7 +2985,8 @@ var KEY='ringshift_v2';
 var GLYPH_FORCED_TO = 10;
 function glyphsOn(){ return !!store.glyphs || (store.level||1) <= GLYPH_FORCED_TO; }
 
-var SET_DEFAULTS = {sfx:true, music:true, haptics:true, fx:true, flicker:false, shake:true,
+var SET_DEFAULTS = {sfx:true, music:true, haptics:true, hapticStr:2, gfx:'auto',
+                    fx:true, flicker:false, shake:true,
                     glyphs:true, invert:false, swapSides:false, sens:100,
                     sfxVol:100, musVol:100};
 function freshStore(){
@@ -3771,8 +3802,90 @@ function sfxConvert(){ tone(880, 0.09, 'triangle', 0.09, 1400); }
    suppress is the countdown's two-and-three-quarter-second rumble, which is
    long enough to count as an effect rather than feedback, and that is gated
    at its own call site. */
+/* WHY HALF OF THESE WERE NEVER FELT.
+
+   Two motors exist in phones. A **linear resonant actuator** — every iPhone,
+   most recent flagship Android — reaches full amplitude in three or four
+   milliseconds, so a 10ms tap is a crisp tick. An **eccentric rotating mass**
+   motor, which is what a Galaxy S10 and most of the mid-range has, is a weight
+   on a shaft: it needs roughly 20-30ms just to spin up and about as long to
+   stop. Ask it for 10ms and it produces a barely perceptible twitch; ask it
+   for 8ms and it produces nothing at all.
+
+   Nine of this game's haptics were 8, 10, 12 or 14ms, tuned by feel on
+   hardware where that reads. On an ERM phone the game appears to have almost
+   no haptics — which is exactly the report that produced this comment.
+
+   So every vibration is floored at HAPTIC_FLOOR before it is issued. A pulse
+   worth having is worth being felt; one not worth 22ms was not worth
+   requesting.
+
+   The second half of the problem is amplitude. `navigator.vibrate` asks the
+   system for DEFAULT_AMPLITUDE, and on One UI that is multiplied by the user's
+   "Vibration intensity" slider, which ships well below maximum. When the
+   native host is present the pattern goes to it instead and it plays a
+   waveform at full amplitude. In a browser there is no way to ask for that,
+   and `navigator.vibrate` is the whole API. */
+var HAPTIC_FLOOR = 22;                       // an ERM motor's spin-up time
+var HAPTIC_MUL   = [0, 0.7, 1.0, 1.55];      // off / light / standard / strong
+
+function hapticLevel(){
+  /* The boolean still wins, and it has to. A save from before this control
+     existed carries haptics:false and no strength — and the loader fills every
+     missing setting from SET_DEFAULTS, so that save would arrive here with
+     haptics:false AND hapticStr:2 and start buzzing at somebody who had turned
+     it off. Reading the strength first was a one-line migration that silently
+     un-set a user's choice. */
+  if(store.haptics === false) return 0;
+  var n = store.hapticStr;
+  if(typeof n !== 'number') n = 2;
+  return Math.max(0, Math.min(3, n | 0));
+}
+
+/* An Android vibration pattern alternates on, off, on, off... starting with
+   ON. Every pattern in this game opens with a 0 so that index 1 reads as a
+   lead-in delay, which means the vibrations are the EVEN indices and the
+   pauses are the odd ones. Only the vibrations are scaled and floored; a
+   scaled pause would change the rhythm, which is the part that carries the
+   meaning. */
+function hapticShape(p, k){
+  var lift = function(v){
+    if(v <= 0) return 0;
+    return Math.round(Math.min(500, Math.max(HAPTIC_FLOOR, v * k)));
+  };
+  if(typeof p === 'number') return lift(p);
+  var out = [];
+  for(var i = 0; i < p.length; i++) out.push(i % 2 ? Math.round(p[i]) : lift(p[i]));
+  return out;
+}
+
 function buzz(p){
-  try{ if(store.haptics && navigator.vibrate) navigator.vibrate(p); }catch(e){}
+  try{
+    var k = HAPTIC_MUL[hapticLevel()];
+    if(!k) return;
+    var pat = hapticShape(p, k);
+    // The host plays it at full amplitude; the browser gets the same shape at
+    // whatever amplitude the system feels like.
+    if(window.__rsVibrate){ window.__rsVibrate(pat); return; }
+    if(navigator.vibrate) navigator.vibrate(pat);
+  }catch(e){}
+}
+
+/* Already shaped by its caller. */
+function buzzRaw(pat){
+  try{
+    if(!HAPTIC_MUL[hapticLevel()]) return;
+    if(window.__rsVibrate){ window.__rsVibrate(pat); return; }
+    if(navigator.vibrate) navigator.vibrate(pat);
+  }catch(e){}
+}
+
+/* Cancel. Never floored, never scaled — zero means stop. */
+function buzzStop(){
+  try{
+    if(window.__rsVibrate){ window.__rsVibrate(0); return; }
+    if(navigator.vibrate) navigator.vibrate(0);
+  }catch(e){}
 }
 
 /* ============================================================
@@ -3833,7 +3946,8 @@ if(!PR_TIER.length) PR_TIER = [PR_CAP];
 /* Start one tier below 1.5 where the device allows it. The first seconds of a
    run are the ones a player judges the game on, and they are also the ones
    the sampler has no data for yet. */
-var prIdx = Math.max(0, PR_TIER.indexOf(1.5) >= 0 ? PR_TIER.indexOf(1.5) : PR_TIER.length - 1);
+var PR_START = Math.max(0, PR_TIER.indexOf(1.5) >= 0 ? PR_TIER.indexOf(1.5) : PR_TIER.length - 1);
+var prIdx = PR_START;
 var DPR = PR_TIER[prIdx];
 renderer.setPixelRatio(DPR);
 renderer.setClearColor(0x040a1a, 1);
@@ -7606,6 +7720,9 @@ function armBack(){ try{ history.pushState({rs:1}, ''); }catch(e){} }
 window.addEventListener('popstate', function(){ if(goBack()) armBack(); });
 armBack();
 
+/* A stored Sharp or Smooth has to reach the renderer before the first frame
+   the player judges, not the first time they open Settings. */
+applyGfx();
 adSimBoot();
 
 /* WHAT IS ACTUALLY DRAWING THIS.
@@ -8177,18 +8294,31 @@ function cdRumble(){
      feedback — nearly three seconds of continuous buzzing — so this one does
      answer to prefers-reduced-motion. */
   if(REDUCED) return;
+  var k = HAPTIC_MUL[hapticLevel()];
+  if(!k) return;
   cdRumbling = true;
-  var pat = [], i;
-  for(i=0;i<5;i++) pat.push(50,134);     // "3" — an idle you can just feel
-  for(i=0;i<6;i++) pat.push(62,91);      // "2" — spooling up
-  for(i=0;i<7;i++) pat.push(78,53);      // "1" — roaring
-  pat.push(170);                          // GO
-  buzz(pat);
+
+  /* THE ONE PATTERN THAT CANNOT BE SCALED THE ORDINARY WAY.
+     Every other haptic is a moment and may get longer at Strong. This one has
+     to END ON "GO", so strength moves the on/off split INSIDE a cell of fixed
+     length instead of stretching the cell. Scaled the ordinary way it ran
+     0.7s past the countdown at Strong and buzzed into the first seconds of
+     the run. */
+  var pat = [];
+  var cell = function(n, period, on){
+    on = Math.min(period - 8, Math.max(HAPTIC_FLOOR, Math.round(on * k)));
+    for(var j=0;j<n;j++) pat.push(on, period - on);
+  };
+  cell(5, 184, 50);                       // "3" — an idle you can just feel
+  cell(6, 153, 62);                       // "2" — spooling up
+  cell(7, 131, 78);                       // "1" — roaring
+  pat.push(Math.round(Math.min(200, 170 * k)));   // GO
+  buzzRaw(pat);
 }
 function cdRumbleStop(){
   if(!cdRumbling) return;
   cdRumbling = false;
-  try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){}
+  buzzStop();
 }
 
 function cdArm(){
@@ -11782,6 +11912,7 @@ function showSettings(from){
   var gl = document.getElementById('setGpu');
   if(gl) gl.textContent = gpuLine();
   adSimApply();          // shows the preview group in a browser, hides it in the app
+  if(window.syncSegs) syncSegs();
   if(window.__rsPrivacySync) window.__rsPrivacySync();
   syncSettingsUI();
 }
@@ -12216,7 +12347,8 @@ bindBtn('doneBtn',     function(){ save(); closeSettings(); });
 bindBtn('resetBtn',    function(){
   for(var k in SET_DEFAULTS) store[k] = SET_DEFAULTS[k];
   store.muted = false;
-  save(); applyVolumes(); syncSettingsUI(); syncToggles(); applyShipColor();
+  save(); applyVolumes(); applyGfx(); syncSettingsUI(); syncToggles(); applyShipColor();
+  if(window.syncSegs) syncSegs();
   toast('Settings restored to default');
 });
 bindBtn('tutBtn',      function(){
@@ -12503,6 +12635,60 @@ syncToggles();
   bindBtn('privBtn', function(){
     if(window.__rsPrivacy) window.__rsPrivacy();
   });
+
+  /* THE SEGMENTED CONTROLS.
+     Bound once, generically: each button carries the value it sets, and the
+     handler for the group decides what to do with it. */
+  (function(){
+    var groups = [
+      {id:'hapSeg', get:function(){ return String(hapticLevel()); },
+       set:function(v){
+         store.hapticStr = parseInt(v,10) || 0;
+         store.haptics = store.hapticStr > 0;   // kept for old saves and readers
+         save(); syncSegs();
+         // Play the thing being adjusted. A strength dial you cannot feel while
+         // you turn it is a dial you have to guess at.
+         buzz([0, 30, 40, 60]);
+       }},
+      {id:'gfxSeg', get:gfxMode,
+       set:function(v){ store.gfx = v; save(); applyGfx(); syncSegs(); buzz(20); }}
+    ];
+    window.syncSegs = function(){
+      for(var g=0; g<groups.length; g++){
+        var el = document.getElementById(groups[g].id);
+        if(!el) continue;
+        var now = groups[g].get(), bs = el.querySelectorAll('button');
+        for(var i=0;i<bs.length;i++){
+          var on = bs[i].getAttribute('data-v') === now;
+          bs[i].classList.toggle('on', on);
+          bs[i].setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+      }
+      var hn = document.getElementById('hapNote');
+      if(hn) hn.textContent = hapticLevel() === 0 ? 'off'
+        : 'how hard the phone buzzes \u00b7 some phones need Strong';
+      var gn = document.getElementById('gfxNote');
+      if(gn) gn.textContent =
+        gfxMode() === 'sharp'  ? 'always the sharpest the screen allows, even if the frame rate drops'
+      : gfxMode() === 'smooth' ? 'one pixel per screen pixel, frame rate first'
+      :                          'follows the frame rate \u00b7 currently ' + DPR.toFixed(2) + '\u00d7';
+    };
+    for(var g=0; g<groups.length; g++){
+      (function(grp){
+        var el = document.getElementById(grp.id);
+        if(!el) return;
+        var bs = el.querySelectorAll('button');
+        for(var i=0;i<bs.length;i++){
+          (function(b){
+            b.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+            b.addEventListener('click', function(e){
+              e.stopPropagation(); audio(); grp.set(b.getAttribute('data-v'));
+            });
+          })(bs[i]);
+        }
+      })(groups[g]);
+    }
+  })();
 
   bindBtn('adPeekI', function(){ adSimPeek('interstitial'); });
   bindBtn('adPeekR', function(){ adSimPeek('rewarded'); });
@@ -13259,6 +13445,28 @@ var fpsFrames=0, fpsClock=0, fpsChecked=false;
 /* Re-point the renderer at a new pixel ratio and rebuild every target behind
    it. Not cheap — five allocations and five frees — so it is rate limited by
    the cooldown in watchPerf and only ever moves one tier at a time. */
+/* AUTO, OR THE PLAYER'S CALL.
+ *
+ * Adaptive resolution is right by default and wrong for the person who would
+ * rather have a sharp 45fps than a soft 60. Sharp pins the top of the ladder
+ * and stops the sampler; Smooth pins native CSS pixels and leaves headroom for
+ * a weak device or a battery. Whatever it settles on is printed under the
+ * version line in Settings, so this is a dial with a readout and not a guess. */
+function gfxMode(){
+  var m = store.gfx;
+  return (m === 'sharp' || m === 'smooth') ? m : 'auto';
+}
+function applyGfx(){
+  var m = gfxMode();
+  if(m === 'sharp')  applyPixelRatio(PR_TIER.length - 1);
+  if(m === 'smooth') applyPixelRatio(PR_SOFT);
+  // Back to Auto means back to the ladder's starting rung, not stranded on
+  // whichever one the last pinned mode left behind.
+  if(m === 'auto')   applyPixelRatio(PR_START);
+  var g = document.getElementById('setGpu');
+  if(g) g.textContent = gpuLine();
+}
+
 function applyPixelRatio(i){
   i = Math.max(0, Math.min(PR_TIER.length - 1, i));
   if(i === prIdx) return false;
@@ -13274,10 +13482,30 @@ function applyPixelRatio(i){
    in trouble. Down fast, up slow — a phone that is struggling should be
    rescued within a second, and one that is coping should not be poked every
    time it has a good second. */
-var PR_DOWN = 46, PR_UP = 57, PR_COOL_DOWN = 1.1, PR_COOL_UP = 3.0;
+/* 42 rather than 46. At 46 a single busy second on a 60Hz phone — a gate, a
+   slipstream, the moment eight wedges and a shockwave land together — reads as
+   a device in trouble, and because down is fast and up is slow the ladder
+   ratchets toward the floor over a run and never fully climbs back. */
+var PR_DOWN = 42, PR_UP = 57, PR_COOL_DOWN = 1.1, PR_COOL_UP = 3.0;
 var prCool = 0;
+
+/* THE ORDER IN WHICH QUALITY IS GIVEN UP, WHICH WAS WRONG.
+ *
+ * The ladder used to run all the way down to 0.75 before it would consider
+ * dimming the post chain. 0.75 is BELOW native CSS resolution: every pixel on
+ * screen is an upscale of something smaller, and on a phone held at reading
+ * distance that is the single most visible degradation available. A 2019
+ * flagship rendering nine passes at 1080p would settle there and look, in the
+ * player's words, unexpectedly pixelated — while the bloom it was protecting
+ * is the thing nobody would have missed.
+ *
+ * So 1.0 is the soft floor. Below it the chain goes first, and only if that is
+ * not enough does the game draw fewer pixels than the screen has. */
+var PR_SOFT = Math.max(0, PR_TIER.indexOf(1.0));
+
 function watchPerf(dt){
   if(state !== S_PLAY){ fpsFrames = 0; fpsClock = 0; return; }
+  if(gfxMode() !== 'auto'){ fpsFrames = 0; fpsClock = 0; return; }
   if(prCool > 0) prCool -= dt;
   fpsFrames++; fpsClock += dt;
   if(fpsClock < 1) return;
@@ -13286,13 +13514,16 @@ function watchPerf(dt){
   if(prCool > 0) return;
 
   if(fps < PR_DOWN){
-    if(applyPixelRatio(prIdx - 1)){ prCool = PR_COOL_DOWN; return; }
-    /* Already at the smallest buffer we are willing to draw. The chain is the
-       only thing left to give up, and it is given up once. */
+    // Sub-native resolution is unlocked only after the chain has already gone.
+    var floorIdx = fpsChecked ? 0 : PR_SOFT;
+    if(prIdx > floorIdx && applyPixelRatio(prIdx - 1)){ prCool = PR_COOL_DOWN; return; }
+    /* Native resolution and still short. The chain is the next thing to give
+       up, and it is given up once. */
     if(store.fx && perfOK && !fpsChecked){
       perfOK = false; fpsChecked = true;
       syncToggles();          // takes the grain layer down with the shader chain
       toast('Effects dimmed to keep the frame rate — tap ✦ to force them back');
+      prCool = PR_COOL_DOWN;
     }
   } else if(fps > PR_UP && applyPixelRatio(prIdx + 1)){
     prCool = PR_COOL_UP;

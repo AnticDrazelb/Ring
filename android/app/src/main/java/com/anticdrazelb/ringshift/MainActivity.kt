@@ -59,6 +59,21 @@ class MainActivity : ComponentActivity() {
 
     private var ads: AdHost? = null
     private var consent: ConsentGate? = null
+    /* The SDK can be ready before the page is. installAdBridge() then has
+     * nothing to inject into, so it leaves a note for onPageFinished. */
+    private var adBridgeWanted = false
+
+    private val vibrator: android.os.Vibrator? by lazy {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
+                    as android.os.VibratorManager).defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            }
+        } catch (e: Exception) { null }
+    }
     private val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     private var focusRequest: AudioFocusRequest? = null
     private var hasFocus = false
@@ -183,6 +198,10 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     private fun setUpWebView(v: WebView): Unit = v.run {
 
+        /* Before anything else, and before loadUrl: the message channel only
+         * reaches documents that start after it is added. */
+        installBridge(v)
+
         /* 1. HARDWARE ACCELERATION, AND THE LINE THAT WAS QUIETLY COSTING US
          *    A FULL-SCREEN COPY EVERY FRAME.
          *
@@ -296,6 +315,8 @@ class MainActivity : ComponentActivity() {
                 pushSafeArea(ViewCompat.getRootWindowInsets(view))
                 // The consent answer usually lands before the page does.
                 pushPrivacyOptions()
+                // ...and so does the ad SDK, on a warm start.
+                if (adBridgeWanted) installAdBridge()
 
                 /* THE WINDOW BACKGROUND HAS DONE ITS JOB — STOP PAINTING IT.
                  *
@@ -338,60 +359,129 @@ class MainActivity : ComponentActivity() {
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
     }
 
-    // ------------------------------------------------------------------ ads
+    // --------------------------------------------------------------- bridge
 
     /**
-     * Hand the page a way to ask for an ad — origin-scoped, string-only, and
-     * only after the SDK is up.
+     * THE ONE CHANNEL THE PAGE CAN SPEAK ON, INSTALLED BEFORE THE PAGE LOADS.
      *
-     * The object androidx installs is `rsAds`, with a single `postMessage`.
-     * The shim below wraps it in the shape the game already expects, so the
-     * game's side of the contract is one small object it can null-check
-     * rather than a feature detection dance.
+     * `addWebMessageListener` injects its object at **document start**, which
+     * means for documents that start after the call. The previous version
+     * installed it from the ad SDK's ready callback — a background thread
+     * racing the page load — so on any launch where the SDK won an already
+     * loaded document never saw `rsAds`, and the `typeof rsAds === 'undefined'`
+     * guard turned that into a silent no-ads app. It is called from
+     * setUpWebView now, before `loadUrl`, which is the documented order and
+     * the only one that is not a race.
+     *
+     * Origin-scoped to the asset loader and nothing else; strings only. The
+     * page may ask for three things by name and can reach none of them:
+     *
+     *     {kind:'interstitial'|'rewarded', tag}   show an ad
+     *     {kind:'privacy'}                        reopen the consent choice
+     *     {kind:'vibrate', p:[…]}                 play a haptic pattern
      */
-    private fun installAdBridge() {
+    private fun installBridge(v: WebView) {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
         try {
             WebViewCompat.addWebMessageListener(
-                web, "rsAds",
-                // The asset loader's origin, and nothing else. A page from
-                // anywhere else cannot see this object exists.
-                setOf("https://appassets.androidplatform.net")
+                v, "rsHost", setOf("https://appassets.androidplatform.net")
             ) { _, message, _, _, _ ->
                 val body = message.data ?: return@addWebMessageListener
                 try {
                     val o = JSONObject(body)
-                    /* Two verbs, both of which the page may only ASK for.
-                     * "privacy" reopens the consent choice — a control the
-                     * player is entitled to under the same policy that
-                     * required the form in the first place. */
-                    if (o.optString("kind") == "privacy") {
-                        consent?.showPrivacyOptions { pushPrivacyOptions() }
-                    } else {
-                        ads?.request(o.optString("kind"), o.optString("tag"))
+                    when (o.optString("kind")) {
+                        "privacy" -> consent?.showPrivacyOptions { pushPrivacyOptions() }
+                        "vibrate" -> vibrate(o.optJSONArray("p"))
+                        else -> ads?.request(o.optString("kind"), o.optString("tag"))
                     }
                 } catch (e: Exception) {
                     // A malformed message is a bug on the page's side, and the
-                    // page is ours. Drop it; do not let it reach the SDK.
+                    // page is ours. Drop it; do not let it reach anything.
                 }
             }
         } catch (e: Exception) {
-            return          // no bridge, no ads, still a game
+            return          // no bridge, still a game
         }
-        web.evaluateJavascript(
+        /* The haptic hook is installed with the bridge rather than with the
+         * ads, because it must work for a player who declined consent. */
+        v.evaluateJavascript(
             """
             (function(){
-              if (typeof rsAds === 'undefined') return;
-              window.__rsAdHost = { request: function(kind, tag){
-                rsAds.postMessage(JSON.stringify({kind:kind, tag:tag}));
-              }};
+              if (typeof rsHost === 'undefined') return;
+              window.__rsVibrate = function(p){
+                rsHost.postMessage(JSON.stringify(
+                  {kind:'vibrate', p: (typeof p === 'number') ? [p] : (p || [])}));
+              };
               window.__rsPrivacy = function(){
-                rsAds.postMessage(JSON.stringify({kind:'privacy'}));
+                rsHost.postMessage(JSON.stringify({kind:'privacy'}));
               };
             })();
             """.trimIndent(), null
         )
+    }
+
+    // ------------------------------------------------------------------ ads
+
+    /**
+     * Hand the page an ad host. Only the shim — the channel underneath it was
+     * installed before the page loaded. `window.__rsAdHost` appearing is the
+     * game's single signal that ads exist at all, so it must not appear until
+     * the SDK can actually serve one.
+     */
+    private fun installAdBridge() {
+        if (!pageReady) { adBridgeWanted = true; return }
+        adBridgeWanted = false
+        web.evaluateJavascript(
+            """
+            (function(){
+              if (typeof rsHost === 'undefined') return;
+              window.__rsAdHost = { request: function(kind, tag){
+                rsHost.postMessage(JSON.stringify({kind:kind, tag:tag}));
+              }};
+            })();
+            """.trimIndent(), null
+        )
         pushPrivacyOptions()
+    }
+
+    // ------------------------------------------------------------- haptics
+
+    /**
+     * WHY THE GAME DOES NOT JUST USE `navigator.vibrate`.
+     *
+     * It does, in a browser, and it is the whole API there. In the app it
+     * routes here for one reason: amplitude. Chromium asks the system for
+     * `DEFAULT_AMPLITUDE`, and One UI multiplies that by the user's "Vibration
+     * intensity" slider, which ships nowhere near maximum. A game's haptics
+     * then arrive at a fraction of the strength they were designed at, on
+     * exactly the hardware — a rotary motor — that already had the least to
+     * give.
+     *
+     * `createWaveform` with an explicit amplitude asks for full power instead.
+     * The page has already floored every pulse at 22ms, which is the other
+     * half of the same problem: below that a rotary motor never spins up.
+     */
+    private fun vibrate(arr: org.json.JSONArray?) {
+        val vib = vibrator ?: return
+        try {
+            if (arr == null || arr.length() == 0) { vib.cancel(); return }
+            val timings = LongArray(arr.length()) { arr.optLong(it, 0L).coerceIn(0L, 5000L) }
+            // A single zero is the page saying "stop".
+            if (timings.size == 1 && timings[0] == 0L) { vib.cancel(); return }
+            if (timings.sum() == 0L) return
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Even indices are vibrations, odd are pauses — the same shape
+                // navigator.vibrate takes, and the shape the page builds.
+                val amps = IntArray(timings.size) { if (it % 2 == 0) 255 else 0 }
+                vib.vibrate(android.os.VibrationEffect.createWaveform(timings, amps, -1))
+            } else {
+                @Suppress("DEPRECATION")
+                vib.vibrate(timings, -1)
+            }
+        } catch (e: Exception) {
+            // A phone with no vibrator, or a manufacturer with opinions.
+        }
     }
 
     /**

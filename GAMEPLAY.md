@@ -923,9 +923,16 @@ cannot drift out of step with the thing it describes.
   reads as *Off*. Both act on the mix bus rather than on new voices, so a sound
   that is already ringing when you move the slider follows it down; you can
   open Settings mid-run and hear the change immediately.
-- **Haptics** — vibration on and off.
+- **Haptics** — Off, Light, Medium, Strong. Not a switch, because the same
+  request produces wildly different results on different hardware — see §25b.
+  Tapping a strength plays it, so the dial can be set by feel.
 - **Bloom & effects** — the full post-processing chain. The game turns this off
   by itself if it detects a device that cannot hold a frame rate, and says so.
+- **Resolution** — Smooth, Auto, Sharp. Auto is the adaptive scaler and is
+  right for almost everybody. Sharp pins the highest the screen allows and
+  accepts whatever frame rate that costs; Smooth pins one rendered pixel per
+  screen pixel and leaves the headroom to the frame rate. The line under the
+  version in Settings names your GPU and prints the scale actually in use.
 - **Flicker reduction** — for photosensitivity. Removes the strobing.
 - **Screen shake** — off if you find it uncomfortable.
 - **Colour-blind glyphs** — shapes on every wedge. *Forced on for levels 1–10.*
@@ -990,7 +997,8 @@ smaller and the buttons stay the same.
 
 ## 25b. Haptics
 
-Every haptic answers to one switch: **Haptics** in Settings. Nothing else.
+Every haptic answers to one control: **Haptics** in Settings — Off, Light,
+Medium, Strong. Nothing else.
 
 That is worth stating because it used to be wrong in two ways. The vibration
 was also gated on the HUD's **sound mute**, so muting the game to play it on a
@@ -1001,7 +1009,41 @@ that can make somebody ill; a 12ms tick is not animation. The only haptic that
 still answers to reduced-motion is the countdown's rumble, which is nearly
 three seconds long and is an effect rather than feedback.
 
-The vocabulary runs from 8ms to about a third of a second:
+### Why it is a dial and not a switch
+
+Phones have two kinds of vibration motor and they are not interchangeable.
+
+A **linear resonant actuator** — every iPhone, most recent Android flagships —
+reaches full strength in three or four milliseconds. A 10ms tap is a crisp
+tick. An **eccentric rotating mass** motor, which is what a Galaxy S10 and most
+of the mid-range carries, is a weight on a shaft: it needs 20–30ms just to spin
+up, and about as long to stop. Ask it for 10ms and you get a twitch; ask it for
+8ms and you get nothing.
+
+Nine of this game's haptics were 8, 10, 12 or 14ms — tuned by feel on hardware
+where that reads. On an ERM phone the game appeared to have almost no haptics
+at all. So **every pulse is floored at 22ms** before it is issued, and the
+strength dial scales the rest: Light 0.7×, Medium 1×, Strong 1.55×. Only the
+buzzes scale — the pauses between them are the rhythm, and the rhythm is what
+carries the meaning.
+
+The countdown rumble is the one pattern that cannot be scaled that way, because
+it has to end exactly on **GO**. There, strength moves the on/off split inside
+a cell of fixed length instead of stretching the cell. Scaled the ordinary way
+it ran two thirds of a second past the countdown at Strong and buzzed into the
+first seconds of the run.
+
+The second half of the problem is amplitude, and only the app can fix it.
+`navigator.vibrate` asks the system for its *default* amplitude, and Android
+skins multiply that by the user's own vibration-intensity slider, which ships
+well below maximum. In the app the pattern goes to the host instead and is
+played as a waveform at full amplitude. In a browser there is no way to ask for
+that — `navigator.vibrate` is the whole API.
+
+### The vocabulary
+
+Durations below are the Medium values *before* the 22ms floor, which is why
+the first two rows collapse into one on a rotary motor:
 
 | | |
 |---|---|

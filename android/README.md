@@ -36,6 +36,7 @@ it is a path on your machine, not a property of the project.
 | `WebViewAssetLoader` | `file:///android_asset/` gets an **opaque origin** on several WebView versions, and an opaque origin has no `localStorage`. The game would run and quietly never save. The loader gives it a real `https://appassets.androidplatform.net` origin and a real storage bucket. |
 | `mediaPlaybackRequiresUserGesture = false` | The game builds its AudioContext on first touch anyway, but leaving this true also suspends the context after a resume on some versions — a game that comes back from the task switcher silent. |
 | `VIBRATE` permission | `navigator.vibrate` fails **silently** without it: no crash, no log, just a game that never buzzes. |
+| `VibrationEffect.createWaveform` at amplitude 255 | `navigator.vibrate` asks for `DEFAULT_AMPLITUDE`, which One UI multiplies by the user's vibration-intensity slider — so the game's haptics arrive at a fraction of their designed strength on exactly the phones (rotary motors) with the least to give. The page routes patterns through `window.__rsVibrate` when the host is there. |
 | `configChanges=...` | Without the full list, rotating the phone recreates the activity, which reloads the WebView, which restarts the game and abandons the run. |
 | `systemGestureExclusionRects` | Android 10+ reads a horizontal swipe from either edge as Back. This game is *steered* by horizontal swipes. The middle 200dp of each edge is claimed, which is the cap the system allows. |
 | `setBackgroundColor(BLACK)` on both window and WebView | The default is white and the game's first paint is black — otherwise every cold start flashes. |
@@ -58,7 +59,8 @@ and reads the result. The page can be *asked* things — `__rsBack`, `__rsAudio`
 
 The one upward channel is `WebViewCompat.addWebMessageListener`, scoped to
 `https://appassets.androidplatform.net`, carrying strings, and accepting
-exactly two verbs: "show an ad" and "reopen my privacy choice". A
+exactly three verbs: "show an ad", "reopen my privacy choice", and "play this
+haptic pattern". A
 `@JavascriptInterface` would instead hand the page a live Java object and
 everything reachable from it, which is the difference between "the game has a
 bug" and "the game has a bug that can touch the filesystem".
@@ -238,6 +240,31 @@ The limit is the WebView, not the OS version.
 Play Store independently of the OS, so a 2016 phone that still receives Play
 updates is fine, while a newer device with Play Services stripped out may not
 be. The game detects and explains both failure modes itself.
+
+---
+
+## Two things a real device found that a browser could not
+
+**Haptics that were never felt.** A Galaxy S10+ reported "way less haptics than
+expected". Nine of the game's cues were 8–14ms pulses, which is fine on a
+linear resonant actuator and *nothing at all* on the eccentric-rotating-mass
+motor most Android phones carry — the weight needs 20–30ms just to spin up. The
+page now floors every pulse at 22ms and offers Off / Light / Medium / Strong,
+and the host plays the pattern at full amplitude rather than at whatever the
+system slider has been left on.
+
+**A picture that was correctly, deliberately soft.** The same device looked
+"unexpectedly pixelated" beside an iPhone browser. It was not a WebView
+problem: the adaptive scaler had done its job. Its ladder ran down to 0.75×
+*before* it would consider dimming the nine-pass post chain — and 0.75× is
+below native, so every pixel on screen is an upscale, which is the most visible
+degradation a phone has. The order is now: drop to native, then dim the chain,
+and only then draw fewer pixels than the screen has. Settings → Resolution
+overrides the whole thing, and the line under the version prints the scale
+actually in use.
+
+Neither was reproducible in a headless browser at any viewport. Both were
+one real phone.
 
 ---
 
