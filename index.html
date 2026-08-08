@@ -1515,6 +1515,29 @@
     text-align:left;font-size:var(--t-fine);font-weight:700;line-height:1.35;color:var(--dim);
   }
 
+  /* the simulator's placeholder. Deliberately ugly-adjacent: it must never
+     be mistaken for a designed screen or for a broken one. */
+  .adSim{
+    position:fixed;top:0;right:0;bottom:0;left:0;z-index:9000;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(2,4,10,.94);
+  }
+  .adSimCard{
+    width:min(380px,88%);padding:30px 22px 22px;text-align:center;
+    border-radius:var(--r-sheet);background:#121826;
+    border:1px dashed rgba(255,211,77,.55);
+  }
+  .adSimTag{
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.22em;color:var(--gold);
+  }
+  .adSimBig{
+    margin:14px 0 6px;font-size:clamp(44px,14vw,72px);font-weight:900;
+    letter-spacing:.14em;color:#39445c;line-height:1;
+  }
+  .adSimSub{
+    margin-bottom:6px;font-size:var(--t-sm);line-height:1.5;color:var(--dim);
+  }
+
   .gradeHero{margin:20px 0 24px;}
   .gradeMark{
     display:block;font-size:clamp(58px,18.5vw,96px);font-weight:900;line-height:.94;
@@ -5687,6 +5710,80 @@ function adRecordShown(now){
   save();
 }
 
+/* THE SIMULATOR, FOR A BROWSER, BEHIND A FLAG.
+
+   There is no ad SDK in a browser, so on a desktop or a phone browser
+   window.__rsAdHost is never set, adBlockedBy() answers 'no host', and every
+   one of the four placements correctly does nothing. That is right, and it is
+   also unhelpful: it means the only way to see where an ad lands, how long it
+   interrupts for, and whether the copy around it reads properly is to build
+   an APK.
+
+   So: index.html?ads=sim installs a fake host. It is the real policy driving
+   it — the cooldowns, the session floor, the hour cap, the once-per-account
+   ship unlock are all untouched — only the thing at the end that would have
+   drawn a Google ad is replaced with a dashed gold placeholder.
+
+     ?ads=sim      an ad plays; rewarded pays out          earned / shown
+     ?ads=skip     the player closes a rewarded early      skipped
+     ?ads=nofill   nothing in inventory, answered instantly  nofill
+
+   It cannot reach the shipped app. The Android host loads a bare asset URL
+   with no query string on it, and there is no way for a player to add one;
+   and if a real host is already attached this refuses to replace it. */
+function adSimInstall(){
+  var mode = '';
+  try{
+    var m = /[?&]ads=([a-z]+)/i.exec(window.location.search || '');
+    if(m) mode = m[1].toLowerCase();
+  }catch(e){}
+  if(mode !== 'sim' && mode !== 'skip' && mode !== 'nofill') return;
+  if(window.__rsAdHost) return;              // never displace a real host
+
+  var CLOSE_AFTER = 2600;                    // what a real interstitial gates
+
+  window.__rsAdHost = { request: function(kind, tag){
+    var answer = function(outcome){
+      try{ window.__rsAdResult(tag, outcome); }catch(e){}
+    };
+    if(mode === 'nofill'){ setTimeout(function(){ answer('nofill'); }, 300); return; }
+
+    var rewarded = (kind === 'rewarded');
+    var wrap = document.createElement('div');
+    wrap.className = 'adSim';
+    wrap.innerHTML =
+      '<div class="adSimCard">' +
+        '<div class="adSimTag">' + (rewarded ? 'REWARDED' : 'INTERSTITIAL') + '</div>' +
+        '<div class="adSimBig">AD</div>' +
+        '<div class="adSimSub">Simulated placement. On a device this is a ' +
+          'full-screen ' + (rewarded ? 'rewarded interstitial' : 'interstitial') + '.</div>' +
+        '<button class="btn ' + (rewarded ? 'gold' : 'line') + '" disabled>…</button>' +
+      '</div>';
+    document.body.appendChild(wrap);
+
+    var btn = wrap.querySelector('button');
+    var t0 = Date.now();
+    var tick = setInterval(function(){
+      var left = Math.ceil((CLOSE_AFTER - (Date.now() - t0)) / 1000);
+      if(left > 0){ btn.textContent = left + 's'; return; }
+      clearInterval(tick);
+      btn.disabled = false;
+      btn.textContent = (rewarded && mode === 'skip') ? 'CLOSE' :
+                        (rewarded ? 'CLAIM REWARD' : 'CONTINUE');
+    }, 100);
+
+    btn.addEventListener('click', function(){
+      clearInterval(tick);
+      if(wrap.parentNode) wrap.parentNode.removeChild(wrap);
+      answer(rewarded ? (mode === 'skip' ? 'skipped' : 'earned') : 'shown');
+    });
+  }};
+
+  /* Say so, once, in the console. A placeholder that appears with no
+     explanation looks exactly like a bug. */
+  try{ console.log('RINGSHIFT: ad simulator active (' + mode + ') — no real ads are involved.'); }catch(e){}
+}
+
 /* ASK THE HOST FOR ONE.
 
    `kind` is 'interstitial' or 'rewarded'. `done(outcome)` is called exactly
@@ -7379,6 +7476,8 @@ function goBack(){
 function armBack(){ try{ history.pushState({rs:1}, ''); }catch(e){} }
 window.addEventListener('popstate', function(){ if(goBack()) armBack(); });
 armBack();
+
+adSimInstall();
 
 /* WHAT IS ACTUALLY DRAWING THIS.
 

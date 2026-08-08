@@ -85,6 +85,58 @@ This is not a nicety. Requesting a live ad from a build you are developing
 against is invalid traffic, and AdMob does not warn you — it suspends the
 account, which takes the whole app's revenue with it.
 
+### Looking at your *own* ad units without getting banned
+
+"The app isn't published yet, so live ads are fine for testing" is the most
+common way an AdMob account gets suspended. The rule does not switch on at
+publication — a request from a device you control, against your own unit, is
+invalid traffic whether a listing exists or not, and clicking one is worse.
+
+The sanctioned route is to **register the device**. A registered device gets a
+real request, through your real ad unit, filled with a test creative: you see
+your placement, your frequency, your mediation, and none of it is counted or
+paid.
+
+Launch once and read the id out of logcat — the SDK prints it for you:
+
+```
+adb logcat -s Ads | grep setTestDeviceIds
+I/Ads: Use RequestConfiguration.Builder()
+         .setTestDeviceIds(Arrays.asList("33BE2250B43518CCDA7DE426D04EE231"))
+       to get test ads on this device.
+```
+
+Then pass it back in — comma-separated for more than one:
+
+```
+./gradlew assembleRelease -Pringshift.testDeviceIds=33BE2250B43518CCDA7DE426D04EE231
+```
+
+or put the same line in `~/.gradle/gradle.properties` so Android Studio picks
+it up too. It is a build property rather than a committed constant because it
+identifies a physical phone. Unset, it compiles to an empty list and changes
+nothing — and a release build with nothing registered says so in logcat:
+`release build, no test devices registered — any ad you see on this device is
+live traffic`.
+
+### Seeing where the ads land without building anything
+
+The placements themselves can be checked in a desktop browser. Open
+`index.html?ads=sim` and a fake host is installed: the **real** policy runs —
+every cooldown, the session floor, the hour cap, the once-per-account ship
+unlock — and only the final "draw a Google ad" step is replaced with a dashed
+gold placeholder.
+
+| | |
+|---|---|
+| `?ads=sim` | an ad plays; rewarded pays out → `earned` / `shown` |
+| `?ads=skip` | the player closes a rewarded early → `skipped` |
+| `?ads=nofill` | nothing in inventory, answered instantly → `nofill` |
+
+It cannot reach the shipped app: the host loads a bare asset URL with no query
+string, there is no way for a player to add one, and the simulator refuses to
+install if a real host is already attached.
+
 ### The bridge is not `@JavascriptInterface`
 
 The page has to be able to say "show one", which is the first time anything
@@ -109,9 +161,15 @@ byte on the wire belongs to the Mobile Ads SDK and none of it to the page.
    plus a privacy message configured in the AdMob console — the SDK only
    fetches and shows what you have set up there, so this cannot be finished
    from the code side alone. **Not implemented here.** Shipping to a UK or EEA
-   audience without it puts the AdMob account at risk.
+   audience without it puts the AdMob account at risk — and the privacy policy
+   in `../PRIVACY.md` already promises a consent message, so until UMP ships
+   that promise is not true. Ship it, or cut that paragraph.
 2. **A privacy policy URL**, in the Play listing and reachable from the app.
-   Required once an app serves ads.
+   Required once an app serves ads. One is written —
+   [`../PRIVACY.md`](../PRIVACY.md), and as a page in
+   [`../docs/privacy.html`](../docs/privacy.html) ready for GitHub Pages. It
+   is drafted from what this project actually does and is **not legal
+   advice**; read it before you publish it under your name.
 3. **The Play Console Data safety form** — the Mobile Ads SDK collects a
    device identifier, and the form has to say so.
 4. **Check the ids** in `app/build.gradle.kts` against your console. A new ad

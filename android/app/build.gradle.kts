@@ -3,6 +3,37 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+/* TEST DEVICES — HOW YOU LOOK AT YOUR OWN AD UNITS WITHOUT GETTING BANNED.
+ *
+ * "The app isn't published yet, so I can request live ads" is the single most
+ * common way an AdMob account gets suspended. Google's rule does not turn on
+ * at publication: any request from a device you control, against your own ad
+ * units, is invalid traffic whether the listing exists or not. Clicking one of
+ * those ads is worse.
+ *
+ * The sanctioned route is to register the device. A registered device gets a
+ * real request, through your real ad unit, filled with a test creative — so
+ * you see your placement, your frequency, your mediation, and none of it is
+ * counted or paid.
+ *
+ * Find the id in logcat on first launch; the SDK prints it for you:
+ *
+ *     I/Ads: Use RequestConfiguration.Builder()
+ *              .setTestDeviceIds(Arrays.asList("33BE2250B43518CCDA7DE426D04EE231"))
+ *            to get test ads on this device.
+ *
+ * Then pass it in — comma-separated for more than one — WITHOUT committing it,
+ * because it identifies a physical phone:
+ *
+ *     ./gradlew assembleRelease -Pringshift.testDeviceIds=33BE2250B43518CCDA7DE426D04EE231
+ *
+ * or put the same line in ~/.gradle/gradle.properties so Android Studio picks
+ * it up too. Unset, it compiles to an empty list and changes nothing. */
+val testDeviceIds: String =
+    (project.findProperty("ringshift.testDeviceIds") as String? ?: "")
+        .split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        .joinToString(",")
+
 android {
     namespace = "com.anticdrazelb.ringshift"
     compileSdk = 35
@@ -35,6 +66,10 @@ android {
            id lives with the other two and there is one place to change when
            the account does. */
         manifestPlaceholders["admobAppId"] = "ca-app-pub-6248261164711853~1977343919"
+
+        // Comma-separated, empty by default. Both build types get it: the whole
+        // point is to make a RELEASE build safe to run on your own phone.
+        buildConfigField("String", "AD_TEST_DEVICES", "\"$testDeviceIds\"")
     }
 
     buildTypes {

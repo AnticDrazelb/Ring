@@ -1102,6 +1102,40 @@ an ad; nothing is gated behind one that is not also reachable another way. A
 ten-second timeout sits under every request, because "the SDK always answers"
 is not a promise the SDK makes.
 
+### Seeing them without a phone
+
+The consequence of the paragraph above is that opening `index.html` in a
+browser shows you no ads at all, correctly, and therefore tells you nothing
+about whether the placements land well.
+
+So `index.html?ads=sim` installs a fake host. The **policy is the real one** —
+every cooldown, the session floor, the hour cap, the once-per-account ship
+unlock — and only the last step, the one that would have drawn a Google ad, is
+replaced with a dashed gold placeholder that gates its own close button for
+2.6 seconds the way a real interstitial does.
+
+| | |
+|---|---|
+| `?ads=sim` | an ad plays; rewarded pays out → `earned` / `shown` |
+| `?ads=skip` | the player closes a rewarded early → `skipped` |
+| `?ads=nofill` | nothing in inventory, answered instantly → `nofill` |
+
+It cannot reach a player: the Android host loads a bare asset URL with no
+query string on it and there is no way to add one, and the simulator refuses
+to install over a real host if one is already attached.
+
+### On a device, register the device
+
+A debug build asks for Google's test units and is safe by construction. A
+release build asks for the real ones — and side-loading that onto your own
+phone to check a placement is **invalid traffic**, whether or not the app is
+published. That rule does not begin at publication and AdMob enforces it by
+suspending accounts.
+
+The sanctioned route is `-Pringshift.testDeviceIds=…`, which puts your phone
+on the SDK's test list: real requests, through the real units, filled with
+test creatives, counted as nothing. See `android/README.md`.
+
 ---
 
 ## 26. The shareable card
