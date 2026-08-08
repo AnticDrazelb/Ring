@@ -150,6 +150,22 @@ web.evaluateJavascript("(window.__rsBack && window.__rsBack()) === true") { r ->
 so this needs no `@JavascriptInterface`. True means something was closed;
 false is the press that quits.
 
+### Talking upwards, if you ever must
+
+Everything above is the host calling into the page. If you add something that
+needs the page to call *out* — this project's ad layer does — use
+`WebViewCompat.addWebMessageListener`, not `@JavascriptInterface`:
+
+```kotlin
+WebViewCompat.addWebMessageListener(
+    web, "rsAds", setOf("https://appassets.androidplatform.net")
+) { _, message, _, _, _ -> handle(message.data) }
+```
+
+It is scoped to an explicit origin, so a page from anywhere else cannot see
+the object exists, and it passes strings. `@JavascriptInterface` passes a live
+Java object and everything reachable from it to anything running in the page.
+
 ### The permission everyone forgets
 
 ```xml

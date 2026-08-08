@@ -23,12 +23,18 @@ android {
         minSdk = 24
         targetSdk = 35
 
-        versionCode = 52
-        versionName = "5.2"
+        versionCode = 53
+        versionName = "5.3"
 
         // No instrumentation tests: the thing under test is a web page, and it
         // has its own headless suite driven by Playwright.
         resourceConfigurations += listOf("en")
+
+        /* THE ADMOB APPLICATION ID, INJECTED INTO THE MANIFEST.
+           A placeholder rather than a literal in AndroidManifest.xml so the
+           id lives with the other two and there is one place to change when
+           the account does. */
+        manifestPlaceholders["admobAppId"] = "ca-app-pub-6248261164711853~1977343919"
     }
 
     buildTypes {
@@ -36,6 +42,18 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isMinifyEnabled = false
+
+            /* GOOGLE'S TEST AD UNITS, NOT YOURS, AND THIS IS NOT OPTIONAL.
+
+               Requesting a live ad from a build you are developing against is
+               invalid traffic. AdMob does not warn — it suspends the account,
+               and an account suspension takes the whole app's revenue with
+               it. These two are Google's published test units; they always
+               fill, they always show a test card, and they earn nothing. */
+            buildConfigField("String", "AD_INTERSTITIAL",
+                "\"ca-app-pub-3940256099942544/1033173712\"")
+            buildConfigField("String", "AD_REWARDED",
+                "\"ca-app-pub-3940256099942544/5354046379\"")
         }
         release {
             /* The APK is one Kotlin file and a 1.3MB HTML asset. Shrinking the
@@ -48,6 +66,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // The live units. Only a release build ever asks for a real ad.
+            buildConfigField("String", "AD_INTERSTITIAL",
+                "\"ca-app-pub-6248261164711853/4350170471\"")
+            buildConfigField("String", "AD_REWARDED",
+                "\"ca-app-pub-6248261164711853/7945534623\"")
             // Sign with your own key before publishing. Left unset on purpose:
             // a committed keystore is worse than an unsigned build.
         }
@@ -92,5 +116,6 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)      // WindowCompat, WindowInsetsControllerCompat
     implementation(libs.androidx.activity)      // ComponentActivity, onBackPressedDispatcher
-    implementation(libs.androidx.webkit)        // WebViewAssetLoader, WebViewClientCompat
+    implementation(libs.androidx.webkit)        // WebViewAssetLoader, WebViewClientCompat, WebMessageListener
+    implementation(libs.play.services.ads)      // AdMob
 }

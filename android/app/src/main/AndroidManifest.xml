@@ -13,9 +13,21 @@
         android:glEsVersion="0x00020000"
         android:required="true" />
 
-    <!-- No network of any kind. There is no INTERNET permission on purpose:
-         the asset loader serves from inside the APK, and declaring the
-         permission would be claiming an ability the game does not have. -->
+    <!-- THE GAME STILL HAS NO NETWORK. THE ADS DO.
+
+         This permission arrived with AdMob and it is worth being honest about
+         what it changes: before ads, the app could not reach the internet at
+         all, which is a very strong thing to be able to say. It no longer
+         can be. What is still true, and is enforced rather than promised, is
+         that the GAME cannot: the WebView carries blockNetworkLoads = true
+         and is served from inside the APK, so every byte on the wire belongs
+         to the Google Mobile Ads SDK and none of it to the page. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Required from Android 13 for the SDK to read the advertising id.
+         Without it ads still serve, but only non-personalised ones. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <application
         android:allowBackup="true"
@@ -38,6 +50,22 @@
              which is the API predictive back is built on, so opting in costs
              nothing and is the difference between a modern Back and one that
              feels like a 2015 app. -->
+
+        <!-- The AdMob app id. The value comes from manifestPlaceholders in
+             app/build.gradle.kts; the SDK crashes at startup if it is absent
+             or malformed, which is at least a loud way to fail. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
+        <!-- Do not initialise on the main thread at app start; AdHost does it
+             off the critical path once the game is already drawing. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_INITIALIZATION"
+            android:value="true" />
+        <meta-data
+            android:name="com.google.android.gms.ads.flag.OPTIMIZE_AD_LOADING"
+            android:value="true" />
 
         <activity
             android:name=".MainActivity"

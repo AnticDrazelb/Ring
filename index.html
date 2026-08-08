@@ -937,6 +937,13 @@
     font-size:var(--t-sm);font-weight:900;
   }
   .lockBadge svg{width:13px;height:13px;}
+  /* the locked badge, when it is an offer rather than a price */
+  .lockBadge.adBadge{
+    background:rgba(35,230,217,.14);color:var(--signal-hi);
+    box-shadow:inset 0 0 0 1px var(--edge-on);
+  }
+  .lockBadge.adBadge svg{width:11px;height:11px;margin-right:1px;}
+
   .lockDot{
     position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;
     background:#f2f6fb;color:#17202e;display:flex;align-items:center;justify-content:center;
@@ -2606,7 +2613,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.2 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.3 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -2897,6 +2904,10 @@ function freshStore(){
           /* Lifetime deaths, for the record screen. Not derivable from the
              per-level ledger: p - c counts quits and abandons too. */
           deaths:0,
+          /* Everything the ad policy needs to survive a restart. `stamps` is
+             the only list and it is pruned to the last hour on every read, so
+             it cannot grow. */
+          ads:{n:0, last:0, ship:'', cont:{}, stamps:[]},
           /* Per level, for life: plays, clears, the play number the first clear
              landed on, total milliseconds spent in it, and the BEST single
              clear in milliseconds. Keyed by level, five short fields, so a
@@ -5582,6 +5593,196 @@ function sectorSub(n){  var s = JOURNEY[sectorOf(n)]; return s.sub; }
 
 
 /* ============================================================
+   ADS — THE POLICY, WHICH IS THE WHOLE PRODUCT DECISION
+
+   Four placements and four rules, and the rules are the point: an ad plan is
+   not "where can we fit one", it is "where does one cost us the least". Every
+   decision below is a refusal as much as a permission.
+
+     HANGAR      opt-in rewarded, once per account, to unlock the second hull
+     PROGRESSION forced interstitial, every third level cleared
+     DEATH       forced interstitial, every fifth death across all runs
+     CONTINUE    opt-in rewarded, when you are out of credits on this level
+
+   And over all of them:
+
+     90s GLOBAL COOLDOWN   nothing within ninety seconds of anything else.
+                           That arithmetic caps the app at forty an hour, and
+                           the hour cap below is the belt to that brace.
+     120s SESSION FLOOR    no FORCED ad in the first two minutes of a session.
+                           Opt-in is exempt: a player who taps "watch an ad"
+                           has asked, and refusing them is just a worse app.
+     RETRY IS SACRED       Retry is never delayed, never gated, never counted.
+                           It is the button pressed after almost every death
+                           and putting an ad in front of it is how a game gets
+                           uninstalled. The death placement fires on the DEATH,
+                           before the card, not on the retry.
+     NEVER MID-RUN         nothing during play, a fail state, or the arrival.
+
+   THE HOST IS OPTIONAL. In a browser there is no ad SDK and `adHost()` is
+   null, so every trigger below evaluates, decides, finds nothing to show and
+   carries on. The game is not built around ads being there.
+   ============================================================ */
+var AD_COOLDOWN   = 90000;    // between any two ads, of any kind
+var AD_FLOOR      = 120000;   // before the first FORCED ad of a session
+var AD_HOUR_CAP   = 40;       // the ceiling the cooldown already implies
+var AD_CONT_COOL  = 300000;   // between two continue offers
+var AD_LEVEL_EVERY = 3;       // progression: every third level cleared
+var AD_DEATH_EVERY = 5;       // death: every fifth, lifetime
+var adSessionStart = Date.now();
+var adInFlight = false;
+
+function adState(){
+  if(!store.ads || typeof store.ads !== 'object') store.ads = {};
+  var a = store.ads;
+  if(typeof a.n !== 'number') a.n = 0;
+  if(typeof a.last !== 'number') a.last = 0;
+  if(typeof a.ship !== 'string') a.ship = '';
+  if(!a.cont || typeof a.cont !== 'object') a.cont = {};
+  if(!Array.isArray(a.stamps)) a.stamps = [];
+  return a;
+}
+
+/* Is a native ad host attached? Set by the Android side once the SDK has
+   initialised — never assumed, because a browser will never set it and a
+   phone with no connection may never manage to. */
+function adHost(){ return (typeof window !== 'undefined' && window.__rsAdHost) || null; }
+function adsLive(){ return !!adHost(); }
+
+function adsInLastHour(now){
+  var a = adState(), cut = now - 3600000, k = 0;
+  for(var i=0;i<a.stamps.length;i++) if(a.stamps[i] > cut) a.stamps[k++] = a.stamps[i];
+  a.stamps.length = k;
+  return k;
+}
+
+/* Why an ad cannot be shown right now, or '' if it can. A string rather than
+   a boolean because two of the four placements are opt-in, and a button that
+   does nothing is worse than a button that says "in 40s". */
+function adBlockedBy(forced, now){
+  now = now || Date.now();
+  if(!adsLive())                                  return 'no host';
+  if(adInFlight)                                  return 'busy';
+  if(state === S_PLAY || state === S_ARRIVE)      return 'mid-run';
+  var a = adState();
+  if(forced && now - adSessionStart < AD_FLOOR)   return 'session floor';
+  if(now - a.last < AD_COOLDOWN)                  return 'cooldown';
+  if(adsInLastHour(now) >= AD_HOUR_CAP)           return 'hour cap';
+  return '';
+}
+function adWaitMs(now){
+  now = now || Date.now();
+  return Math.max(0, AD_COOLDOWN - (now - adState().last));
+}
+
+/* Book-keeping happens when an ad is actually SHOWN, not when one is asked
+   for. A request the host cannot fill — no fill, no network, SDK still
+   loading — must not spend the cooldown, or a plane journey would silently
+   burn the player's whole hour of allowance. */
+function adRecordShown(now){
+  var a = adState();
+  now = now || Date.now();
+  a.n++; a.last = now; a.stamps.push(now);
+  adsInLastHour(now);
+  save();
+}
+
+/* ASK THE HOST FOR ONE.
+
+   `kind` is 'interstitial' or 'rewarded'. `done(outcome)` is called exactly
+   once with 'shown', 'earned', 'skipped' or a reason it could not run — and
+   it is called even when there is no host at all, so every caller can be
+   written as though ads always resolve. Nothing in the game waits on one.
+
+   A ten second guard sits under it. If the SDK never answers — no fill, a
+   dead network, a bug in a version of Play Services we have never seen — the
+   game must not be left with a modal it cannot dismiss. */
+var adSeq = 0, adPending = {};
+function adRequest(kind, forced, done){
+  done = done || function(){};
+  var why = adBlockedBy(forced);
+  if(why){ done(why); return; }
+  var host = adHost();
+  var tag = 'a' + (++adSeq);
+  adInFlight = true;
+  var settled = false;
+  var finish = function(outcome){
+    if(settled) return;
+    settled = true;
+    adInFlight = false;
+    delete adPending[tag];
+    if(outcome === 'shown' || outcome === 'earned') adRecordShown();
+    done(outcome);
+  };
+  adPending[tag] = finish;
+  setTimeout(function(){ finish('timeout'); }, 10000);
+  try{ host.request(kind, tag); }
+  catch(e){ finish('threw'); }
+}
+/* Called by the host, once, per request. */
+window.__rsAdResult = function(tag, outcome){
+  var f = adPending[tag];
+  if(f) f(String(outcome || 'unknown'));
+  return true;
+};
+
+/* ---- 2. PROGRESSION: every third level cleared ---- */
+function adAfterLevel(n, then){
+  then = then || function(){};
+  if(!n || n % AD_LEVEL_EVERY !== 0) { then('not due'); return; }
+  adRequest('interstitial', true, then);
+}
+
+/* ---- 3. DEATH: every fifth, lifetime, and BEFORE the card ----
+   Counted on deaths, not on retries. Retry stays untouched. */
+function adOnDeath(then){
+  then = then || function(){};
+  var d = store.deaths || 0;
+  if(!d || d % AD_DEATH_EVERY !== 0) { then('not due'); return; }
+  adRequest('interstitial', true, then);
+}
+
+/* ---- 4. CONTINUE: the mercy mulligan ----
+   Offered only when the paid route is closed — no credits — and only once per
+   level, on a five minute leash of its own on top of the global one. */
+function adContinueOffer(n){
+  var a = adState(), now = Date.now();
+  if(!adsLive()) return false;
+  if((store.credits||0) >= reviveCost) return false;   // they can just pay
+  if(revivesUsed >= 3) return false;
+  var last = a.cont[n] || 0;
+  if(last && now - last < AD_CONT_COOL) return false;
+  return !adBlockedBy(false, now) || adBlockedBy(false, now) === 'cooldown';
+}
+function adContinueTake(n, then){
+  adRequest('rewarded', false, function(outcome){
+    if(outcome === 'earned'){ adState().cont[n] = Date.now(); save(); }
+    then(outcome);
+  });
+}
+
+/* ---- 1. HANGAR: unlock the second hull, once, ever ---- */
+function adShipOffer(hull){
+  var a = adState();
+  if(!adsLive()) return false;
+  if(a.ship) return false;                       // already spent, for good
+  if(!hull || hull.need <= 0) return false;      // the first hull is free
+  if(totalStars() >= hull.need) return false;    // already earned it
+  return hull.id === HULLS[1].id;                // the second hull only
+}
+function adShipTake(hull, then){
+  adRequest('rewarded', false, function(outcome){
+    if(outcome === 'earned'){ adState().ship = hull.id; save(); }
+    then(outcome);
+  });
+}
+/* An ad-unlocked hull is owned exactly as a starred one is, everywhere that
+   asks — the hangar, the ship picker and the ability lookup. */
+function hullOwned(hull){
+  return totalStars() >= hull.need || adState().ship === hull.id;
+}
+
+/* ============================================================
    GRADES
 
    Stars say how well you flew a level. They do not say how many attempts it
@@ -6945,6 +7146,21 @@ function doRevive(){
   store.credits -= reviveCost;
   revivesUsed++; reviveCost *= 2;
   save();
+  reviveResume();
+}
+
+/* The rewarded route in. Identical from here on — same shield, same beat to
+   breathe, same popup — but nothing is charged and the escalating price is
+   not advanced, because the player did not spend credits and should not be
+   punished on the next continue for having watched instead. revivesUsed is
+   incremented by the caller: the three-per-run cap is a design limit, not a
+   paywall, and it applies to both routes. */
+function doReviveFree(){
+  save();
+  reviveResume();
+}
+
+function reviveResume(){
   overScreen.classList.add('hidden');
   clearBoard();
   combo=0; mult=1; charge=0; over.on=false; over.t=0;
@@ -11067,7 +11283,7 @@ function buildHangar(){
   var out = '';
   for(var i=0;i<HULLS.length;i++){
     var h = HULLS[i];
-    var owned = stars >= h.need;
+    var owned = hullOwned(h);
     var eq = store.skin === h.id;
     var cls = 'hangCard ' + (eq ? 'equipped' : (owned ? 'owned' : 'lockedCard'));
     var artMode = eq ? 'eq' : (owned ? 'own' : 'lock');
@@ -11084,7 +11300,11 @@ function buildHangar(){
                '<span class="hangBlurb">'+h.blurb+'</span>'+
                (eq ? '<span class="eqPill">EQUIPPED</span>'
                    : owned ? '<span class="hangLv">Lv. '+(h.tier||1)+'</span>'
-                   : '<span class="lockBadge"><svg viewBox="0 0 24 24" fill="currentColor">'+
+                   : adShipOffer(h)
+                     ? '<span class="lockBadge adBadge" data-ad="'+h.id+'">'+
+                       '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5l11 6.5-11 6.5z"/></svg>'+
+                       'WATCH AD</span>'
+                     : '<span class="lockBadge"><svg viewBox="0 0 24 24" fill="currentColor">'+
                      '<path d="M17 10h-1V7.5a4 4 0 1 0-8 0V10H7a1.6 1.6 0 0 0-1.6 1.6v7A1.6 1.6 0 0 0 7 20.2h10a1.6 1.6 0 0 0 1.6-1.6v-7A1.6 1.6 0 0 0 17 10zm-7-2.5a2 2 0 1 1 4 0V10h-4z"/></svg>'+
                      h.need+'\u2605</span>')+
              '</span>'+
@@ -11096,12 +11316,45 @@ function buildHangar(){
   for(var j=0;j<cards.length;j++){
     cards[j].addEventListener('click', function(e){
       e.stopPropagation(); audio();
+      var id = this.getAttribute('data-skin');
+      var hull = null;
+      for(var hk=0; hk<HULLS.length; hk++) if(HULLS[hk].id === id) hull = HULLS[hk];
       var need = parseInt(this.getAttribute('data-need'),10);
-      if(totalStars() < need){
+
+      /* THE ONE PLACE AN AD IS OFFERED RATHER THAN SHOWN.
+         Tapping a hull you cannot afford normally just tells you the price.
+         If this is the hull the offer applies to, the price has a second
+         currency — and it is still a price the player chooses to pay. */
+      if(hull && !hullOwned(hull) && adShipOffer(hull)){
+        var wait = adWaitMs();
+        if(adBlockedBy(false)){
+          toast(wait > 0 ? 'Ad available in ' + Math.ceil(wait/1000) + 's'
+                         : 'No ad available right now');
+          buzz(20); return;
+        }
+        toast('Loading…');
+        adShipTake(hull, function(outcome){
+          if(outcome === 'earned'){
+            store.skin = hull.id; save();
+            applyShipSkin(); buildHangar();
+            toast(hull.name + ' unlocked'); sfxBonus(); buzz([0,30,40,60]);
+          } else {
+            /* Not earned is not a failure to explain away. They closed it
+               early, or there was nothing to show. Either way: no unlock, no
+               scolding, and the offer is still there. */
+            toast(outcome === 'skipped' ? 'Ad closed early — not unlocked'
+                                        : 'No ad available right now');
+            buzz(20);
+          }
+        });
+        return;
+      }
+
+      if(!hull || !hullOwned(hull)){
         toast('Needs ' + need + ' stars — you have ' + totalStars());
         buzz(20); return;
       }
-      store.skin = this.getAttribute('data-skin');
+      store.skin = id;
       save(); applyShipSkin(); buildHangar();
       sfxShift(1); buzz(10);
     });
@@ -11179,7 +11432,7 @@ function showMenu(){
                   taskProgress(nextTask) + '/' + nextTask.goal
                 : 'Claimed · back tomorrow');
   var st = totalStars(), ownedN = 0;
-  for(var hi=0; hi<HULLS.length; hi++) if(st >= HULLS[hi].need) ownedN++;
+  for(var hi=0; hi<HULLS.length; hi++) if(hullOwned(HULLS[hi])) ownedN++;
   /* "144 STARS" wraps onto two lines at 360px and the tile reads as broken
      next to the three that do not. The glyph says the same thing in a third
      of the width, and the tile is already headed HANGAR. */
@@ -11761,9 +12014,47 @@ bindBtn('pauseSettings',function(){ showSettings('pause'); });
 bindBtn('pauseQuit',   function(){ stopMusic(); showStart(); });
 bindBtn('pauseMenu',   function(){ stopMusic(); showMenu(); });
 
+/* ---- 2. PROGRESSION ----
+   On the way OUT of the clear card, not on the way in. The card is the
+   reward for the level and putting an ad before it takes the moment away;
+   putting one after it costs a beat of a screen they were leaving anyway. */
+function afterClearCard(go){
+  adAfterLevel(plan && plan.n, function(){ go(); });
+}
+
 bindBtn('reviveBtn',   function(){
   if(pendingDeath > 0) return;
-  if(!canRevive()){ toast('Need ' + reviveCost + ' credits to continue'); buzz(20); return; }
+  if(!canRevive()){
+    /* Out of credits. If the mulligan is on the table this is where it is
+       offered — and it is the ONLY way an ad reaches this screen, because
+       Retry is right above it and untouched. */
+    var lv = plan && plan.n;
+    if(adContinueOffer(lv)){
+      var wait = adWaitMs();
+      if(adBlockedBy(false)){
+        toast(wait > 0 ? 'Ad available in ' + Math.ceil(wait/1000) + 's'
+                       : 'No ad available right now');
+        buzz(20); return;
+      }
+      toast('Loading…');
+      adContinueTake(lv, function(outcome){
+        if(outcome === 'earned'){
+          /* Earned means earned: the continue is free, the escalating price
+             is not charged and not advanced. It still counts against the
+             three-per-run cap, because that cap is a design limit rather
+             than a paywall. */
+          revivesUsed++;
+          doReviveFree();
+        } else {
+          toast(outcome === 'skipped' ? 'Ad closed early — no continue'
+                                      : 'No ad available right now');
+          buzz(20);
+        }
+      });
+      return;
+    }
+    toast('Need ' + reviveCost + ' credits to continue'); buzz(20); return;
+  }
   doRevive();
 });
 bindBtn('retryBtn',    function(){
@@ -11779,8 +12070,10 @@ bindBtn('menuBtnOver', function(){ showMenu(); });
    the beat where the player has just finished something, rather than
    interrupting them on the way into the next one. */
 bindBtn('nextBtn',     function(){
-  if(sectorOwed()) showSectorCard();
-  else beginRun(store.level);
+  afterClearCard(function(){
+    if(sectorOwed()) showSectorCard();
+    else beginRun(store.level);
+  });
 });
 bindBtn('secGo',       function(){ beginRun(store.level); });
 bindBtn('shareClear',  function(){ doShare(true); });
@@ -12429,7 +12722,17 @@ function update(dt){
 
   if(pendingDeath > 0){
     pendingDeath -= dt;
-    if(pendingDeath <= 0) showOver();
+    if(pendingDeath <= 0){
+      /* The death placement fires HERE — in the gap between the ship coming
+         apart and the card appearing — and not on Retry. Retry is the button
+         pressed after almost every death; an ad in front of it is the single
+         fastest way to lose a player. By the time the card is up the ad is
+         already behind them and Retry is instant.
+
+         showOver() is called either way and on the same path, so a no-fill,
+         a dead network or no host at all costs nothing but a callback. */
+      adOnDeath(function(){ showOver(); });
+    }
   }
 
   /* ============================================================

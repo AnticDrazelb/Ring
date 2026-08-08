@@ -1056,6 +1056,54 @@ is configured.
 
 ---
 
+## 25d. Ads
+
+Four placements. The rules around them are the design; an ad plan is not
+"where can we fit one", it is "where does one cost us the least".
+
+| | Where | Type |
+|---|---|---|
+| **Hangar** | Unlock the second hull without the 25 stars | Opt-in rewarded, **once per account** |
+| **Progression** | Leaving the clear card, every third level | Interstitial |
+| **Death** | Every fifth death, lifetime | Interstitial |
+| **Continue** | You died, you have no credits, and you have not used it on this level | Opt-in rewarded, 1 per level, 5 min leash |
+
+### The four rules that matter more than the placements
+
+- **90-second global cooldown.** Nothing within ninety seconds of anything
+  else, of any kind. That arithmetic caps the app at forty an hour on its own;
+  a separate hour cap of 40 is the belt to that brace.
+- **120-second session floor.** No *forced* ad in the first two minutes of a
+  session. Opt-in is exempt — a player who taps "watch an ad" has asked, and
+  refusing them is just a worse app.
+- **Retry is sacred.** Never delayed, never gated, never counted. It is the
+  button pressed after almost every death. The death placement fires on the
+  **death**, in the gap before the card appears — so by the time the card is
+  up the ad is behind you and Retry is instant.
+- **Never mid-run.** Nothing during play, a fail state, or the arrival.
+
+### Two decisions inside those
+
+**The continue you watch for is not the continue you pay for.** A rewarded
+continue does not charge credits and does not advance the escalating price,
+because the player did not spend and should not be penalised on their next
+one. It still counts against the three-per-run cap: that cap is a design
+limit, not a paywall.
+
+**A rewarded ad pays out on dismissal, not on the reward callback.** The two
+arrive in that order, and paying out on the first would unlock a ship behind
+an ad the player is still watching.
+
+### The game does not depend on any of it
+
+There is no ad SDK in a browser, so `window.__rsAdHost` does not exist, so
+every trigger above evaluates, finds no host, and carries on. Nothing waits on
+an ad; nothing is gated behind one that is not also reachable another way. A
+ten-second timeout sits under every request, because "the SDK always answers"
+is not a promise the SDK makes.
+
+---
+
 ## 26. The shareable card
 
 Hit **Share** on any result and the game renders a **three-second animated GIF**

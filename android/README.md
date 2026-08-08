@@ -62,6 +62,64 @@ that can touch the filesystem".
 
 ---
 
+## Ads
+
+AdMob, four placements, and the split is deliberate:
+
+- **`AdHost.kt` knows how to show an ad.** Preload, show, report an outcome.
+- **The game knows when one should be shown.** Every "every third level",
+  "every fifth death", "ninety second cooldown" decision is one policy block
+  in `index.html` — readable and testable without an Android device, and
+  tunable without rebuilding an APK.
+
+The contract is four words wide: `request(kind, tag)` → `result(tag, outcome)`,
+where outcome is `earned` / `shown` / `skipped` / `nofill` / `failed`.
+
+### Test ads in debug, live ads only in release
+
+`buildConfigField` puts **Google's test ad units** in the debug build and
+yours in release. Verified in the shipped bytes: a debug APK contains only
+`ca-app-pub-3940256099942544/…` and no real unit id at all.
+
+This is not a nicety. Requesting a live ad from a build you are developing
+against is invalid traffic, and AdMob does not warn you — it suspends the
+account, which takes the whole app's revenue with it.
+
+### The bridge is not `@JavascriptInterface`
+
+The page has to be able to say "show one", which is the first time anything
+here needs to talk *upwards*. It uses `WebViewCompat.addWebMessageListener`,
+scoped to `https://appassets.androidplatform.net` and nothing else, passing
+strings. `@JavascriptInterface` would hand the page a live Java object and
+everything reachable from it.
+
+### What the INTERNET permission changed
+
+Before ads this app could not reach the network at all, which is a strong
+thing to be able to say, and it can no longer be said. What is still true —
+and enforced rather than promised — is that the **game** cannot: the WebView
+keeps `blockNetworkLoads = true` and is served from inside the APK, so every
+byte on the wire belongs to the Mobile Ads SDK and none of it to the page.
+
+### Before you publish — one of these is a blocker
+
+1. **A consent mechanism for the UK and EEA.** Google's EU User Consent Policy
+   requires one before serving ads to users there, and AdMob enforces it. That
+   means the **UMP SDK** (`com.google.android.ump:user-messaging-platform`),
+   plus a privacy message configured in the AdMob console — the SDK only
+   fetches and shows what you have set up there, so this cannot be finished
+   from the code side alone. **Not implemented here.** Shipping to a UK or EEA
+   audience without it puts the AdMob account at risk.
+2. **A privacy policy URL**, in the Play listing and reachable from the app.
+   Required once an app serves ads.
+3. **The Play Console Data safety form** — the Mobile Ads SDK collects a
+   device identifier, and the form has to say so.
+4. **Check the ids** in `app/build.gradle.kts` against your console. A new ad
+   unit can take an hour to start filling; until then a release build gets
+   `nofill`, which the game treats as "no ad today" and moves on.
+
+---
+
 ## The engine floor
 
 The limit is the WebView, not the OS version.

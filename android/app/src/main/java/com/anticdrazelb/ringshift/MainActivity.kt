@@ -23,6 +23,9 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+import org.json.JSONObject
 
 /**
  * RINGSHIFT.
@@ -33,15 +36,28 @@ import androidx.webkit.WebViewClientCompat
  * by default — see WEBVIEW.md in the repository root, which this file is the
  * implementation of.
  *
- * The page and the host communicate in exactly one direction: the host calls
- * `evaluateJavascript` and reads the result. There is no `@JavascriptInterface`
- * and there must never be one.
+ * MESSAGES BETWEEN THE TWO SIDES
+ *
+ * Host to page is `evaluateJavascript`, which exposes nothing.
+ *
+ * Page to host used to be impossible, and with ads it stops being optional —
+ * the game has to be able to say "show one". That is done with
+ * `WebViewCompat.addWebMessageListener`, NOT `@JavascriptInterface`, and the
+ * difference matters:
+ *
+ *   - addWebMessageListener is scoped to an explicit ALLOWED ORIGIN. Only a
+ *     page served from our own asset loader can see the object at all.
+ *   - It passes strings. @JavascriptInterface passes a live Java object, and
+ *     everything reachable from it, to anything running in the page.
+ *
+ * So the page can still only ASK, and it can only ask for one thing.
  */
 class MainActivity : ComponentActivity() {
 
     private lateinit var web: WebView
     private var pageReady = false
 
+    private var ads: AdHost? = null
     private val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     private var focusRequest: AudioFocusRequest? = null
     private var hasFocus = false
@@ -95,6 +111,23 @@ class MainActivity : ComponentActivity() {
 
         hideSystemBars()
         watchInsets()
+
+        /* ADS.
+         *
+         * Initialised off the critical path, and the bridge is installed only
+         * once the SDK says it is ready. Until then — and forever, if it
+         * never manages it — `window.__rsAdHost` does not exist, every
+         * trigger in the game finds no host, and the game plays exactly as it
+         * does in a browser. Ads are an addition to this app, never a
+         * dependency of it. */
+        ads = AdHost(this) { tag, outcome ->
+            if (pageReady) {
+                web.evaluateJavascript(
+                    "window.__rsAdResult && window.__rsAdResult(" +
+                        JSONObject.quote(tag) + "," + JSONObject.quote(outcome) + ")", null
+                )
+            }
+        }.also { it.start { installAdBridge() } }
 
         /* BACK.
          *
@@ -285,6 +318,50 @@ class MainActivity : ComponentActivity() {
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
     }
 
+    // ------------------------------------------------------------------ ads
+
+    /**
+     * Hand the page a way to ask for an ad — origin-scoped, string-only, and
+     * only after the SDK is up.
+     *
+     * The object androidx installs is `rsAds`, with a single `postMessage`.
+     * The shim below wraps it in the shape the game already expects, so the
+     * game's side of the contract is one small object it can null-check
+     * rather than a feature detection dance.
+     */
+    private fun installAdBridge() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+        try {
+            WebViewCompat.addWebMessageListener(
+                web, "rsAds",
+                // The asset loader's origin, and nothing else. A page from
+                // anywhere else cannot see this object exists.
+                setOf("https://appassets.androidplatform.net")
+            ) { _, message, _, _, _ ->
+                val body = message.data ?: return@addWebMessageListener
+                try {
+                    val o = JSONObject(body)
+                    ads?.request(o.optString("kind"), o.optString("tag"))
+                } catch (e: Exception) {
+                    // A malformed message is a bug on the page's side, and the
+                    // page is ours. Drop it; do not let it reach the SDK.
+                }
+            }
+        } catch (e: Exception) {
+            return          // no bridge, no ads, still a game
+        }
+        web.evaluateJavascript(
+            """
+            (function(){
+              if (typeof rsAds === 'undefined') return;
+              window.__rsAdHost = { request: function(kind, tag){
+                rsAds.postMessage(JSON.stringify({kind:kind, tag:tag}));
+              }};
+            })();
+            """.trimIndent(), null
+        )
+    }
+
     // ---------------------------------------------------------------- insets
 
     /**
@@ -436,6 +513,9 @@ class MainActivity : ComponentActivity() {
         web.onResume()
         hideSystemBars()
         requestAudioFocus()
+        // Top the chamber back up after an ad was spent, or after a spell in
+        // the background with no network.
+        ads?.preload()
         /* An AudioContext comes back SUSPENDED from a pause and Web Audio will
          * not restart it by itself. In a browser this is invisible because
          * every screen is one tap from a sound; in an app the player comes
