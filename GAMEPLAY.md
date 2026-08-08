@@ -1141,8 +1141,13 @@ an ad the player is still watching.
 There is no ad SDK in a browser, so `window.__rsAdHost` does not exist, so
 every trigger above evaluates, finds no host, and carries on. Nothing waits on
 an ad; nothing is gated behind one that is not also reachable another way. A
-ten-second timeout sits under every request, because "the SDK always answers"
-is not a promise the SDK makes.
+timeout sits under every request, because "the SDK always answers" is not a
+promise the SDK makes — but only over the parts that are a *wait*. Twelve
+seconds for an ad to appear; nothing at all while one is on screen, because the
+game is waiting on a player then and not on a network; eight seconds after it
+closes for the outcome to land. Armed across the whole request instead, as it
+first was, it expired mid-ad and threw away every reward the player had just
+sat through.
 
 ### Seeing them without a phone
 
