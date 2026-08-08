@@ -988,6 +988,52 @@ smaller and the buttons stay the same.
 
 ---
 
+## 25b. Haptics
+
+Every haptic answers to one switch: **Haptics** in Settings. Nothing else.
+
+That is worth stating because it used to be wrong in two ways. The vibration
+was also gated on the HUD's **sound mute**, so muting the game to play it on a
+bus killed the haptics too — which is the exact circumstance in which they are
+doing the most work, and it made the Settings switch read ON while nothing
+buzzed. And it was gated on `prefers-reduced-motion`, which is about animation
+that can make somebody ill; a 12ms tick is not animation. The only haptic that
+still answers to reduced-motion is the countdown's rumble, which is nearly
+three seconds long and is an effect rather than feedback.
+
+The vocabulary runs from 8ms to about a third of a second:
+
+| | |
+|---|---|
+| **8ms** | any button in the game. The single funnel every control is bound through, so the menus are not the one part your hand cannot feel. |
+| **10–14ms** | a shift, a pulse, a checkpoint banked |
+| **20–30ms** | a shield taken, a rule card stopping the world |
+| **short patterns** | a ring resolved, a chain milestone, a slipstream opening |
+| **the countdown** | one pattern for the whole hold, in three phases of a number each |
+| **the clear** | *the grade*, see below |
+| **the death** | the longest thing in the game bar one |
+| **the arrival** | the one exception — a swell rather than a hit |
+
+**The clear feels like the grade.** Every clear used to return the same three
+beats, so scraping a world on the ninth attempt felt in the hand exactly like
+taking it first time under par. The ledger is written before the card is
+built, so the grade is known — and the buzz is the one piece of feedback that
+reaches you before you have read anything:
+
+| Grade | Buzz |
+|---|---|
+| S | 340ms, and unmistakable |
+| A+ | 190ms |
+| A | 140ms |
+| B+ / B | 80ms |
+| C | 56ms — cleared, and that is all |
+
+On Android this needs the `VIBRATE` permission, without which
+`navigator.vibrate` fails silently. iOS Safari has no Vibration API at all, so
+none of this exists there and nothing depends on it.
+
+---
+
 ## 26. The shareable card
 
 Hit **Share** on any result and the game renders a **three-second animated GIF**

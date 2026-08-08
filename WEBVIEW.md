@@ -5,6 +5,11 @@ will run in a WebView, but a WebView is not a browser and four of its defaults
 are wrong for this. Getting those four right is the difference between the game
 working and a black screen.
 
+> **There is a finished Android Studio project in [`android/`](android/) that
+> does all of this.** Open that directory in Android Studio and run it. What
+> follows is the reasoning behind what it does, and what you need if you are
+> hosting the game in an app of your own instead.
+
 ---
 
 ## The engine floor
@@ -70,6 +75,31 @@ And in the manifest, on the `<application>` or the hosting `<activity>`:
 android:hardwareAccelerated="true"
 ```
 
+### The permission everyone forgets
+
+```xml
+<uses-permission android:name="android.permission.VIBRATE" />
+```
+
+The game's haptics are `navigator.vibrate`, and without this it fails
+**silently**: no crash, no log, no exception to catch — just a game that never
+buzzes and a Haptics switch in Settings that appears to do nothing. It is a
+normal permission, granted at install, with no runtime prompt.
+
+### And the one nobody expects
+
+```kotlin
+// Android 10 and up reads a horizontal swipe from either edge as Back.
+// This game is STEERED by horizontal swipes.
+view.systemGestureExclusionRects = listOf(Rect(0, top, width, bottom))
+```
+
+Without it, a steer that begins near the side of the screen — which is most of
+them, because that is where a thumb reaches — navigates out of the run instead
+of turning the conduit. The system caps the claim at 200dp per edge and
+silently drops anything larger, so take the middle 200dp and leave the rest of
+the edge to the system gesture.
+
 ---
 
 ## Serve it, do not `file://` it
@@ -114,7 +144,12 @@ You do not need to add error handling around it.
   one. Anything tappable holds a hard 44px floor regardless of how small the
   screen gets — the chrome shrinks, the touch targets do not.
 - **A corrupt or hand-edited save** — checked and repaired on load.
-- **`prefers-reduced-motion`** — respected without being asked.
+- **`prefers-reduced-motion`** — respected without being asked. It softens the
+  countdown's warp and suppresses its long rumble; it deliberately does *not*
+  silence ordinary haptics, which are feedback rather than animation.
+- **A device with no vibrator, or the permission missing** — `navigator.vibrate`
+  is called inside a try/catch and behind a feature test, so the game does not
+  care either way.
 
 ---
 

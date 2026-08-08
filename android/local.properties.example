@@ -1,0 +1,7 @@
+# Copy to local.properties and point at your SDK. This file is a path on your
+# machine, not a property of the project, which is why the real one is ignored.
+#
+#   macOS   /Users/<you>/Library/Android/sdk
+#   Linux   /home/<you>/Android/Sdk
+#   Windows C:\\Users\\<you>\\AppData\\Local\\Android\\Sdk
+sdk.dir=/path/to/Android/Sdk

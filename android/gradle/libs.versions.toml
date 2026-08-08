@@ -1,0 +1,22 @@
+# Pinned to the newest releases that still compile against SDK 35.
+#
+# Lint will offer core-ktx 1.19.0, activity 1.13.0 and webkit 1.16.0. Do not
+# take them without reading the failure first: those builds declare
+# `compileSdkVersion 37` in their AAR metadata, and accepting them forces this
+# project onto an unreleased platform to gain nothing it uses. Bump them when
+# the target moves, not before.
+[versions]
+agp = "8.7.3"
+kotlin = "2.0.21"
+coreKtx = "1.16.0"
+activity = "1.10.1"
+webkit = "1.13.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-activity = { group = "androidx.activity", name = "activity-ktx", version.ref = "activity" }
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

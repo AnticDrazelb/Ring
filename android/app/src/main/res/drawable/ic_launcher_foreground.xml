@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The conduit seen down its own axis: four rings converging, and the ship's
+     chevron sitting in front of them. Everything is inside the 72dp safe zone
+     (18..90 on this 108 canvas) so no launcher mask can crop it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- rings, furthest first: dimmer and tighter as they recede -->
+    <path
+        android:pathData="M54,20a34,34 0,1 0,0.1 0z"
+        android:strokeColor="#23E6D9"
+        android:strokeWidth="3.2"
+        android:strokeAlpha="0.30"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M54,29a25,25 0,1 0,0.1 0z"
+        android:strokeColor="#23E6D9"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.55"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M54,37a17,17 0,1 0,0.1 0z"
+        android:strokeColor="#5CFFF2"
+        android:strokeWidth="2.8"
+        android:strokeAlpha="0.85"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M54,45a9,9 0,1 0,0.1 0z"
+        android:strokeColor="#5CFFF2"
+        android:strokeWidth="2.6"
+        android:fillColor="#00000000" />
+
+    <!-- the one wedge that is not yours -->
+    <path
+        android:pathData="M54,20a34,34 0,0 1,24 10l-24,24z"
+        android:fillColor="#FF3E7F"
+        android:fillAlpha="0.9" />
+
+    <!-- the ship -->
+    <path
+        android:pathData="M54,58l16,9 -16,-3 -16,3z"
+        android:fillColor="#FFFFFF" />
+</vector>

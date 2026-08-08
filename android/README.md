@@ -1,0 +1,115 @@
+# RINGSHIFT — Android
+
+An Android Studio project that wraps `index.html` in a WebView. The game is the
+whole app: one self-contained HTML file in `app/src/main/assets/`, no network,
+no sibling assets, no server.
+
+This project is the implementation of [`../WEBVIEW.md`](../WEBVIEW.md). If the
+two ever disagree, that document is the reasoning and this is the code.
+
+---
+
+## Opening it
+
+**Android Studio** → *Open* → select this `android/` directory. Sync, then run.
+
+**Command line** (needs `local.properties` or `ANDROID_HOME`):
+
+```
+./gradlew assembleDebug          # app/build/outputs/apk/debug/
+./gradlew installDebug           # to a connected device
+./gradlew assembleRelease        # unsigned; see "Publishing"
+```
+
+If Gradle cannot find your SDK, copy `local.properties.example` to
+`local.properties` and set `sdk.dir`. That file is git-ignored on purpose —
+it is a path on your machine, not a property of the project.
+
+---
+
+## What is set up, and why it is not optional
+
+| | |
+|---|---|
+| `setLayerType(LAYER_TYPE_HARDWARE)` | No hardware layer means no WebGL, and the game shows its "this device cannot run RINGSHIFT" card instead of starting. |
+| `domStorageEnabled = true` | **Off by default in a WebView.** The entire save is `localStorage` — progress, stars, credits, settings, the daily, the per-level ledger, every grade. Off means every session silently restarts at level 1. |
+| `WebViewAssetLoader` | `file:///android_asset/` gets an **opaque origin** on several WebView versions, and an opaque origin has no `localStorage`. The game would run and quietly never save. The loader gives it a real `https://appassets.androidplatform.net` origin and a real storage bucket. |
+| `mediaPlaybackRequiresUserGesture = false` | The game builds its AudioContext on first touch anyway, but leaving this true also suspends the context after a resume on some versions — a game that comes back from the task switcher silent. |
+| `VIBRATE` permission | `navigator.vibrate` fails **silently** without it: no crash, no log, just a game that never buzzes. |
+| `configChanges=...` | Without the full list, rotating the phone recreates the activity, which reloads the WebView, which restarts the game and abandons the run. |
+| `systemGestureExclusionRects` | Android 10+ reads a horizontal swipe from either edge as Back. This game is *steered* by horizontal swipes. The middle 200dp of each edge is claimed, which is the cap the system allows. |
+| `setBackgroundColor(BLACK)` on both window and WebView | The default is white and the game's first paint is black — otherwise every cold start flashes. |
+
+There is deliberately **no `INTERNET` permission** and no `@JavascriptInterface`
+bridge. The page and the host do not talk to each other at all, which is the
+cheapest possible answer to "what can a bug in the game reach".
+
+---
+
+## The engine floor
+
+The limit is the WebView, not the OS version.
+
+| Needs | Chromium |
+|---|---|
+| Hard floor | **79** — CSS `min()`/`max()`/`clamp()`, which the whole responsive layout is built on |
+| Recommended | **90+** — below 84, flex/grid `gap` collapses; below 88, `aspect-ratio` falls back |
+
+`minSdk` is **24** (Android 7.0). Android System WebView updates through the
+Play Store independently of the OS, so a 2016 phone that still receives Play
+updates is fine, while a newer device with Play Services stripped out may not
+be. The game detects and explains both failure modes itself.
+
+---
+
+## Checking it actually worked
+
+1. **Clear a level, force-quit, reopen.** Back on level 1 means `domStorageEnabled`
+   is off or you are on a `file://` origin.
+2. **Open Settings** — the version line at the bottom tells you which build is
+   running.
+3. **The WebGL card on a device with a GPU** means the layer type is software.
+4. **Bunched layout or non-square menu tiles** means the WebView is below 84.
+5. **Rotate the phone.** Nothing should jump and the run should survive; if the
+   game restarts from the studio card, a `configChanges` value is missing.
+6. **Steer with a swipe that starts near the edge of the screen.** If it
+   navigates back instead of turning, the gesture exclusion is not applying —
+   it is API 29+ only, and the system silently drops any claim over 200dp.
+
+---
+
+## Publishing
+
+`assembleRelease` produces an **unsigned** APK. There is no keystore in this
+repository and there should never be one.
+
+```
+# once
+keytool -genkey -v -keystore ringshift.jks -keyalg RSA \
+        -keysize 2048 -validity 10000 -alias ringshift
+```
+
+Then add a `signingConfigs` block to `app/build.gradle.kts` reading from
+environment variables or a git-ignored `keystore.properties`, and wire it to
+the `release` build type.
+
+Before you ship, change **`applicationId`** in `app/build.gradle.kts` and the
+matching `namespace`. `com.anticdrazelb.ringshift` is a placeholder derived
+from the repository owner; an application ID is permanent once published.
+
+For the Play Store, build an App Bundle instead: `./gradlew bundleRelease`.
+
+---
+
+## Updating the game
+
+`app/src/main/assets/index.html` is a **copy** of the file in the repository
+root. It is not a symlink, because Gradle's asset packaging does not follow
+them reliably across platforms.
+
+```
+cp ../index.html app/src/main/assets/index.html
+```
+
+Bump `versionCode` and `versionName` in `app/build.gradle.kts` to match the
+version string the game prints at the bottom of its Settings screen.

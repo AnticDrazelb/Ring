@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The game's haptics are navigator.vibrate, and without this permission
+         that call silently does nothing: no crash, no log, just a game that
+         never buzzes. It is a normal permission, granted at install. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- WebGL. A device without GLES2 gets the game's "cannot run" card, but
+         it should not be offered the install in the first place. -->
+    <uses-feature
+        android:glEsVersion="0x00020000"
+        android:required="true" />
+
+    <!-- No network of any kind. There is no INTERNET permission on purpose:
+         the asset loader serves from inside the APK, and declaring the
+         permission would be claiming an ability the game does not have. -->
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="false"
+        android:theme="@style/Theme.Ringshift"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.Ringshift"
+            android:windowSoftInputMode="adjustNothing"
+            android:resizeableActivity="true"
+            android:immersive="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboardHidden|keyboard|navigation|uiMode|fontScale|locale|layoutDirection">
+
+            <!-- ROTATION MUST NOT RESTART THE ACTIVITY.
+                 Every one of those configChanges would otherwise recreate the
+                 activity, which reloads the WebView, which restarts the game
+                 from the studio card and abandons the run in progress. With
+                 them declared the WebView simply resizes and the game's own
+                 resize handler does the rest — which is already tested at
+                 eight viewport sizes including both landscape orientations. -->
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

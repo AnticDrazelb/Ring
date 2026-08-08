@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and below. The save is localStorage, which lives in the
+     WebView's own directory under the app's data dir, so backing up the whole
+     data dir is what carries a player's 246 levels to a new phone. -->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="file" path="." />
+    <include domain="sharedpref" path="." />
+    <!-- No caches: the WebView cache is disposable and can be large. -->
+    <exclude domain="file" path="cache" />
+    <exclude domain="file" path="app_webview/GPUCache" />
+    <exclude domain="file" path="app_webview/Service Worker" />
+</full-backup-content>
