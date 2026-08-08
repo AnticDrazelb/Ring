@@ -1046,7 +1046,13 @@
     top:max(14px,calc(var(--sa-top, env(safe-area-inset-top)) + 8px));
     display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
   }
-  #hudTop .pill{min-width:0;}
+  /* A PILL MUST NEVER WRAP, AND NOT ONLY BECAUSE IT LOOKS WRONG.
+     fitHudTop decides which tier the row is on by MEASURING the three pills.
+     A pill whose text has already wrapped measures narrow — so "LV 1" broke
+     after the space, the level pill came back half as wide as it really
+     wanted, the arithmetic said the row fitted, and no tier was ever applied.
+     The wrap was both the symptom and the reason it went unfixed. */
+  #hudTop .pill{min-width:0;white-space:nowrap;}
   #scorePill{justify-self:start;gap:10px;}
   #speedPill{justify-self:center;}
   #levelPill{justify-self:end;}
@@ -1107,13 +1113,29 @@
      font, and the font is whatever the device happens to have. Guessing width
      thresholds gets it wrong on one device or the other; the same three pills
      that fit on a 430px iPhone overflow a 430px headless Chromium. */
+  /* t1 — the two labels that repeat what the numbers already say. */
   #hudTop.t1 #scorePill .lab{display:none;}
   #hudTop.t1 #spdIcon{display:none;}
   #hudTop.t1 #speedPill{gap:6px;}
+  /* t2 — the chevron. It is a hint that the pill is tappable; "4/12" is how
+     far you are through the level. The hint goes first, and it used to go at
+     the same moment as the count, which meant a 430px phone with plenty of
+     room lost both. */
   #hudTop.t2{gap:6px;}
-  #hudTop.t2 .pill{padding:0 12px;height:var(--h-hud-t);}
-  #hudTop.t2 #scoreVal,#hudTop.t2 #spdVal,#hudTop.t2 #lvVal{font-size:var(--t-xl);}
-  #hudTop.t2 #lvProg,#hudTop.t2 #levelPill .chev{display:none;}
+  #hudTop.t2 .pill{padding:0 12px;}
+  #hudTop.t2 #levelPill{gap:7px;}
+  #hudTop.t2 #levelPill .chev{display:none;}
+  /* The count is the secondary half of this pill and can afford to read as
+     secondary. Worth about eight pixels of the twenty-four the row needs. */
+  #hudTop.t2 #lvProg{font-size:var(--t-sm);}
+  /* t3 — the type shrinks, and the progress count is the last thing out.
+     Note what the fit test costs here: the middle pill is held on the centre
+     line, so the row fits when TWICE the wider side plus the middle fits, and
+     twelve pixels of padding off each pill is worth twenty-four. That is the
+     whole difference between a 430px phone keeping "4/12" and losing it. */
+  #hudTop.t3 .pill{height:var(--h-hud-t);}
+  #hudTop.t3 #scoreVal,#hudTop.t3 #spdVal,#hudTop.t3 #lvVal{font-size:var(--t-xl);}
+  #hudTop.t3 #lvProg{display:none;}
 
   /* The tray is 40px off the bottom and about 80px tall, so at 122 the charge
      bar was resting on its lid. Clear of it now. */
@@ -2732,7 +2754,7 @@
 
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.9 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 6.0 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -8666,12 +8688,19 @@ function fitHudTop(force){
      three widths happen to add up. Testing the sum let the level pill sit 5px
      under the speed pill at 430 while the arithmetic said there was room. */
   var over = function(){
-    return Math.max(a.offsetWidth, c.offsetWidth)*2 + b.offsetWidth + 16 > row.clientWidth;
+    /* The gap was hard-coded at 16 and the row's actual gap is 8, dropping to
+       6 once t2 tightens it — so the test was asking for up to ten pixels that
+       were never going to be spent, and a 390px phone lost its ring count to
+       arithmetic rather than to space. Read it. */
+    var g = parseFloat(getComputedStyle(row).columnGap) || 0;
+    return Math.max(a.offsetWidth, c.offsetWidth)*2 + b.offsetWidth + g*2 > row.clientWidth;
   };
   if(!over()) return;
   row.className = 't1';
   if(!over()) return;
   row.className = 't1 t2';
+  if(!over()) return;
+  row.className = 't1 t2 t3';
 }
 window.addEventListener('resize', function(){ fitHudTop(true); });
 

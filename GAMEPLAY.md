@@ -54,7 +54,8 @@ wedges — six, eight, ten or twelve of them depending on the sector.
   readout only; the ring cadence is not touched, because the reachability
   guarantee is derived from it.
 - Top right: **LV n  x/y** — the level, and how many rings you have cleared of
-  the target. Tap it to pause.
+  the target. Tap it to pause. On a narrow phone the row sheds the count and
+  then the chevron rather than letting anything wrap or overlap — see §25a.
 - Middle, when you have a chain going: your **multiplier** and chain length.
 - A thin bar along the bottom: your **resonance charge**.
 - Bottom: pause, sound and effects buttons.
@@ -992,6 +993,35 @@ when the top tray genuinely runs out of room.
 **Anything you tap is at least 44px, always.** The type and the chrome scale
 with the screen; touch targets do not. On the smallest phone the labels get
 smaller and the buttons stay the same.
+
+### The HUD row sheds in an order
+
+The three pills along the top — score, velocity, level — are sized by their own
+text, and text is a font, and the font is whatever the device happens to have.
+So which of them fits is **measured**, not guessed from a width breakpoint: the
+same three pills that fit a 430dp iPhone overflow a 430dp headless Chromium.
+
+They go in order of how little each is carrying:
+
+1. the word **SIGNAL** and the velocity icon — both repeat what the number
+   beside them already says;
+2. the **chevron** on the level pill — a hint that it is tappable;
+3. the **ring count**, and the type tightens.
+
+The count outranks the chevron because "4/12" is how far through the level you
+are and the chevron is decoration. They used to go together, which meant a
+large phone with room to spare lost both.
+
+The measurement has to be of a pill that has **not** wrapped, and that was a
+real bug: `LV 1` broke after its space, the level pill came back half as wide
+as it wanted, the arithmetic concluded the row fitted, and no tier was ever
+applied. The wrap was both the symptom and the reason it was never corrected.
+Pills do not wrap now.
+
+The test is also stricter than a sum. The velocity pill is held on the centre
+line of the screen, so the row fits when **twice the wider side** plus the
+middle fits — not when the three widths happen to add up. Which is why twelve
+pixels of padding off each pill is worth twenty-four.
 
 ---
 
