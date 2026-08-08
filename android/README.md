@@ -46,6 +46,9 @@ it is a path on your machine, not a property of the project.
 | `CUTOUT_MODE_ALWAYS` | `SHORT_EDGES` letterboxes a sideways phone away from its own camera and loses a black bar down one edge. |
 | `window.__rsBack()` | `canGoBack()` is always true because the page arms a history sentinel, so the standard snippet spends the first Back at the main menu doing nothing. Asking the game costs no press. |
 | `onRenderProcessGone` | Not overriding it means the app is **killed** when Android reclaims the WebView renderer in the background. |
+| `setLayerType(LAYER_TYPE_NONE)` | **Not** `LAYER_TYPE_HARDWARE`, which sounds like asking for the GPU and is not. It renders the view into an off-screen texture first — free for a static view being animated, a full-screen copy *every frame* for one repainting at 60fps. Hardware acceleration comes from the window, not the layer. |
+| `RENDERER_PRIORITY_IMPORTANT`, waived=false | The default waives the renderer process's priority the moment the view is not visible, which is how a game gets reaped in the task switcher. |
+| `window.setBackgroundDrawable(null)` on page finish | It exists to stop a white flash on cold start. After that it is a full-screen opaque fill under a full-screen opaque view — every pixel painted twice, forever. |
 
 There is deliberately **no `INTERNET` permission** and no
 `@JavascriptInterface` bridge.
@@ -97,6 +100,15 @@ be. The game detects and explains both failure modes itself.
    activity is using `canGoBack()` rather than asking the game.
 10. **Switch away mid-run and come back.** Sound should return without a tap,
     and the app should not have restarted.
+11. **Open Settings and read the line under the version.** It names the GPU —
+    `Adreno (TM) 740 · render scale 2.00×`. If it says
+    **⚠ SOFTWARE RENDERER**, the game is not on the GPU and the cause is one
+    of: `LAYER_TYPE_SOFTWARE` on the view, `hardwareAccelerated="false"`
+    somewhere in the manifest, or a driver Chromium has blocklisted.
+
+    The render scale beside it is the adaptive tier the game settled on. It is
+    also the honest way to judge any performance change on a real device:
+    the same phone settling at a higher scale is the win, not a frame counter.
 
 ---
 

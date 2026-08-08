@@ -36,11 +36,30 @@ stripped out.
 ```kotlin
 val web = WebView(this)
 
-// 1. HARDWARE ACCELERATION. Without it there is no WebGL and the game shows
-//    its "this device cannot run RINGSHIFT" card instead of starting.
-//    It is on by default at the application level, but a software layer type
-//    on the view overrides that and is a common copy-paste.
-web.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+// 1. HARDWARE ACCELERATION — AND THE LINE THAT LOOKS LIKE IT AND IS NOT.
+//
+//    WebGL is available because the WINDOW is hardware accelerated:
+//    android:hardwareAccelerated, on by default since API 14. The LAYER TYPE
+//    is a different question — whether this View's output is rendered into an
+//    off-screen texture before compositing.
+//
+//    LAYER_TYPE_HARDWARE is a win for a static view being animated, because
+//    the texture is drawn once and reused. It is a straight LOSS for a view
+//    repainting sixty times a second: the layer is invalidated every frame,
+//    so the whole screen is rendered into an FBO and then that FBO is drawn
+//    to the screen. One extra full-screen write and read per frame, on a
+//    renderer that is already fill-rate bound.
+//
+//    NONE is the default and the right answer. LAYER_TYPE_SOFTWARE is the
+//    value that genuinely breaks WebGL — check for it if the "cannot run"
+//    card ever appears on a device with a GPU.
+web.setLayerType(View.LAYER_TYPE_NONE, null)
+
+// Keep the renderer process important. A WebView's renderer runs in its own
+// process, and the default policy waives its priority the moment the view is
+// not visible — which is how a game comes back from the task switcher having
+// been reaped.
+web.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
 
 web.settings.apply {
     javaScriptEnabled = true
@@ -68,6 +87,41 @@ web.settings.apply {
 web.setBackgroundColor(Color.BLACK)
 web.overScrollMode = View.OVER_SCROLL_NEVER
 ```
+
+...and then **throw the window background away** once the page is up:
+
+```kotlin
+override fun onPageFinished(view: WebView, url: String) {
+    window.setBackgroundDrawable(null)
+}
+```
+
+It exists so the first frame of a cold start is black rather than white. After
+that it is a full-screen opaque fill underneath a full-screen opaque view —
+every pixel painted twice, every frame, forever. It is the cheapest overdraw
+win an app like this has.
+
+---
+
+## Is it actually using the GPU?
+
+A software renderer draws the same picture as a GPU, just slowly, so "hardware
+acceleration is off" and "this phone is a bit slow" look identical from the
+sofa. **Settings answers it**: under the version line the game prints the
+unmasked WebGL renderer and its current render scale.
+
+```
+Adreno (TM) 740 · render scale 2.00×
+⚠ SOFTWARE RENDERER · Mesa/X.org, llvmpipe · render scale 0.75×
+```
+
+If that second line ever appears on a real handset, the cause is one of three
+things, in order of likelihood: `LAYER_TYPE_SOFTWARE` set on the view,
+`android:hardwareAccelerated="false"` somewhere in the manifest, or a device
+whose GPU driver is blocklisted by Chromium.
+
+The render scale beside it is the adaptive tier the game has settled on, so
+the two figures together explain any frame rate you are looking at.
 
 And in the manifest, on the `<application>` or the hosting `<activity>`:
 

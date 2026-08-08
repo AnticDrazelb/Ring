@@ -132,13 +132,42 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     private fun setUpWebView(v: WebView): Unit = v.run {
 
-        /* 1. HARDWARE ACCELERATION.
+        /* 1. HARDWARE ACCELERATION, AND THE LINE THAT WAS QUIETLY COSTING US
+         *    A FULL-SCREEN COPY EVERY FRAME.
          *
-         * Without it there is no WebGL and the game shows its "this device
-         * cannot run RINGSHIFT" card instead of starting. It is on by default
-         * at the application level, and this line only guards against a
-         * software layer type being set on the view somewhere else. */
-        setLayerType(View.LAYER_TYPE_HARDWARE, null)
+         * This used to say LAYER_TYPE_HARDWARE, which sounds like the way to
+         * ask for the GPU and is not. WebGL is available because the WINDOW is
+         * hardware accelerated — android:hardwareAccelerated, on by default
+         * since API 14 and declared explicitly in the manifest. The layer type
+         * is a different question: it asks whether this View's output should
+         * be rendered into an off-screen texture before being composited.
+         *
+         * That is a win for a view whose content is STATIC while the view
+         * itself is animated — the texture is drawn once and reused. It is a
+         * straight loss for a view repainting sixty times a second, because
+         * the layer is invalidated on every one of those frames: the whole
+         * screen is rendered into an FBO and then that FBO is drawn to the
+         * screen. One extra full-screen write and read per frame, on a
+         * renderer that is already fill-rate bound.
+         *
+         * NONE is the default. It is written out here because the value is
+         * load-bearing and the wrong one looks more correct than the right
+         * one. LAYER_TYPE_SOFTWARE is the value that would genuinely break
+         * WebGL, and it is the one to check for if the game ever shows its
+         * "cannot run" card on a device with a GPU. */
+        setLayerType(View.LAYER_TYPE_NONE, null)
+
+        /* KEEP THE RENDERER PROCESS IMPORTANT.
+         *
+         * A WebView's renderer runs in its own process and Android is free to
+         * deprioritise or kill it under memory pressure. The default policy
+         * waives priority the moment the view is not visible, which is how a
+         * game comes back from the task switcher having been reaped.
+         * IMPORTANT with waived=false says: this is the app, not a background
+         * tab. */
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
+        }
 
         settings.apply {
             javaScriptEnabled = true
@@ -214,6 +243,15 @@ class MainActivity : ComponentActivity() {
                 pageReady = true
                 // The first measurement usually happens before the page exists.
                 pushSafeArea(ViewCompat.getRootWindowInsets(view))
+
+                /* THE WINDOW BACKGROUND HAS DONE ITS JOB — STOP PAINTING IT.
+                 *
+                 * It exists so the first frame of a cold start is black rather
+                 * than white. Once the WebView is drawing, it is a full-screen
+                 * opaque fill underneath a full-screen opaque view: every
+                 * pixel painted twice, every frame, forever. Dropping it is
+                 * the single cheapest overdraw win an app like this has. */
+                window.setBackgroundDrawable(null)
             }
 
             /* THE WEBVIEW RENDERER CAN BE KILLED WHILE YOU ARE IN THE
