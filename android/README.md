@@ -262,6 +262,45 @@ returns false, the ad SDK is never started, and the app is silently ad-free.
 
 ---
 
+## `WebView.pauseTimers()` froze the ads
+
+The single worst bug in this project so far, and it reads as correct code.
+
+`onPause()` paused the game so it would not render behind the task switcher:
+`web.onPause()` and `web.pauseTimers()`. Showing an ad starts a **translucent**
+`AdActivity`, which pauses this activity, so both ran — and
+`WebView.pauseTimers()` is documented as
+
+> Pauses all layout, parsing, and JavaScript timers for **all WebViews**. This
+> is a global request, not restricted to this WebView.
+
+**The Mobile Ads SDK renders its ads in a WebView.** So "pause the game while
+the ad plays" froze the ad instead. A rewarded ad's *Reward in 8 seconds* never
+counted down, the close button it turns into never appeared, the reward was
+never earned, and the unlock never happened. Worse, `resumeTimers()` only runs
+in `onResume()` — which cannot happen until the ad is dismissed, which it could
+not be. An interstitial escaped only because its X is there from frame one.
+
+The replacement does the same job aimed at one view. `AdHost` exposes
+`showing`, `onPause()` skips the global freeze while our own ad is up, and the
+page is told `window.__rsAdOpen(true)` so its render loop returns immediately —
+no simulation, and no nine-pass WebGL chain drawing a conduit nobody can see
+while a video tries to play next door.
+
+Two smaller things came with it, both the same shape — this app fighting the ad
+for the window:
+
+- `hideSystemBars()` no longer runs while an ad is showing. `AdActivity` is
+  translucent and shows the system bars; re-hiding them from the inset listener
+  is a fight the ad has to relayout through.
+- `onResume()` likewise leaves the bars alone until the ad is gone.
+
+An ad will not be edge-to-edge in this app, because `AdActivity` is Google's
+activity with Google's theme and it lays out inside the system bars while this
+one is immersive. With the page blanked, what shows around it is black.
+
+---
+
 ## Three ways an opt-in ad can be wired correctly and still never be seen
 
 All three shipped, and all three were invisible rather than broken.

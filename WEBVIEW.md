@@ -348,3 +348,28 @@ consent regions is never offered a control that would do nothing.
 
 The asymmetry is deliberate and worth restating: the page can ask for two
 things by name and can receive answers. It cannot reach the host.
+
+---
+
+## Pausing a WebView game is not `pauseTimers()`
+
+`WebView.onPause()` does not stop JavaScript, so the obvious way to stop a
+60fps rAF loop when the app goes to the background is `pauseTimers()`. Its
+documentation is one sentence long and the important half is easy to skim past:
+it is **global to every WebView in the process**.
+
+For a game that is the whole app, that reads as harmless — there is only one
+WebView. Then an SDK arrives that renders in a WebView of its own, and
+"pausing the game" pauses that too. Ads were the case here, and the failure was
+total: an ad shows by launching a translucent activity, which pauses the host
+activity, which froze the ad that had just launched. Nothing could count down
+and nothing could be dismissed.
+
+The rule this leaves behind: **pause your own view, never the process.**
+`web.onPause()` is per-view and safe. Anything global needs to know what else
+is in the process, and by the time a third-party SDK is in the build, you do
+not.
+
+Stopping the render loop is better done by asking the page. It knows what it is
+drawing, it can stop in one branch, and it cannot possibly affect anybody
+else's WebView.

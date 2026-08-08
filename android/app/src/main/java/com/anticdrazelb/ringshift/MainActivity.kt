@@ -136,14 +136,18 @@ class MainActivity : ComponentActivity() {
          * trigger in the game finds no host, and the game plays exactly as it
          * does in a browser. Ads are an addition to this app, never a
          * dependency of it. */
-        ads = AdHost(this) { tag, outcome ->
-            if (pageReady) {
-                web.evaluateJavascript(
-                    "window.__rsAdResult && window.__rsAdResult(" +
-                        JSONObject.quote(tag) + "," + JSONObject.quote(outcome) + ")", null
-                )
-            }
-        }
+        ads = AdHost(
+            this,
+            onResult = { tag, outcome ->
+                if (pageReady) {
+                    web.evaluateJavascript(
+                        "window.__rsAdResult && window.__rsAdResult(" +
+                            JSONObject.quote(tag) + "," + JSONObject.quote(outcome) + ")", null
+                    )
+                }
+            },
+            onCover = { on -> adCover(on) }
+        )
 
         /* CONSENT FIRST, ADS SECOND, AND THE GAME REGARDLESS.
          *
@@ -533,8 +537,10 @@ class MainActivity : ComponentActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(web) { _, insets ->
             pushSafeArea(insets)
             // A cutout change is also a rotation, and a rotation is one of the
-            // ways the system bars come back.
-            hideSystemBars()
+            // ways the system bars come back. Not while an ad is up, though:
+            // AdActivity is translucent and shows the bars, so re-hiding them
+            // on every inset pass is a fight the ad has to relayout through.
+            if (ads?.showing != true) hideSystemBars()
             insets
         }
         ViewCompat.requestApplyInsets(web)
@@ -641,15 +647,58 @@ class MainActivity : ComponentActivity() {
         web.evaluateJavascript("window.__rsDuck && window.__rsDuck($on)", null)
     }
 
+    // ------------------------------------------------------------ ad cover
+
+    /**
+     * AN AD IS ABOUT TO COVER THE SCREEN — AND THE OBVIOUS WAY TO HANDLE THAT
+     * IS THE BUG THIS EXISTS TO FIX.
+     *
+     * Showing an ad starts a translucent AdActivity, which pauses this one, so
+     * `onPause()` ran and called `WebView.pauseTimers()`. That call is
+     * documented as **global to every WebView in the process** — and the
+     * Mobile Ads SDK renders its ads in a WebView.
+     *
+     * So "pause the game while the ad plays" froze the ad. A rewarded ad's
+     * "Reward in 8 seconds" never counted down, the close button it turns into
+     * never appeared, the reward was never earned and the unlock never
+     * happened — and because `resumeTimers()` only runs in `onResume()`, which
+     * cannot happen until the ad is dismissed, the ad could not be dismissed
+     * at all. An interstitial survived it only because its X is there from the
+     * first frame.
+     *
+     * The replacement does the same job aimed at one view: the page is told to
+     * stop drawing, which stops a nine-pass WebGL chain rendering a conduit
+     * nobody can see while a video tries to play next door.
+     */
+    private fun adCover(on: Boolean) {
+        if (on) {
+            /* Undo any global pause already in effect before the ad gets going
+             * — belt and braces against a race with onPause(). */
+            web.resumeTimers()
+            if (pageReady) web.evaluateJavascript("window.__rsAdOpen && window.__rsAdOpen(true)", null)
+        } else {
+            web.resumeTimers()
+            if (pageReady) web.evaluateJavascript("window.__rsAdOpen && window.__rsAdOpen(false)", null)
+            hideSystemBars()
+        }
+    }
+
     // ------------------------------------------------------------- lifecycle
 
     /* The game must not keep rendering behind the task switcher. pauseTimers
      * stops its rAF loop and its audio scheduler; the countdown and the
      * arrival both tick on the wall clock and both guard against a gap, so
-     * they resume where they were rather than losing the time. */
+     * they resume where they were rather than losing the time.
+     *
+     * It is skipped for one case, and the reason is the whole of adCover():
+     * pauseTimers is global to every WebView in this process, an ad IS a
+     * WebView, and an ad launches by pausing us. Freezing the game here froze
+     * the ad with it. When the ad is ours, the page has already been told to
+     * stop drawing and that is the whole of what was wanted. */
     override fun onPause() {
         super.onPause()
         abandonAudioFocus()
+        if (ads?.showing == true) return
         web.onPause()
         web.pauseTimers()
     }
@@ -658,7 +707,9 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         web.resumeTimers()
         web.onResume()
-        hideSystemBars()
+        // Not while an ad owns the screen: yanking the system bars away from
+        // underneath it relayouts the ad mid-play.
+        if (ads?.showing != true) hideSystemBars()
         requestAudioFocus()
         // Top the chamber back up after an ad was spent, or after a spell in
         // the background with no network.

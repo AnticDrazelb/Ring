@@ -42,7 +42,13 @@ import com.google.android.gms.ads.rewardedinterstitial.RewardedInterstitialAdLoa
  * second timeout underneath, because "exactly one" is a promise this class
  * makes and a promise the SDK does not.
  */
-class AdHost(private val activity: Activity, private val onResult: (String, String) -> Unit) {
+class AdHost(
+    private val activity: Activity,
+    private val onResult: (String, String) -> Unit,
+    /** Called on the main thread with true just before an ad covers the
+     *  screen and false once it is gone. Exactly once each, per shown ad. */
+    private val onCover: (Boolean) -> Unit = {}
+) {
 
     companion object {
         private const val TAG = "RingshiftAds"
@@ -53,6 +59,20 @@ class AdHost(private val activity: Activity, private val onResult: (String, Stri
     private var rewarded: RewardedInterstitialAd? = null
     private var loadingInterstitial = false
     private var loadingRewarded = false
+    private var covering = false
+
+    /** True from just before `show()` until the ad is dismissed or fails.
+     *
+     *  The host has to know, because the obvious way to pause a game while an
+     *  ad plays — `WebView.pauseTimers()` — is documented as global to every
+     *  WebView in the process, and this SDK draws its ads in a WebView. */
+    val showing: Boolean get() = covering
+
+    private fun cover(on: Boolean) {
+        if (covering == on) return
+        covering = on
+        onCover(on)
+    }
 
     /** True once the SDK has initialised and the bridge may be installed. */
     val initialised: Boolean get() = ready
@@ -174,11 +194,14 @@ class AdHost(private val activity: Activity, private val onResult: (String, Stri
         if (ad == null) { loadInterstitial(); done(tag, "nofill"); return }
         interstitial = null                       // one shot; the next is loaded on dismiss
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-            override fun onAdDismissedFullScreenContent() { loadInterstitial(); done(tag, "shown") }
+            override fun onAdDismissedFullScreenContent() {
+                cover(false); loadInterstitial(); done(tag, "shown")
+            }
             override fun onAdFailedToShowFullScreenContent(e: AdError) {
-                loadInterstitial(); done(tag, "failed")
+                cover(false); loadInterstitial(); done(tag, "failed")
             }
         }
+        cover(true)
         ad.show(activity)
     }
 
@@ -194,13 +217,16 @@ class AdHost(private val activity: Activity, private val onResult: (String, Stri
         var earned = false
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
-                loadRewarded(); done(tag, if (earned) "earned" else "skipped")
+                cover(false); loadRewarded()
+                Log.i(TAG, "rewarded dismissed, earned=$earned")
+                done(tag, if (earned) "earned" else "skipped")
             }
             override fun onAdFailedToShowFullScreenContent(e: AdError) {
-                loadRewarded(); done(tag, "failed")
+                cover(false); loadRewarded(); done(tag, "failed")
             }
         }
-        ad.show(activity) { earned = true }
+        cover(true)
+        ad.show(activity) { earned = true; Log.i(TAG, "reward earned") }
     }
 
     private fun done(tag: String, outcome: String) {

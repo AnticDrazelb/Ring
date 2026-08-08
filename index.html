@@ -257,6 +257,14 @@
   }
   #reviveBtn.adOffer .cost{background:rgba(0,0,0,.14);}
   #reviveBtn.adOffer .cost svg{width:15px;height:15px;}
+  /* "Watch an ad to continue" is nine characters longer than the coin label
+     this button was measured against, and the button is nowrap — so at 320
+     and 360 it ran 33px past its own edge and was clipped mid-word. It wraps
+     instead, on the one variant that needs to. */
+  #reviveBtn.adOffer{
+    white-space:normal;line-height:1.15;font-size:var(--t-lg);
+    padding:0 14px;gap:8px;
+  }
   .btn .bIcon{width:24px;height:24px;flex:0 0 auto;}
   .btn.line .bIcon{color:var(--signal-hi);}
   .btn.ghost .bIcon{color:#9db3ce;}
@@ -2716,7 +2724,7 @@
 
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.6 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.7 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -5290,6 +5298,14 @@ ship.add(shipWing, shipSpine, shipFin, shipEdge, shipTrails,
 for(var na=0; na<nacelles.length; na++) ship.add(nacelles[na]);
 placeThrust();
 scene.add(ship);
+/* THE MENU CONDUIT IS EMPTY, AND IT HAS TO BE EMPTY FROM FRAME ONE.
+   setTunnel(false) hides the ship and the lane, but nothing calls it until
+   showMenu() runs — which is two thirds of the way THROUGH the boot black
+   hole. So the ship sat parked in the conduit while the studio card spiralled
+   away and while the horizon ate the screen, and only vanished once the menu
+   arrived. Measured: ship.visible true from 0ms to 4.2s of a 5.5s boot.
+   The ship belongs to a run; a run turns it back on. */
+ship.visible = false;
 
 function applyShipSkin(){
   var h = hullById(store.skin);
@@ -6104,6 +6120,20 @@ window.__rsAdsReady = function(){
     if(hs && !hs.classList.contains('hidden')) buildHangar();
     refreshLifeUI();          // repaints the death card's Continue button
   }catch(e){}
+  return true;
+};
+
+/* THE HOST SAYS AN AD IS ON SCREEN.
+
+   The alternative — the host calling WebView.pauseTimers() — is a trap, and
+   the game was caught in it: that call is documented as global to every
+   WebView in the process, and AdMob renders its ads in a WebView. Pausing
+   "the game" froze the ad's own countdown, so the reward was never earned and
+   the close button never appeared. This is the same intent, aimed at the one
+   view it is meant for. */
+var adCover = false;
+window.__rsAdOpen = function(on){
+  adCover = !!on;
   return true;
 };
 
@@ -11830,7 +11860,17 @@ function showMenu(){
   setTunnel(true, false);      // conduit keeps flying behind the wordmark
   clearBoard();          // never leave an abandoned run's rings frozen behind a menu
   tunnelVisible(true);   // and never leave the arrival's empty sky behind one
-  hideHole(); ship.visible = true; shipZ = 0;
+  /* NOT `ship.visible = true`. The line above is setTunnel(true, false) —
+     conduit on, HUD off — and setTunnel's whole reason for tying the ship to
+     the HUD is stated in its own comment: "on the menu we want the empty
+     conduit; a parked ship reads as an artefact". This line then turned it
+     straight back on, and the two have been contradicting each other since.
+
+     What it looked like: the ship sat in the conduit for the first four
+     seconds of every cold start, through the studio card spiralling away and
+     through the black hole eating the screen, until the canvas went fully
+     dark at BH_DARK and setTunnel(false) finally won the argument. */
+  hideHole(); shipZ = 0;
   menuScreen.classList.remove('hidden');
   reflow(menuScreen);
   document.getElementById('menuCredits').textContent = fmtChip(store.credits);
@@ -13621,6 +13661,11 @@ var idleAcc = 0;
 
 function loop(now){
   requestAnimationFrame(loop);
+  /* AN AD IS COVERING THE SCREEN. Do nothing at all — not a simulation step,
+     and above all not a nine-pass render of a conduit nobody can see, while
+     an ad next door is trying to play a video. `last` still advances, so
+     coming back costs one frame rather than a two-minute one. */
+  if(adCover){ last = now; return; }
   // clamped both ends: a backwards clock must stall the world, never rewind it
   var raw = Math.max(0, Math.min(0.05, (now-last)/1000));
   last = now;
