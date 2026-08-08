@@ -1645,12 +1645,16 @@
     font-size:clamp(96px,31vw,208px);font-weight:800;line-height:.92;
     letter-spacing:-.045em;color:#fff;
     font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
-    text-shadow:0 0 44px rgba(35,230,217,.5),0 0 108px rgba(35,230,217,.2);
+    /* Two dark shadows UNDER the two glows. By ONE the warp field behind this
+       is white and full-frame, and white-on-white is not a countdown. */
+    text-shadow:0 0 18px rgba(2,6,14,.95), 0 0 46px rgba(2,6,14,.85),
+                0 0 44px rgba(35,230,217,.5), 0 0 108px rgba(35,230,217,.2);
     animation:cdTick var(--cd-step,.92s) cubic-bezier(.16,1,.3,1) both;
   }
   #countCap{
     margin-top:22px;font-size:var(--t-fine);font-weight:800;letter-spacing:.42em;
-    text-transform:uppercase;color:var(--dim-2);
+    text-transform:uppercase;color:#cfe0f4;
+    text-shadow:0 0 12px rgba(2,6,14,.95),0 0 26px rgba(2,6,14,.8);
   }
   /* the pulse itself — one ring per heartbeat, out and gone */
   #countRing{
@@ -2584,7 +2588,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.8 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.9 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -4376,6 +4380,112 @@ var streakMat = new THREE.LineBasicMaterial({
 });
 var streaks = new THREE.LineSegments(streakGeo, streakMat);
 world.add(streaks);
+
+/* --- THE PRE-WARP FIELD ---------------------------------------------
+   The countdown's stars, and nothing else uses them.
+
+   The conduit's own streaks were never going to do this job. There are 320
+   of them, they live between radius 2.4 and 7.4 because that is where the
+   tunnel wall is, they are pale blue at a third opacity, and they are drawn
+   in front of a grid cylinder that is brighter than they are. Stretching
+   those produced a few scratches behind a cage.
+
+   So this is its own field, built for one moment:
+
+     - 1100 lines instead of 320, which is what "loads of them" costs.
+     - Out to radius 13, nearly twice the tunnel. The wide ones start off the
+       edge of the frame and sweep past you, which is the whole feeling of
+       being inside a field rather than looking down a pipe.
+     - White. Not the conduit's blue — white, additive, straight into the
+       bloom, so at full tension the frame goes bright.
+     - Length is per-star and grows with the tension, from a point to a line
+       running most of the way to the vanishing point.
+
+   It costs nothing when it is not on screen: visible=false skips the draw
+   entirely, and the buffer is only rewritten while the tension is non-zero,
+   which is three seconds at the start of a run and never again. */
+var WARPN = 1100;
+var warpGeo = new THREE.BufferGeometry();
+var wPos = new Float32Array(WARPN*6);       // two vertices a line
+var wCol = new Float32Array(WARPN*6);
+var wData = [];
+/* PLACED BY WHERE THEY LAND ON THE SCREEN, NOT BY WHERE THEY ARE IN THE WORLD.
+
+   Scattering stars through a cylinder of world radius 13 and then looking down
+   it puts almost all of them in the middle of the frame, because a star 250
+   units away at radius 13 projects to seven percent of the screen height. The
+   result is a bright knot around the vanishing point and empty corners — a
+   burst, not a field.
+
+   So the screen position is chosen FIRST. Pick where it should appear (rho, as
+   a fraction of half the frame height, out to 1.3 so the corners are covered
+   and some start off-frame entirely), pick how far away it is, and solve for
+   the world radius that puts it there. The field is then evenly dense across
+   the whole frame at every depth, which is what being inside one looks like. */
+var WARP_TAN = Math.tan(CAM_FOV*0.5*Math.PI/180);
+for(var wi=0;wi<WARPN;wi++){
+  var wa = Math.random()*Math.PI*2;
+  var wDist = 22 + Math.random()*300;                 // distance from the lens
+  var wRho  = 1.3*Math.sqrt(Math.random());           // even over the disc, past the corners
+  var wr = wRho * wDist * WARP_TAN;
+  wData.push({a:wa, r:wr, z:14 - wDist, len:0.72 + Math.random()*0.56});
+  /* head bright, tail gone — a stretched star is brightest where the star is */
+  var wb = 0.55 + Math.random()*0.45;
+  var b1 = wi*6;
+  wCol[b1]=wb; wCol[b1+1]=wb; wCol[b1+2]=wb;
+  wCol[b1+3]=0; wCol[b1+4]=0; wCol[b1+5]=0;
+}
+warpGeo.setAttribute('position', new THREE.BufferAttribute(wPos,3));
+warpGeo.setAttribute('color', new THREE.BufferAttribute(wCol,3));
+var warpMat = new THREE.LineBasicMaterial({
+  vertexColors:true, transparent:true, opacity:0, blending:THREE.AdditiveBlending,
+  /* depth TEST on, so the ship occludes the field instead of being scribbled
+     over by it. Depth write off, because a hundred additive lines writing
+     depth would occlude each other and the field would go patchy. */
+  depthWrite:false, depthTest:true,
+  /* AND NO FOG. Scene fog is the sector's colour, and every one of these
+     lines runs hundreds of units into it — so in a green sector the warp came
+     out green and in a pink one it came out pink. These are stars. They are
+     white everywhere. */
+  fog:false
+});
+var warpField = new THREE.LineSegments(warpGeo, warpMat);
+warpField.visible = false;
+warpField.frustumCulled = false;
+world.add(warpField);
+/* HOW LONG A TRAIL IS, AND WHY IT IS NOT A CONSTANT.
+
+   A segment parallel to Z from distance d to d+L projects to a screen length
+   proportional to r*L / (d*(d+L)). Hand every star the same L and the near
+   ones subtend enormous spokes while the far ones barely move — which is the
+   firework the first version drew.
+
+   Set L proportional to the star's own distance instead, L = k*d, and that
+   collapses to r*k/(1+k): independent of depth, proportional to RADIUS. Every
+   star draws the same trail for its distance from the centre of the frame,
+   and the ones out at the edge draw the longest — which is exactly how radial
+   motion blur behaves, and exactly what a warp looks like. */
+var WARP_K = 1.75;           // trail length as a multiple of distance, at full tension
+
+/* Rewritten only while there is tension to draw. `t` is signed: the snap
+   drives it negative, and a negative length is clamped to nothing, so the
+   field does not shrink politely on release — it is simply gone on the frame
+   the spring lets go, and the conduit is what slams back. */
+function warpDraw(t){
+  var on = t > 0.004;
+  if(warpField.visible !== on) warpField.visible = on;
+  if(!on) return;
+  var e = t*t*(3-2*t);                       // smoothstep: the last of it bites
+  warpMat.opacity = Math.min(1, e*1.3);
+  var k = WARP_K * e;
+  for(var i=0;i<WARPN;i++){
+    var d = wData[i], c = Math.cos(d.a)*d.r, sn = Math.sin(d.a)*d.r, p = i*6;
+    var dist = camZ - d.z;                   // how far this star is from the lens
+    wPos[p]   = c; wPos[p+1] = sn; wPos[p+2] = d.z;
+    wPos[p+3] = c; wPos[p+4] = sn; wPos[p+5] = d.z - dist*k*d.len;
+  }
+  warpGeo.attributes.position.needsUpdate = true;
+}
 
 // --- ambient dust: fills the empty volume between the rings and the wall
 var DUSTN = 700;
@@ -7200,6 +7310,9 @@ function arrivalFit(){
 function tunnelVisible(on){
   wall.visible = on; horizon.visible = on; dust.visible = on;
   streaks.visible = on; points.visible = on; lane.visible = on;
+  /* warpDraw owns this the rest of the time; hiding the conduit has to take
+     it too, or an interrupted countdown could leave a field over a menu. */
+  if(!on) warpField.visible = false;
   for(var i=0;i<bands.length;i++) bands[i].visible = on;
   for(var j=0;j<rails.length;j++) rails[j].visible = on;
   for(var k=0;k<laneTicks.length;k++) laneTicks[k].visible = on;
@@ -11734,19 +11847,23 @@ function update(dt){
   } else blackout *= Math.max(0, 1 - dt*3);
   var lightsOn = 1 - blackout*0.92;
 
-  /* Read once, above the first thing that uses it. */
+  /* THE CAGE GETS OUT OF THE WAY.
+
+     The conduit is a grid cylinder, four light rails and a lane of ticks, and
+     at rest it is the loudest thing on screen — which is right when you are
+     flying down it and wrong when the point of the moment is the stars. At
+     full tension it is down to eight percent and the warp field owns the
+     frame. cdS going NEGATIVE on the snap pushes this back over 1, so the
+     conduit does not fade in on release, it slams back brighter than resting
+     and settles. */
   var cdS = cdStretch();
+  var cageDim = 1 - Math.max(0, Math.min(1, cdS))*0.97 - Math.min(0, cdS)*0.85;
+  warpDraw(cdS);
   wallTex.offset.y -= flow*0.0026*dt;
-  /* The tunnel is a cylinder wearing a grid, so stretching the world along
-     its axis is the same thing as running fewer bands over the same length.
-     34 is the resting figure; at full tension it is 18 and the bands are
-     drawn out into long lines converging on the vanishing point. */
-  var wRep = 34 - cdS*16;
-  if(Math.abs(wallTex.repeat.y - wRep) > 0.01) wallTex.repeat.y = wRep;
-  wall.material.opacity = (0.48 + Math.max(0, cdS)*0.22) * lightsOn;
-  /* and the point it is all being pulled toward burns brighter for it */
+  wall.material.opacity = 0.48 * lightsOn * cageDim;
+  /* the one thing that brightens: the point it is all being pulled toward */
   horizon.material.opacity = 0.5 + Math.sin(performance.now()*0.0012)*0.18
-                           + Math.max(0, cdS)*0.42;
+                           + Math.max(0, cdS)*0.5;
 
   // wall bands sweep toward you and flare on the beat
   for(var i=0;i<bands.length;i++){
@@ -11760,7 +11877,8 @@ function update(dt){
 
   // light rails scroll toward you; they brighten with speed so the tube
   // visibly tightens up as the level accelerates
-  var railGlow = (0.34 + Math.max(0,(speed-34)/46)*0.45 + beatPulse*0.18 + (over.on?0.25:0)) * lightsOn;
+  var railGlow = (0.34 + Math.max(0,(speed-34)/46)*0.45 + beatPulse*0.18 + (over.on?0.25:0))
+               * lightsOn * cageDim;
   for(var rq=0;rq<rails.length;rq++){
     var rr = rails[rq];
     rr.position.z += flow*dt;
@@ -11776,7 +11894,7 @@ function update(dt){
     dPos[i2*3]=Math.cos(dd.a)*dd.r; dPos[i2*3+1]=Math.sin(dd.a)*dd.r; dPos[i2*3+2]=dd.z;
   }
   dustGeo.attributes.position.needsUpdate = true;
-  dustMat.opacity = 0.34 + beatPulse*0.2;
+  dustMat.opacity = (0.34 + beatPulse*0.2) * cageDim;
 
   // streaks
   /* How far the world turned while the trail was being laid down. The trail is
@@ -11799,12 +11917,7 @@ function update(dt){
        and starts at 32, this one is neither. Two different curves under one
        name in one function is a bug waiting for someone to move a line. */
     var streakSpd = Math.max(0, (speed-34)/46);
-    /* cdS is added rather than multiplied into s.len: at full tension every
-       streak reaches the same distance forward regardless of how long it
-       happens to be, which is what "pulled from one point" looks like. A
-       short one and a long one both end up at the vanishing point. */
-    var stretch = s.len * (0.5 + streakSpd*3.4 + (over.on?1.2:0) + aberrPunch*4.0)
-                + cdS*CD_STRETCH;
+    var stretch = s.len * (0.5 + streakSpd*3.4 + (over.on?1.2:0) + aberrPunch*4.0);
     var twist = -STREAK_TWIST * Math.tanh(wRad * (stretch / flowSafe) / STREAK_TWIST);
     var base = i3*SVERT*3;
     for(var sj=0; sj<STREAK_SEG; sj++){
@@ -11816,10 +11929,7 @@ function update(dt){
     }
   }
   streakGeo.attributes.position.needsUpdate = true;
-  /* Streak opacity keys off speed, and during the hold speed is zero — so
-     without this term the tension would draw out lines nobody can see. */
-  streakMat.opacity = 0.22 + Math.max(0,(speed-34)/46)*0.75 + beatPulse*0.12
-                    + Math.max(0, cdS)*0.62;
+  streakMat.opacity = (0.22 + Math.max(0,(speed-34)/46)*0.75 + beatPulse*0.12) * cageDim;
 
   // lane ticks scroll toward the camera, giving the lane a readable speed
   for(var i4=0;i4<laneTicks.length;i4++){
@@ -11827,7 +11937,7 @@ function update(dt){
     tk.position.z += flow*dt;
     if(tk.position.z > camZ+2) tk.position.z -= TICKN*TICK_GAP;
   }
-  laneMat.opacity = 0.22 + Math.max(0,(speed-34)/46)*0.14 + beatPulse*0.10;
+  laneMat.opacity = (0.22 + Math.max(0,(speed-34)/46)*0.14 + beatPulse*0.10) * cageDim;
 
   if(state===S_PLAY) updatePulses(dt, flow);
   updateDebris(dt);

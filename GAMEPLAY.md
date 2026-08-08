@@ -75,22 +75,54 @@ and uses because you can hear the last one coming without being told.
 
 ### The hold is a loaded spring
 
-Stopped is not the same as inert. Across the three numbers the whole world in
-front of you is **drawn out toward the vanishing point**, as though something
-at the far end of the conduit had taken hold of it and pulled: the star
-streaks lengthen into lines that all reach the same distance ahead, the
-tunnel's grid elongates along its own axis until there are half as many bands
-over the same length, and the point everything is converging on burns
-brighter for it.
+Stopped is not the same as inert. Across the three numbers a **warp field**
+comes up around you: eleven hundred white stars stretched into lines that all
+converge on the vanishing point, filling the frame edge to edge and running
+off the corners, as though something at the far end of the conduit had taken
+hold of everything and pulled.
 
-Two things are deliberately **not** in that list. **The ship**, which holds
+At the same time the **conduit gets out of the way**. The grid cylinder, the
+four light rails, the lane and the dust all fall to three percent of their
+brightness. At rest they are the loudest thing on screen, which is right when
+you are flying down them and wrong when the point of the moment is the stars.
+
+Two things are deliberately **not** in any of that. **The ship**, which holds
 perfectly still — measured at zero movement and zero change of scale for the
-entire count. And **the camera**, which does not dolly, pan or change its
-field of view. The world is being stretched away from you, and that only
-reads if the thing it is being stretched away *from* is nailed down.
+entire count, and which the field passes behind rather than over. And **the
+camera**, which does not dolly, pan or change its field of view. The world is
+being stretched away from you, and that only reads if the thing it is being
+stretched away *from* is nailed down.
 
 The build is quadratic, so three and two are a low hum and almost all of the
 draw happens under **ONE**.
+
+#### Why the field is its own object
+
+The conduit's own speed streaks cannot do this. There are 320 of them, they
+live between radius 2.4 and 7.4 because that is where the tunnel wall is,
+they are pale blue at a third opacity, and they are drawn in front of a grid
+brighter than they are. Stretching those produces a few scratches behind a
+cage.
+
+Two things about the dedicated field matter more than its size:
+
+- **The stars are placed by where they land on the screen, not by where they
+  are in the world.** Scatter them through a cylinder and look down it and
+  almost all of them sit in the middle of the frame — a star 250 units away
+  at radius 13 projects to seven percent of the screen height. The result is
+  a bright knot at the vanishing point and empty corners. So the screen
+  position is chosen first and the world radius solved for it.
+- **A trail's length is proportional to its star's distance.** A segment
+  parallel to the axis, from distance *d* to *d+L*, projects to a screen
+  length of roughly `r·L / (d·(d+L))`. Give every star the same *L* and the
+  near ones subtend enormous spokes while the far ones barely move — a
+  firework. Set `L = k·d` and that collapses to `r·k/(1+k)`: independent of
+  depth, proportional to radius. Every star draws the same trail for its
+  distance from the centre, and the ones at the edge draw the longest, which
+  is how radial motion blur actually behaves.
+
+The field is white and carries **no fog**. Scene fog is the sector's colour,
+and without that exemption the warp came out green in a green sector.
 
 Under it, the phone **rumbles** — one vibration pattern covering the whole
 count, in three phases of a number each: long slow pulses, then shorter and
@@ -100,11 +132,12 @@ half carries the moment alone.)*
 
 ### And then it lets go
 
-**GO!** does not ease the tension away, it releases it. The stretch is driven
-straight through zero into **compression** — the grid bunches tighter than its
-resting state for about a fifth of a second before settling, which is what a
-spring does and what "snaps back" means. A shockwave and a burst of chromatic
-aberration go with it.
+**GO!** does not ease the tension away, it releases it. The field does not
+retract politely — the tension goes straight through zero and the stars are
+simply gone on the frame the spring lets go. What snaps back is the conduit:
+the same negative value drives its brightness *past* its resting state, so it
+slams in brighter than normal for about a fifth of a second and then settles.
+A shockwave and a burst of chromatic aberration go with it.
 
 Everything else arrives on the same frame: the music starts, the pace climbs
 to what the level asked for over about a second and a half, and the stars draw
