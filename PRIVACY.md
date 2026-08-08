@@ -3,11 +3,10 @@
 
      1. This is a draft written from what the code actually does. It is not
         legal advice. Read every line before it goes out under your name.
-     2. Section 5 says a consent message is shown in the UK/EEA/Switzerland.
-        THAT IS NOT TRUE YET — the UMP SDK is not in the app (see
-        android/README.md, "Before you publish"). Either ship UMP before this
-        policy goes live, or delete that paragraph. A privacy policy that
-        describes behaviour the app does not have is worse than none.
+     2. Section 5's consent paragraph is true only once the GDPR message is
+        PUBLISHED in the AdMob console (Privacy & messaging > GDPR). The UMP
+        SDK is in the app and will show whatever is configured there — and
+        nothing at all if nothing is. See android/README.md.
      3. The published copy is docs/privacy.html. Keep the two in step.
      --------------------------------------------------------------------- -->
 
@@ -121,9 +120,10 @@ personalised advertising identifier.
 **Settings → Apps → RINGSHIFT → Storage → Clear data**. Either removes your
 entire save permanently.
 
-**Consent in the UK, EEA and Switzerland.** Where required, you will be shown
-a consent message before personalised ads are served, and you can change your
-choice later from the game's Settings screen. This is provided through
+**Consent in the UK, EEA and Switzerland.** Where required, a consent message
+is shown before any ad is requested, and no ad is requested until you have
+answered it. You can change your answer at any time from
+**Settings → Privacy choices** inside the game. This is provided through
 Google's User Messaging Platform.
 
 **GDPR / UK GDPR.** Where these apply, the legal bases are: your **consent**

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -34,6 +36,34 @@ val testDeviceIds: String =
         .split(",").map { it.trim() }.filter { it.isNotEmpty() }
         .joinToString(",")
 
+/* Force the UK/EEA consent form to appear (or not) from anywhere, so the
+ * consent flow can be tested without flying. Honoured only for a registered
+ * test device, which is the UMP SDK's rule rather than ours.
+ *
+ *     ./gradlew installRelease -Pringshift.testDeviceIds=<id> \
+ *                              -Pringshift.consentGeography=EEA
+ */
+val consentGeography: String =
+    (project.findProperty("ringshift.consentGeography") as String? ?: "").trim()
+
+/* RELEASE SIGNING, FROM A FILE THAT IS NOT IN THIS REPOSITORY.
+ *
+ * Create android/keystore.properties (git-ignored) with:
+ *
+ *     storeFile=/absolute/path/to/ringshift.jks
+ *     storePassword=...
+ *     keyAlias=ringshift
+ *     keyPassword=...
+ *
+ * Absent, the release build is simply unsigned, exactly as it was before —
+ * a missing key must not break the build for anyone who only wants to read
+ * the code. */
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val hasSigning = keystoreProps.getProperty("storeFile")?.isNotBlank() == true
+
 android {
     namespace = "com.anticdrazelb.ringshift"
     compileSdk = 35
@@ -54,8 +84,8 @@ android {
         minSdk = 24
         targetSdk = 35
 
-        versionCode = 53
-        versionName = "5.3"
+        versionCode = 54
+        versionName = "5.4"
 
         // No instrumentation tests: the thing under test is a web page, and it
         // has its own headless suite driven by Playwright.
@@ -70,6 +100,27 @@ android {
         // Comma-separated, empty by default. Both build types get it: the whole
         // point is to make a RELEASE build safe to run on your own phone.
         buildConfigField("String", "AD_TEST_DEVICES", "\"$testDeviceIds\"")
+
+        /* Forces the consent form to appear (or not) regardless of where
+           the phone is. Honoured only for a registered test device — the
+           SDK's rule, not ours. EEA | NOT_EEA | unset.
+             -Pringshift.consentGeography=EEA */
+        buildConfigField("String", "CONSENT_GEOGRAPHY", "\"$consentGeography\"")
+    }
+
+    signingConfigs {
+        if (hasSigning) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+                /* Schemes are left to AGP, which picks from minSdk. At 24 that
+                 * is v2 and no v1 — verified on the output rather than assumed,
+                 * because setting enableV1Signing here does not produce a v1
+                 * signature and a comment claiming otherwise would be a lie. */
+            }
+        }
     }
 
     buildTypes {
@@ -107,8 +158,10 @@ android {
                 "\"ca-app-pub-6248261164711853/4350170471\"")
             buildConfigField("String", "AD_REWARDED",
                 "\"ca-app-pub-6248261164711853/7945534623\"")
-            // Sign with your own key before publishing. Left unset on purpose:
-            // a committed keystore is worse than an unsigned build.
+            /* Signed only if android/keystore.properties exists. No keystore
+             * is committed and none ever should be; without one this produces
+             * app-release-unsigned.apk exactly as before. */
+            if (hasSigning) signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -153,4 +206,5 @@ dependencies {
     implementation(libs.androidx.activity)      // ComponentActivity, onBackPressedDispatcher
     implementation(libs.androidx.webkit)        // WebViewAssetLoader, WebViewClientCompat, WebMessageListener
     implementation(libs.play.services.ads)      // AdMob
+    implementation(libs.user.messaging.platform) // UMP — UK/EEA consent
 }

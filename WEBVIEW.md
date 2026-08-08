@@ -322,3 +322,29 @@ which build you are running. Then:
 4. Rotate the phone and resize the window if you can. Nothing should jump: the
    layout has no width breakpoints left that change scale, only ones that
    *hide* a chip when the top tray runs out of room.
+
+---
+
+## Consent, and the second verb on the bridge
+
+Ads in the UK and EEA cannot be requested until the player has been asked.
+That is Google's EU User Consent Policy and AdMob enforces it against the
+account, not the app.
+
+The host runs the User Messaging Platform before the ad SDK exists: ask, show
+the form if one is required, and only start `MobileAds` if the answer allows
+it. A refusal is a normal outcome — the bridge is never installed, the page
+finds no `window.__rsAdHost`, and every trigger in the game evaluates to
+nothing, which is exactly the path a browser already takes. There is no second
+code path for "ads declined", because there was never a first one for "ads
+present".
+
+Reopening the choice is the only reason the page→host channel has a second
+verb. `{kind:'privacy'}` on the same origin-scoped `WebMessageListener` asks
+the host to show the privacy options form; the host answers by setting
+`window.__rsPrivacyOptions` and calling `window.__rsPrivacySync()`, and the
+game shows or hides one Settings row on that flag alone. A player outside the
+consent regions is never offered a control that would do nothing.
+
+The asymmetry is deliberate and worth restating: the page can ask for two
+things by name and can receive answers. It cannot reach the host.

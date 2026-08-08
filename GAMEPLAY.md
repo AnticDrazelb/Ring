@@ -1105,24 +1105,40 @@ is not a promise the SDK makes.
 ### Seeing them without a phone
 
 The consequence of the paragraph above is that opening `index.html` in a
-browser shows you no ads at all, correctly, and therefore tells you nothing
-about whether the placements land well.
+browser shows no ads at all, correctly, and therefore tells you nothing about
+whether the placements land well.
 
-So `index.html?ads=sim` installs a fake host. The **policy is the real one** —
-every cooldown, the session floor, the hour cap, the once-per-account ship
-unlock — and only the last step, the one that would have drawn a Google ad, is
-replaced with a dashed gold placeholder that gates its own close button for
-2.6 seconds the way a real interstitial does.
+**Settings → Ad preview → Simulate ads** installs a fake host. The policy is
+the real one, and only the last step — the one that would have drawn a Google
+ad — becomes a dashed gold placeholder that gates its own close button for 2.6
+seconds the way an interstitial does. **Show one now** puts one on screen
+immediately.
 
-| | |
-|---|---|
-| `?ads=sim` | an ad plays; rewarded pays out → `earned` / `shown` |
-| `?ads=skip` | the player closes a rewarded early → `skipped` |
-| `?ads=nofill` | nothing in inventory, answered instantly → `nofill` |
+Two production timings are relaxed while previewing, because they exist to
+protect a player from being interrupted and here they only hide the thing
+being looked at: the 120-second session floor is waived and the 90-second
+cooldown drops to 12. The hour cap, once-per-account and one-continue-per-level
+are untouched, because those are the rules worth checking. And when a trigger
+*is* blocked, preview says so in a toast — silence is the enemy of a preview
+even though it is exactly right in production.
 
-It cannot reach a player: the Android host loads a bare asset URL with no
-query string on it and there is no way to add one, and the simulator refuses
-to install over a real host if one is already attached.
+The same thing from a link, for sharing a repro: `?ads=sim`, `?ads=skip`
+(rewarded closed early), `?ads=nofill`, `?ads=off`.
+
+It cannot reach a player. The Settings group appears only when the page was
+**not** served from `appassets.androidplatform.net` — the app's own origin,
+and the only place the host serves from — so the test is where the page came
+from rather than a flag anyone could set. The simulator also refuses to
+install over a real host.
+
+### Consent, before any of it
+
+In the UK, the EEA and Switzerland nothing above happens until the player has
+been asked. The host runs Google's User Messaging Platform first, shows the
+consent form if one is required, and only then starts the ad SDK at all —
+so a player who declines gets a game with no host attached, which is the same
+game a browser gets. **Settings → Privacy choices** reopens the decision, and
+appears only when there is a decision to reopen.
 
 ### On a device, register the device
 

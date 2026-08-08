@@ -1537,6 +1537,31 @@
   .adSimSub{
     margin-bottom:6px;font-size:var(--t-sm);line-height:1.5;color:var(--dim);
   }
+  /* the corner badge that says the simulator is on. Present the whole time it
+     is, because "why am I seeing a placeholder" and "why am I NOT seeing one"
+     are both questions this answers. */
+  .adBadge{
+    position:fixed;z-index:8500;pointer-events:none;
+    left:calc(var(--sa-left, env(safe-area-inset-left, 0px)) + 10px);
+    /* clear of the footer: every screen with buttons puts them along the
+       bottom, and a badge sitting on "Reset to default" reads as a bug in
+       the very thing it is there to explain. */
+    bottom:calc(var(--sa-bottom, env(safe-area-inset-bottom, 0px)) + 88px);
+    padding:4px 9px;border-radius:999px;opacity:.88;
+    font-size:var(--t-tiny);font-weight:800;letter-spacing:.12em;
+    color:#0d0a00;background:rgba(255,211,77,.92);
+  }
+  .setGroupHead em{
+    font-style:normal;margin-left:8px;opacity:.5;font-size:.86em;letter-spacing:.1em;
+  }
+  /* the non-destructive miniBtn. The base one is red because the first three
+     of them were Wipe-shaped; these are not. */
+  .miniBtn.calm{
+    background:rgba(35,230,217,.14);box-shadow:inset 0 0 0 1px rgba(35,230,217,.4);
+    color:var(--signal);
+  }
+  .peekRow{display:flex;gap:10px;}
+  .peekRow .miniBtn{flex:1 1 0;min-width:0;padding:0 8px;}
 
   .gradeHero{margin:20px 0 24px;}
   .gradeMark{
@@ -2628,15 +2653,33 @@
       <div class="setGroup">
         <div class="setGroupHead">Progress</div>
         <label class="setRow"><span>Flight manual<small>ECHO reads you the ship&rsquo;s files</small></span>
-          <button class="miniBtn" id="manualBtn" style="background:rgba(35,230,217,.14);box-shadow:inset 0 0 0 1px rgba(35,230,217,.4);color:var(--signal)">Read</button></label>
+          <button class="miniBtn calm" id="manualBtn">Read</button></label>
         <label class="setRow"><span>Replay the tutorial</span>
-          <button class="miniBtn" id="tutBtn" style="background:rgba(35,230,217,.14);box-shadow:inset 0 0 0 1px rgba(35,230,217,.4);color:var(--signal)">Replay</button></label>
+          <button class="miniBtn calm" id="tutBtn">Replay</button></label>
         <label class="setRow"><span>Reset all progress</span>
           <button class="miniBtn" id="wipeBtn">Wipe</button></label>
+        <!-- PRIVACY CHOICES. Hidden unless the host says the player has a
+             consent choice to revisit, which is a UK/EEA player and nobody
+             else. A control that would do nothing is worse than no control. -->
+        <label class="setRow hidden" id="privRow"><span>Privacy choices<small>change your consent for personalised ads</small></span>
+          <button class="miniBtn calm" id="privBtn">Manage</button></label>
       </div>
+      <!-- AD PREVIEW. Absent on a device: adSimApply() hides this group
+           whenever the page is served from the app's own origin, so the
+           check is where the page came FROM rather than a flag. -->
+      <div class="setGroup hidden" id="setAdGroup">
+        <div class="setGroupHead">Ad preview <em>browser only</em></div>
+        <label class="setRow"><span>Simulate ads<small>placeholders in place of real ads, real rules</small></span>
+          <span class="tog" data-set="adsim"><i></i></span></label>
+        <div class="setRow col"><span>Show one now<small>ignores the cooldown and the session floor</small></span>
+          <span class="peekRow">
+            <button class="miniBtn calm" id="adPeekI">Interstitial</button>
+            <button class="miniBtn calm" id="adPeekR">Rewarded</button></span></div>
+      </div>
+
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 5.3 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 5.4 &middot; the long way home</div>
       <!-- "Is it actually on the GPU?" is the one performance question you
            cannot answer by looking at the game, because a software renderer
            produces the same picture slowly. This answers it on the device. -->
@@ -5688,14 +5731,14 @@ function adBlockedBy(forced, now){
   if(adInFlight)                                  return 'busy';
   if(state === S_PLAY || state === S_ARRIVE)      return 'mid-run';
   var a = adState();
-  if(forced && now - adSessionStart < AD_FLOOR)   return 'session floor';
-  if(now - a.last < AD_COOLDOWN)                  return 'cooldown';
+  if(forced && now - adSessionStart < adFloorMs())return 'session floor';
+  if(now - a.last < adCooldown())                 return 'cooldown';
   if(adsInLastHour(now) >= AD_HOUR_CAP)           return 'hour cap';
   return '';
 }
 function adWaitMs(now){
   now = now || Date.now();
-  return Math.max(0, AD_COOLDOWN - (now - adState().last));
+  return Math.max(0, adCooldown() - (now - adState().last));
 }
 
 /* Book-keeping happens when an ad is actually SHOWN, not when one is asked
@@ -5710,43 +5753,70 @@ function adRecordShown(now){
   save();
 }
 
-/* THE SIMULATOR, FOR A BROWSER, BEHIND A FLAG.
+/* THE SIMULATOR — SO THE PLACEMENTS CAN BE SEEN WITHOUT AN APK.
 
-   There is no ad SDK in a browser, so on a desktop or a phone browser
-   window.__rsAdHost is never set, adBlockedBy() answers 'no host', and every
-   one of the four placements correctly does nothing. That is right, and it is
-   also unhelpful: it means the only way to see where an ad lands, how long it
-   interrupts for, and whether the copy around it reads properly is to build
-   an APK.
+   There is no ad SDK in a browser, so window.__rsAdHost is never set,
+   adBlockedBy() answers 'no host', and all four placements correctly do
+   nothing. Correct, and useless: it means the only way to see where an ad
+   lands is to build and install an APK.
 
-   So: index.html?ads=sim installs a fake host. It is the real policy driving
-   it — the cooldowns, the session floor, the hour cap, the once-per-account
-   ship unlock are all untouched — only the thing at the end that would have
-   drawn a Google ad is replaced with a dashed gold placeholder.
+   Turning it on is deliberately easy, because the first version of this was
+   a URL flag and a URL flag was not enough — the 120 second session floor
+   then hid every forced ad for the first two minutes anyway, which looks
+   exactly like a broken simulator.
 
-     ?ads=sim      an ad plays; rewarded pays out          earned / shown
-     ?ads=skip     the player closes a rewarded early      skipped
-     ?ads=nofill   nothing in inventory, answered instantly  nofill
+     Settings -> Ad preview -> Simulate ads      (the way)
+     index.html?ads=sim                          (same thing, from a link)
+     index.html?ads=skip                         rewarded closed early
+     index.html?ads=nofill                       nothing in inventory
 
-   It cannot reach the shipped app. The Android host loads a bare asset URL
-   with no query string on it, and there is no way for a player to add one;
-   and if a real host is already attached this refuses to replace it. */
-function adSimInstall(){
-  var mode = '';
+   Three things keep it away from players:
+     - it never installs over a real host,
+     - the Settings group is absent unless the page is in a browser, which is
+       decided by the ORIGIN, not by a flag anyone could set,
+     - and the Android host serves from appassets.androidplatform.net, so
+       the test is true exactly when it should be. */
+var AD_SIM = '';            // '' | 'sim' | 'skip' | 'nofill'
+var adSimOwns = false;      // did WE install the host we are looking at?
+
+/* Running inside the native shell? Decided by where the page was served
+   from. WebViewAssetLoader gives the app https://appassets.androidplatform.net
+   and nothing else can be there, so this cannot be spoofed into being false
+   on a device or true off one. */
+function nativeHost(){
   try{
-    var m = /[?&]ads=([a-z]+)/i.exec(window.location.search || '');
-    if(m) mode = m[1].toLowerCase();
-  }catch(e){}
-  if(mode !== 'sim' && mode !== 'skip' && mode !== 'nofill') return;
-  if(window.__rsAdHost) return;              // never displace a real host
+    if(window.__rsNative) return true;
+    return /(^|\.)androidplatform\.net$/i.test(window.location.hostname || '');
+  }catch(e){ return false; }
+}
 
-  var CLOSE_AFTER = 2600;                    // what a real interstitial gates
+/* Sim timings. The production numbers exist to protect a player from being
+   interrupted; while previewing they only hide the thing being previewed.
+   The rest of the policy — the hour cap, once-per-account, one continue per
+   level — is untouched, because those are the rules worth checking. */
+function adCooldown(){ return AD_SIM ? 12000 : AD_COOLDOWN; }
+function adFloorMs(){  return AD_SIM ? 0     : AD_FLOOR; }
 
-  window.__rsAdHost = { request: function(kind, tag){
+function adSimBadge(){
+  var el = document.getElementById('adBadge');
+  if(!AD_SIM){ if(el) el.parentNode.removeChild(el); return; }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'adBadge'; el.className = 'adBadge';
+    document.body.appendChild(el);
+  }
+  el.textContent = 'AD PREVIEW · ' + AD_SIM.toUpperCase();
+}
+
+/* The fake host. Same four-word contract the Android one implements:
+   request(kind, tag) -> __rsAdResult(tag, outcome). */
+function adSimHost(){
+  var CLOSE_AFTER = 2600;                   // what a real interstitial gates
+  return { __sim: true, request: function(kind, tag){
     var answer = function(outcome){
       try{ window.__rsAdResult(tag, outcome); }catch(e){}
     };
-    if(mode === 'nofill'){ setTimeout(function(){ answer('nofill'); }, 300); return; }
+    if(AD_SIM === 'nofill'){ setTimeout(function(){ answer('nofill'); }, 300); return; }
 
     var rewarded = (kind === 'rewarded');
     var wrap = document.createElement('div');
@@ -5768,20 +5838,73 @@ function adSimInstall(){
       if(left > 0){ btn.textContent = left + 's'; return; }
       clearInterval(tick);
       btn.disabled = false;
-      btn.textContent = (rewarded && mode === 'skip') ? 'CLOSE' :
+      btn.textContent = (rewarded && AD_SIM === 'skip') ? 'CLOSE' :
                         (rewarded ? 'CLAIM REWARD' : 'CONTINUE');
     }, 100);
 
     btn.addEventListener('click', function(){
       clearInterval(tick);
       if(wrap.parentNode) wrap.parentNode.removeChild(wrap);
-      answer(rewarded ? (mode === 'skip' ? 'skipped' : 'earned') : 'shown');
+      answer(rewarded ? (AD_SIM === 'skip' ? 'skipped' : 'earned') : 'shown');
     });
   }};
+}
 
-  /* Say so, once, in the console. A placeholder that appears with no
-     explanation looks exactly like a bug. */
-  try{ console.log('RINGSHIFT: ad simulator active (' + mode + ') — no real ads are involved.'); }catch(e){}
+/* Attach or detach, from whatever AD_SIM currently says. Safe to call twice,
+   and it will not touch a host it did not create. */
+function adSimApply(){
+  if(nativeHost()) AD_SIM = '';
+  if(AD_SIM){
+    if(!window.__rsAdHost){ window.__rsAdHost = adSimHost(); adSimOwns = true; }
+    else if(!window.__rsAdHost.__sim){ AD_SIM = ''; }   // a real host wins
+  } else if(adSimOwns){
+    window.__rsAdHost = null; adSimOwns = false;
+  }
+  adSimBadge();
+  var g = document.getElementById('setAdGroup');
+  if(g) g.classList.toggle('hidden', nativeHost());
+  var t = document.querySelector('.tog[data-set="adsim"]');
+  if(t){ t.classList.toggle('on', !!AD_SIM); t.setAttribute('aria-checked', AD_SIM ? 'true':'false'); }
+}
+
+/* Boot. The URL wins over the stored setting, and using it stores the choice
+   so a reload without the query string keeps previewing. */
+function adSimBoot(){
+  if(nativeHost()) return;
+  var mode = '';
+  try{
+    var m = /[?&]ads=([a-z]+)/i.exec(window.location.search || '') ||
+            /[#&]ads=([a-z]+)/i.exec(window.location.hash   || '');
+    if(m) mode = m[1].toLowerCase();
+  }catch(e){}
+  if(mode === 'off'){ store.adsim = false; save(); }
+  else if(mode === 'sim' || mode === 'skip' || mode === 'nofill'){
+    AD_SIM = mode; store.adsim = true; save();
+  } else if(store.adsim){
+    AD_SIM = 'sim';
+  }
+  adSimApply();
+  if(AD_SIM){
+    try{ console.log('RINGSHIFT: ad preview active (' + AD_SIM +
+      ') — placeholders only, no real ads are involved.'); }catch(e){}
+  }
+}
+
+/* Show one right now, ignoring policy. The Settings buttons use this: when
+   you press "show me an interstitial" you mean now, not "in 74 seconds". */
+function adSimPeek(kind){
+  if(!AD_SIM){ toast('Turn on Simulate ads first'); return; }
+  if(adInFlight){ return; }
+  var host = window.__rsAdHost;
+  if(!host){ return; }
+  var tag = 'peek' + (++adSeq);
+  adInFlight = true;
+  adPending[tag] = function(outcome){
+    adInFlight = false; delete adPending[tag];
+    toast('Preview: ' + outcome);
+  };
+  setTimeout(function(){ var f = adPending[tag]; if(f) f('timeout'); }, 30000);
+  host.request(kind, tag);
 }
 
 /* ASK THE HOST FOR ONE.
@@ -5798,7 +5921,13 @@ var adSeq = 0, adPending = {};
 function adRequest(kind, forced, done){
   done = done || function(){};
   var why = adBlockedBy(forced);
-  if(why){ done(why); return; }
+  if(why){
+    /* Silence is the enemy of a preview. In production a blocked ad is the
+       system working and the player must never hear about it; in preview it
+       is the only thing you actually wanted to know. */
+    if(AD_SIM && why !== 'no host') toast('No ad: ' + why);
+    done(why); return;
+  }
   var host = adHost();
   var tag = 'a' + (++adSeq);
   adInFlight = true;
@@ -7477,7 +7606,7 @@ function armBack(){ try{ history.pushState({rs:1}, ''); }catch(e){} }
 window.addEventListener('popstate', function(){ if(goBack()) armBack(); });
 armBack();
 
-adSimInstall();
+adSimBoot();
 
 /* WHAT IS ACTUALLY DRAWING THIS.
 
@@ -11652,6 +11781,8 @@ function showSettings(from){
      whole point is that it says what is happening NOW. */
   var gl = document.getElementById('setGpu');
   if(gl) gl.textContent = gpuLine();
+  adSimApply();          // shows the preview group in a browser, hides it in the app
+  if(window.__rsPrivacySync) window.__rsPrivacySync();
   syncSettingsUI();
 }
 var setReturn = 'menu';
@@ -12351,12 +12482,31 @@ syncToggles();
       if(key === 'glyphs' && !store.glyphs && (store.level||1) <= GLYPH_FORCED_TO)
         toast('Glyphs stay on until level ' + (GLYPH_FORCED_TO + 1));
       if(key === 'swapSides') showZones();
+      if(key === 'adsim'){
+        AD_SIM = store.adsim ? 'sim' : '';
+        adSimApply();
+        toast(AD_SIM ? 'Ad preview on \u00b7 placeholders only' : 'Ad preview off');
+      }
       if(key === 'fx' && store.fx) perfOK = true;
       // sfx and music are sliders now; their old toggle branches lived here
       save(); syncToggles(); applyShipColor();
       buzz(10);
     });
   }
+  /* Handed to the host, which re-pushes it after the form closes: declining
+     can change whether the row belongs on screen at all. */
+  window.__rsPrivacySync = function(){
+    var r = document.getElementById('privRow');
+    if(r) r.classList.toggle('hidden', !window.__rsPrivacyOptions);
+    return true;
+  };
+  bindBtn('privBtn', function(){
+    if(window.__rsPrivacy) window.__rsPrivacy();
+  });
+
+  bindBtn('adPeekI', function(){ adSimPeek('interstitial'); });
+  bindBtn('adPeekR', function(){ adSimPeek('rewarded'); });
+
   var sl = document.getElementById('sensSlider');
   if(sl){
     sl.addEventListener('pointerdown', function(e){ e.stopPropagation(); });

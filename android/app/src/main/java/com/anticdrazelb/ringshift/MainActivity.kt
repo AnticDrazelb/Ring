@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
     private var pageReady = false
 
     private var ads: AdHost? = null
+    private var consent: ConsentGate? = null
     private val audioManager by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     private var focusRequest: AudioFocusRequest? = null
     private var hasFocus = false
@@ -127,7 +128,24 @@ class MainActivity : ComponentActivity() {
                         JSONObject.quote(tag) + "," + JSONObject.quote(outcome) + ")", null
                 )
             }
-        }.also { it.start { installAdBridge() } }
+        }
+
+        /* CONSENT FIRST, ADS SECOND, AND THE GAME REGARDLESS.
+         *
+         * In the UK, the EEA and Switzerland an ad may not be requested until
+         * the player has been asked. The gate asks, shows the form if one is
+         * needed, and answers whether ads may run at all. `false` is a normal
+         * answer — a player who declined — and the only consequence is an app
+         * with no ads in it, which must still be a complete game.
+         *
+         * Everywhere else the status comes back NOT_REQUIRED, no form appears,
+         * and this costs one asynchronous round trip that the game spends
+         * drawing its studio card. */
+        consent = ConsentGate(this)
+        consent?.run { canRequestAds ->
+            if (canRequestAds) ads?.start { installAdBridge() }
+            pushPrivacyOptions()
+        }
 
         /* BACK.
          *
@@ -276,6 +294,8 @@ class MainActivity : ComponentActivity() {
                 pageReady = true
                 // The first measurement usually happens before the page exists.
                 pushSafeArea(ViewCompat.getRootWindowInsets(view))
+                // The consent answer usually lands before the page does.
+                pushPrivacyOptions()
 
                 /* THE WINDOW BACKGROUND HAS DONE ITS JOB — STOP PAINTING IT.
                  *
@@ -341,7 +361,15 @@ class MainActivity : ComponentActivity() {
                 val body = message.data ?: return@addWebMessageListener
                 try {
                     val o = JSONObject(body)
-                    ads?.request(o.optString("kind"), o.optString("tag"))
+                    /* Two verbs, both of which the page may only ASK for.
+                     * "privacy" reopens the consent choice — a control the
+                     * player is entitled to under the same policy that
+                     * required the form in the first place. */
+                    if (o.optString("kind") == "privacy") {
+                        consent?.showPrivacyOptions { pushPrivacyOptions() }
+                    } else {
+                        ads?.request(o.optString("kind"), o.optString("tag"))
+                    }
                 } catch (e: Exception) {
                     // A malformed message is a bug on the page's side, and the
                     // page is ours. Drop it; do not let it reach the SDK.
@@ -357,8 +385,32 @@ class MainActivity : ComponentActivity() {
               window.__rsAdHost = { request: function(kind, tag){
                 rsAds.postMessage(JSON.stringify({kind:kind, tag:tag}));
               }};
+              window.__rsPrivacy = function(){
+                rsAds.postMessage(JSON.stringify({kind:'privacy'}));
+              };
             })();
             """.trimIndent(), null
+        )
+        pushPrivacyOptions()
+    }
+
+    /**
+     * Tell the page whether a "Privacy choices" row is due.
+     *
+     * It is due exactly when the consent SDK says the player has a choice they
+     * are entitled to revisit — which is a UK/EEA player and nobody else. The
+     * page shows the row on that flag alone, so a player in a region with no
+     * consent requirement never sees a control that would do nothing.
+     *
+     * Pushed again after the form closes, because declining can change the
+     * answer.
+     */
+    private fun pushPrivacyOptions() {
+        if (!pageReady) return
+        val on = consent?.privacyOptionsRequired == true
+        web.evaluateJavascript(
+            "window.__rsPrivacyOptions = $on;" +
+                "window.__rsPrivacySync && window.__rsPrivacySync();", null
         )
     }
 

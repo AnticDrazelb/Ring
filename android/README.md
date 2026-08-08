@@ -18,7 +18,8 @@ two ever disagree, that document is the reasoning and this is the code.
 ```
 ./gradlew assembleDebug          # app/build/outputs/apk/debug/
 ./gradlew installDebug           # to a connected device
-./gradlew assembleRelease        # unsigned; see "Publishing"
+./gradlew assembleRelease        # see "Publishing"
+./gradlew bundleRelease          # the .aab you upload to Play
 ```
 
 If Gradle cannot find your SDK, copy `local.properties.example` to
@@ -31,7 +32,6 @@ it is a path on your machine, not a property of the project.
 
 | | |
 |---|---|
-| `setLayerType(LAYER_TYPE_HARDWARE)` | No hardware layer means no WebGL, and the game shows its "this device cannot run RINGSHIFT" card instead of starting. |
 | `domStorageEnabled = true` | **Off by default in a WebView.** The entire save is `localStorage` — progress, stars, credits, settings, the daily, the per-level ledger, every grade. Off means every session silently restarts at level 1. |
 | `WebViewAssetLoader` | `file:///android_asset/` gets an **opaque origin** on several WebView versions, and an opaque origin has no `localStorage`. The game would run and quietly never save. The loader gives it a real `https://appassets.androidplatform.net` origin and a real storage bucket. |
 | `mediaPlaybackRequiresUserGesture = false` | The game builds its AudioContext on first touch anyway, but leaving this true also suspends the context after a resume on some versions — a game that comes back from the task switcher silent. |
@@ -50,15 +50,21 @@ it is a path on your machine, not a property of the project.
 | `RENDERER_PRIORITY_IMPORTANT`, waived=false | The default waives the renderer process's priority the moment the view is not visible, which is how a game gets reaped in the task switcher. |
 | `window.setBackgroundDrawable(null)` on page finish | It exists to stop a white flash on cold start. After that it is a full-screen opaque fill under a full-screen opaque view — every pixel painted twice, forever. |
 
-There is deliberately **no `INTERNET` permission** and no
-`@JavascriptInterface` bridge.
+There is deliberately no `@JavascriptInterface` bridge.
 
-Communication runs in exactly **one direction**: the host calls
-`evaluateJavascript` and reads the result. The page can be asked things
-(`__rsBack`, `__rsAudio`, `__rsDuck`); it cannot reach anything. A
-`@JavascriptInterface` would invert that and hand the page a Java object,
-which is the difference between "the game has a bug" and "the game has a bug
-that can touch the filesystem".
+Almost everything runs in one direction: the host calls `evaluateJavascript`
+and reads the result. The page can be *asked* things — `__rsBack`, `__rsAudio`,
+`__rsDuck`, `__rsPrivacySync` — and cannot reach anything.
+
+The one upward channel is `WebViewCompat.addWebMessageListener`, scoped to
+`https://appassets.androidplatform.net`, carrying strings, and accepting
+exactly two verbs: "show an ad" and "reopen my privacy choice". A
+`@JavascriptInterface` would instead hand the page a live Java object and
+everything reachable from it, which is the difference between "the game has a
+bug" and "the game has a bug that can touch the filesystem".
+
+The `INTERNET` permission arrived with ads and is used only by the Google SDKs;
+the game's own WebView keeps `blockNetworkLoads = true`.
 
 ---
 
@@ -121,21 +127,32 @@ live traffic`.
 
 ### Seeing where the ads land without building anything
 
-The placements themselves can be checked in a desktop browser. Open
-`index.html?ads=sim` and a fake host is installed: the **real** policy runs —
-every cooldown, the session floor, the hour cap, the once-per-account ship
-unlock — and only the final "draw a Google ad" step is replaced with a dashed
-gold placeholder.
+Open `index.html` in any browser and go to **Settings → Ad preview →
+Simulate ads**. A fake host installs: the **real** policy runs — the hour cap,
+the once-per-account ship unlock, one continue per level — and only the final
+"draw a Google ad" step becomes a dashed gold placeholder. **Show one now**
+puts an interstitial or a rewarded ad on screen immediately.
+
+Two production timings are relaxed while previewing, because they exist to
+protect a player from interruption and while previewing they only hide the
+thing being previewed: the 120-second session floor is waived and the global
+cooldown drops to 12 seconds. Everything else is the shipping policy, and when
+a trigger is blocked the reason is shown as a toast rather than swallowed.
+
+Same thing from a link, for sharing a repro:
 
 | | |
 |---|---|
 | `?ads=sim` | an ad plays; rewarded pays out → `earned` / `shown` |
 | `?ads=skip` | the player closes a rewarded early → `skipped` |
 | `?ads=nofill` | nothing in inventory, answered instantly → `nofill` |
+| `?ads=off` | back to normal |
 
-It cannot reach the shipped app: the host loads a bare asset URL with no query
-string, there is no way for a player to add one, and the simulator refuses to
-install if a real host is already attached.
+It cannot reach a player. The Settings group is present only when the page was
+**not** served from `appassets.androidplatform.net`, which is the app's own
+origin and the only place the host serves from — so the test is where the page
+came from, not a flag anyone could set. The simulator also refuses to install
+over a real host.
 
 ### The bridge is not `@JavascriptInterface`
 
@@ -153,20 +170,48 @@ and enforced rather than promised — is that the **game** cannot: the WebView
 keeps `blockNetworkLoads = true` and is served from inside the APK, so every
 byte on the wire belongs to the Mobile Ads SDK and none of it to the page.
 
-### Before you publish — one of these is a blocker
+### Consent — the UK and EEA gate
 
-1. **A consent mechanism for the UK and EEA.** Google's EU User Consent Policy
-   requires one before serving ads to users there, and AdMob enforces it. That
-   means the **UMP SDK** (`com.google.android.ump:user-messaging-platform`),
-   plus a privacy message configured in the AdMob console — the SDK only
-   fetches and shows what you have set up there, so this cannot be finished
-   from the code side alone. **Not implemented here.** Shipping to a UK or EEA
-   audience without it puts the AdMob account at risk — and the privacy policy
-   in `../PRIVACY.md` already promises a consent message, so until UMP ships
-   that promise is not true. Ship it, or cut that paragraph.
+`ConsentGate.kt` is the UMP SDK. Before a single ad is requested it asks
+whether consent is required, shows the form if it is, and answers whether ads
+may run at all. A player who declines gets a complete game with no ads in it.
+Outside those regions the status comes back NOT_REQUIRED, no form appears, and
+the whole thing costs one round trip spent behind the studio card.
+
+**Half of this is not code.** UMP shows only what you have configured in the
+AdMob console:
+
+> **Privacy & messaging → GDPR → create message → add the privacy policy URL →
+> Publish.**
+
+Skip it and the SDK behaves correctly and unhelpfully: a UK device gets consent
+REQUIRED, no form available, `canRequestAds()` false — **no ads at all in your
+home market**, silently. That case is logged as an error rather than left to be
+found in the earnings report:
+
+```
+E/RingshiftConsent: consent required but NO FORM IS AVAILABLE — no ads will serve here.
+```
+
+To see the European form from anywhere, register a test device and force the
+geography:
+
+```
+./gradlew installRelease -Pringshift.testDeviceIds=<id> \
+                         -Pringshift.consentGeography=EEA
+```
+
+Where the player changes their mind: **Settings → Privacy choices**, which the
+game shows only when the host says a choice exists to revisit. The host learns
+that from `privacyOptionsRequirementStatus` and pushes it to the page; nobody
+outside the UK/EEA is offered a control that would do nothing.
+
+### Before you publish
+
+1. **Publish the GDPR message** in the AdMob console — see above. This is the
+   one that costs you your UK revenue if you forget it.
 2. **A privacy policy URL**, in the Play listing and reachable from the app.
-   Required once an app serves ads. One is written —
-   [`../PRIVACY.md`](../PRIVACY.md), and as a page in
+   One is written — [`../PRIVACY.md`](../PRIVACY.md), and as a page in
    [`../docs/privacy.html`](../docs/privacy.html) ready for GitHub Pages. It
    is drafted from what this project actually does and is **not legal
    advice**; read it before you publish it under your name.
@@ -175,6 +220,8 @@ byte on the wire belongs to the Mobile Ads SDK and none of it to the page.
 4. **Check the ids** in `app/build.gradle.kts` against your console. A new ad
    unit can take an hour to start filling; until then a release build gets
    `nofill`, which the game treats as "no ad today" and moves on.
+5. **`applicationId`** is permanent once published. `com.anticdrazelb.ringshift`
+   is derived from the repository owner; change it now or never.
 
 ---
 
@@ -230,24 +277,39 @@ be. The game detects and explains both failure modes itself.
 
 ## Publishing
 
-`assembleRelease` produces an **unsigned** APK. There is no keystore in this
+Signing is wired and waiting for a key. There is no keystore in this
 repository and there should never be one.
 
 ```
-# once
-keytool -genkey -v -keystore ringshift.jks -keyalg RSA \
+# once — keep this file and its passwords safe; losing it means you can never
+# update the app again under the same listing
+keytool -genkeypair -v -keystore ringshift.jks -keyalg RSA \
         -keysize 2048 -validity 10000 -alias ringshift
 ```
 
-Then add a `signingConfigs` block to `app/build.gradle.kts` reading from
-environment variables or a git-ignored `keystore.properties`, and wire it to
-the `release` build type.
+Then create `android/keystore.properties` — git-ignored, alongside `*.jks`:
 
-Before you ship, change **`applicationId`** in `app/build.gradle.kts` and the
-matching `namespace`. `com.anticdrazelb.ringshift` is a placeholder derived
-from the repository owner; an application ID is permanent once published.
+```
+storeFile=/absolute/path/to/ringshift.jks
+storePassword=...
+keyAlias=ringshift
+keyPassword=...
+```
 
-For the Play Store, build an App Bundle instead: `./gradlew bundleRelease`.
+```
+./gradlew bundleRelease      # app/build/outputs/bundle/release/app-release.aab
+./gradlew assembleRelease    # app/build/outputs/apk/release/app-release.apk
+```
+
+With that file present the release build is signed and the output loses its
+`-unsigned` suffix; without it the build still succeeds and produces
+`app-release-unsigned.apk`, because a missing key must not break the build for
+someone who only wants to read the code. Verified end to end with a throwaway
+key: `apksigner verify` reports one signer, APK Signature Scheme v2. AGP picks
+the schemes from `minSdk`, which at 24 means v2 and no v1.
+
+**Upload the `.aab`, not the APK.** Play requires a bundle for new apps, and
+signs the delivered APKs with its own key from it.
 
 ---
 
@@ -263,3 +325,22 @@ cp ../index.html app/src/main/assets/index.html
 
 Bump `versionCode` and `versionName` in `app/build.gradle.kts` to match the
 version string the game prints at the bottom of its Settings screen.
+
+---
+
+## Launch checklist
+
+Everything on this list is outside the code. The code is done.
+
+| | |
+|---|---|
+| ☐ | **Publish a GDPR message** — AdMob → Privacy & messaging → GDPR → create → add the privacy policy URL → **Publish**. Without it, no ads serve in the UK or EEA. |
+| ☐ | **Turn on GitHub Pages** — repository Settings → Pages → *Deploy from a branch* → default branch, `/docs`. The policy is then at `https://anticdrazelb.github.io/Ring/privacy.html`. |
+| ☐ | **Read `PRIVACY.md`** end to end and make it true of you. Delete the publisher note at the top when you are happy with it. |
+| ☐ | **Create the upload key** and `android/keystore.properties` — see Publishing. Back both up somewhere you will still have in five years. |
+| ☐ | **`./gradlew bundleRelease`** and upload the `.aab`. |
+| ☐ | **Play Console: Data safety** — declare the advertising ID and the device/IP data the Mobile Ads SDK collects. Say data is not collected by you, is shared with Google for advertising, and is not user-deletable on request because you never hold it. |
+| ☐ | **Play Console: Ads declaration** — yes, the app contains ads. |
+| ☐ | **Play Console: content rating, target audience, privacy policy URL.** Target audience must not include children — the app is not COPPA/families-designed. |
+| ☐ | **Register your phone as a test device** and install a release build. Check the four placements and the consent form before anyone else sees them. |
+| ☐ | **Confirm `applicationId`.** `com.anticdrazelb.ringshift` becomes permanent the moment the listing goes live. |
