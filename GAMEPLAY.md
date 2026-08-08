@@ -1034,6 +1034,28 @@ none of this exists there and nothing depends on it.
 
 ---
 
+## 25c. What a native host can ask
+
+Three functions on `window`, and they only ever get *called*; they never call
+out. In a browser nothing touches them.
+
+| | |
+|---|---|
+| `__rsBack()` | Close whatever is on top. Returns **true** if it closed something, **false** if there is nothing left — which is the host's signal to quit. |
+| `__rsAudio()` | Resume the AudioContext. It comes back suspended from an app pause and Web Audio will not restart itself. |
+| `__rsDuck(on)` | Another app took the speaker. Rides the master gain, so the player's own volume settings are untouched and read the same afterwards. |
+
+And four CSS variables the host writes onto the root element — `--sa-top`,
+`--sa-right`, `--sa-bottom`, `--sa-left`. Every safe-area read in the
+stylesheet is `var(--sa-top, env(safe-area-inset-top))`, so `env()` is only
+ever the default. It has to be: **`env(safe-area-inset-*)` reads zero in an
+Android WebView**, because it is plumbed through Chromium's own display-cutout
+handling and a WebView is not Chromium's window. Without this seam the score
+pill sits under the camera on every notched phone, however correctly the app
+is configured.
+
+---
+
 ## 26. The shareable card
 
 Hit **Share** on any result and the game renders a **three-second animated GIF**

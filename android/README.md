@@ -39,10 +39,23 @@ it is a path on your machine, not a property of the project.
 | `configChanges=...` | Without the full list, rotating the phone recreates the activity, which reloads the WebView, which restarts the game and abandons the run. |
 | `systemGestureExclusionRects` | Android 10+ reads a horizontal swipe from either edge as Back. This game is *steered* by horizontal swipes. The middle 200dp of each edge is claimed, which is the cap the system allows. |
 | `setBackgroundColor(BLACK)` on both window and WebView | The default is white and the game's first paint is black — otherwise every cold start flashes. |
+| `volumeControlStream = STREAM_MUSIC` | Without it the hardware volume keys move the **ringer**. The player turns the game up, their ringtone gets louder, and the game does not. |
+| Audio focus + `window.__rsDuck()` | Web Audio in a WebView does not participate in audio focus, so without a host request the game talks over phone calls and fights whatever was already playing. |
+| `window.__rsAudio()` on resume | An `AudioContext` comes back **suspended** from a pause and will not restart itself. Without this the player returns mid-run to silence. |
+| Insets → `--sa-*` | `env(safe-area-inset-*)` reads **zero** in a WebView — it is plumbed through Chromium's own cutout handling and a WebView is not Chromium's window. The host measures and injects; the game's 16 safe-area reads are `var(--sa-top, env(...))`. |
+| `CUTOUT_MODE_ALWAYS` | `SHORT_EDGES` letterboxes a sideways phone away from its own camera and loses a black bar down one edge. |
+| `window.__rsBack()` | `canGoBack()` is always true because the page arms a history sentinel, so the standard snippet spends the first Back at the main menu doing nothing. Asking the game costs no press. |
+| `onRenderProcessGone` | Not overriding it means the app is **killed** when Android reclaims the WebView renderer in the background. |
 
-There is deliberately **no `INTERNET` permission** and no `@JavascriptInterface`
-bridge. The page and the host do not talk to each other at all, which is the
-cheapest possible answer to "what can a bug in the game reach".
+There is deliberately **no `INTERNET` permission** and no
+`@JavascriptInterface` bridge.
+
+Communication runs in exactly **one direction**: the host calls
+`evaluateJavascript` and reads the result. The page can be asked things
+(`__rsBack`, `__rsAudio`, `__rsDuck`); it cannot reach anything. A
+`@JavascriptInterface` would invert that and hand the page a Java object,
+which is the difference between "the game has a bug" and "the game has a bug
+that can touch the filesystem".
 
 ---
 
@@ -75,6 +88,15 @@ be. The game detects and explains both failure modes itself.
 6. **Steer with a swipe that starts near the edge of the screen.** If it
    navigates back instead of turning, the gesture exclusion is not applying —
    it is API 29+ only, and the system silently drops any claim over 200dp.
+7. **Press the volume keys in a run.** If the ringer slider appears instead of
+   media, `volumeControlStream` is not set.
+8. **On a phone with a notch, look at the score pill.** If it is under the
+   camera, the insets are not reaching the page — check that `__rsBack` and
+   friends exist, because it means the whole hook set is missing.
+9. **Press Back once at the main menu.** It should quit. If it takes two, the
+   activity is using `canGoBack()` rather than asking the game.
+10. **Switch away mid-run and come back.** Sound should return without a tap,
+    and the app should not have restarted.
 
 ---
 

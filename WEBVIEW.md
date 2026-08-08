@@ -75,6 +75,27 @@ And in the manifest, on the `<application>` or the hosting `<activity>`:
 android:hardwareAccelerated="true"
 ```
 
+### Back, which costs a press if you ask the wrong thing
+
+`if (web.canGoBack()) web.goBack() else finish()` is the standard snippet and
+it is wrong here. The page keeps its own history — a sentinel entry pushed so
+a browser Back closes whatever screen is open — so `canGoBack()` is *always*
+true, and the first press at the main menu is spent popping a sentinel while
+the game decides it had nothing to close. Measured: **two presses to leave the
+menu, and the first one did nothing.**
+
+Ask the game instead:
+
+```kotlin
+web.evaluateJavascript("(window.__rsBack && window.__rsBack()) === true") { r ->
+    if (r != "true") finish()
+}
+```
+
+`evaluateJavascript` returns a result without exposing anything to the page,
+so this needs no `@JavascriptInterface`. True means something was closed;
+false is the press that quits.
+
 ### The permission everyone forgets
 
 ```xml
@@ -85,6 +106,70 @@ The game's haptics are `navigator.vibrate`, and without this it fails
 **silently**: no crash, no log, no exception to catch — just a game that never
 buzzes and a Haptics switch in Settings that appears to do nothing. It is a
 normal permission, granted at install, with no runtime prompt.
+
+### The notch: `env(safe-area-inset-*)` reads ZERO in a WebView
+
+This is the one that looks like it works and does not. `viewport-fit=cover` in
+the page, `LAYOUT_IN_DISPLAY_CUTOUT_MODE` on the window, everything by the
+book — and the insets still come back **0**, because `env(safe-area-inset-*)`
+is plumbed through Chromium's own display-cutout handling and a WebView is not
+Chromium's window. It is a View inside somebody else's Activity and it has no
+idea where the camera is.
+
+So the host measures and the page reads a variable:
+
+```kotlin
+ViewCompat.setOnApplyWindowInsetsListener(web) { _, insets ->
+    val cut  = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+    val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+    // the union, not just the cutout: a gesture pill with no notch still
+    // needs the bottom, and a device with both takes the larger
+    web.evaluateJavascript("""
+        var r = document.documentElement.style;
+        r.setProperty('--sa-top',    '${'$'}{max(cut.top, bars.top) / density}px');
+        ...
+    """, null)
+    insets
+}
+```
+
+The game's sixteen safe-area reads are written `var(--sa-top, env(...))`, so
+`env()` is only ever the default. In a browser nothing changes; in the app the
+four variables are real. Use **`LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS`** on API
+30+ rather than `SHORT_EDGES`, or a phone turned sideways is letterboxed away
+from its own camera and loses a black bar down one edge.
+
+### Sound, which has three separate ways to be wrong
+
+```kotlin
+volumeControlStream = AudioManager.STREAM_MUSIC
+```
+
+Without that one line the hardware volume keys move the **ringer**. The player
+turns the game up, their ringtone gets louder, and the game does not.
+
+Then **audio focus**: Web Audio in a WebView does not participate in it, so
+without a request from the host the game talks over phone calls and fights
+whatever was already playing. Request `AUDIOFOCUS_GAIN` with
+`USAGE_GAME`, and on loss call into the page to duck — the game exposes
+`window.__rsDuck(bool)`, which rides the master gain so the player's own
+volume settings are untouched and read the same afterwards.
+
+Then **resume**: an `AudioContext` comes back *suspended* from a pause and Web
+Audio will not restart it. In a browser this is invisible because every screen
+is one tap from a sound; in an app the player returns mid-run to silence. Call
+`window.__rsAudio()` from `onResume`.
+
+### The renderer can be killed, and by default it takes the app with it
+
+```kotlin
+override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean
+```
+
+Not overriding this means the process is torn down when Android reclaims the
+WebView renderer in the background: the player switches away, comes back, and
+gets a crash instead of their game. Rebuild the view and reload — the save is
+on disk, so nothing is lost but the current run.
 
 ### And the one nobody expects
 

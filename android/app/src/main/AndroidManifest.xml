@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- The game's haptics are navigator.vibrate, and without this permission
          that call silently does nothing: no crash, no log, just a game that
@@ -26,11 +27,22 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="false"
         android:theme="@style/Theme.Ringshift"
-        android:usesCleartextTraffic="false">
+        android:usesCleartextTraffic="false"
+        android:enableOnBackInvokedCallback="true"
+        tools:targetApi="tiramisu">
+
+        <!-- enableOnBackInvokedCallback: Android 13 introduced predictive
+             back, and an app that has not opted in gets the legacy path with
+             no animation and, from Android 15, increasingly odd edge cases.
+             The activity already routes Back through OnBackPressedDispatcher,
+             which is the API predictive back is built on, so opting in costs
+             nothing and is the difference between a modern Back and one that
+             feels like a 2015 app. -->
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:hardwareAccelerated="true"
             android:launchMode="singleTask"
             android:theme="@style/Theme.Ringshift"
             android:windowSoftInputMode="adjustNothing"
