@@ -73,19 +73,58 @@ side labels and everything else wait their turn. The three beeps are identical
 and the one on GO is an octave up, which is the shape every start line uses,
 and uses because you can hear the last one coming without being told.
 
-Then **GO!**, and everything arrives at once — the music starts, the pace
-climbs to what the level asked for over about a second and a half, and the
-stars draw out into streaks as you gather speed. Nothing in the launch is
-animated by hand. The tunnel, the streaks, the drone and the readout were all
-reading your speed the whole time; the only thing that changes at GO is that
-your speed stops being zero.
+### The hold is a loaded spring
+
+Stopped is not the same as inert. Across the three numbers the whole world in
+front of you is **drawn out toward the vanishing point**, as though something
+at the far end of the conduit had taken hold of it and pulled: the star
+streaks lengthen into lines that all reach the same distance ahead, the
+tunnel's grid elongates along its own axis until there are half as many bands
+over the same length, and the point everything is converging on burns
+brighter for it.
+
+Two things are deliberately **not** in that list. **The ship**, which holds
+perfectly still — measured at zero movement and zero change of scale for the
+entire count. And **the camera**, which does not dolly, pan or change its
+field of view. The world is being stretched away from you, and that only
+reads if the thing it is being stretched away *from* is nailed down.
+
+The build is quadratic, so three and two are a low hum and almost all of the
+draw happens under **ONE**.
+
+Under it, the phone **rumbles** — one vibration pattern covering the whole
+count, in three phases of a number each: long slow pulses, then shorter and
+denser, then a roar, ending on the launch itself. It is an engine spooling up.
+*(Android only. iOS Safari has no Vibration API, so on an iPhone the visual
+half carries the moment alone.)*
+
+### And then it lets go
+
+**GO!** does not ease the tension away, it releases it. The stretch is driven
+straight through zero into **compression** — the grid bunches tighter than its
+resting state for about a fifth of a second before settling, which is what a
+spring does and what "snaps back" means. A shockwave and a burst of chromatic
+aberration go with it.
+
+Everything else arrives on the same frame: the music starts, the pace climbs
+to what the level asked for over about a second and a half, and the stars draw
+out into streaks again — this time because you are actually moving. Nothing in
+the launch is animated by hand. The tunnel, the streaks, the drone and the
+readout were all reading your speed the whole time; the only thing that
+changes at GO is that your speed stops being zero.
+
+Reduced-motion still gets all of it, at a third of the amplitude, and no
+rumble.
 
 After that you get a few seconds of empty conduit before the first ring, so
 the acceleration is something you watch rather than something you survive.
 
 Pausing on the line resumes to the line. A mechanic that has to be explained
 before you launch stops the count where it is, and it picks up where it left
-off — you never lose a beat of it to reading.
+off — you never lose a beat of it to reading. Anything that takes the screen
+also releases the spring and cancels the rumble: a pause card should not have
+a stretched world frozen behind it, and a phone should not keep buzzing
+against a menu.
 
 ---
 

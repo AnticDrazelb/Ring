@@ -2584,7 +2584,7 @@
       </div>
       <!-- bumped whenever the build changes, so "am I actually running the new
            one?" is a question the game can answer rather than a guess -->
-      <div class="setVer">Ringshift &middot; version 4.7 &middot; the long way home</div>
+      <div class="setVer">Ringshift &middot; version 4.8 &middot; the long way home</div>
     </div>
 
     <div class="setFoot">
@@ -7393,8 +7393,58 @@ var cdLast = 0;         // performance.now() at the last tick; 0 means not start
    it, so a launch at level 200 is as fast as level 200 always was. */
 var spdRamp = 1;
 
+/* THE HOLD IS NOT A PAUSE, IT IS A LOADED SPRING.
+
+   `cdPull` is the tension: 0 at the start of the count, 1 the instant before
+   GO, and it drives everything in front of the ship to draw out toward the
+   vanishing point — the star streaks lengthen into lines, the tunnel's grid
+   elongates along its own axis, the horizon burns brighter. The ship is not
+   in that list, and nor is the camera: the world is being stretched away from
+   you, and the effect only reads if the thing it is being stretched away FROM
+   holds still.
+
+   `cdSnap` is the release. At GO the tension is not eased away, it is let go:
+   the stretch is driven past zero into compression for a fifth of a second
+   and then settles, which is what a spring does and what "snaps back" means.
+   The build is quadratic so almost all of it happens under ONE. */
+var cdPull = 0, cdSnap = 0;
+var CD_STRETCH = 9.0;    // world units a streak gains at full tension
+function cdStretch(){
+  var v = cdPull - cdSnap*0.42;
+  return REDUCED ? v*0.35 : v;   // reduced-motion still reads, at a third
+}
+
+/* The engine, spooling. One pattern issued for the whole count rather than a
+   pulse per frame: navigator.vibrate REPLACES the running pattern on every
+   call, so per-frame calls produce a stutter and get throttled. The three
+   phases are one number each — 920ms of long slow pulses, then shorter and
+   denser, then a roar — and the last entry is the launch itself.
+
+   Android only. iOS Safari has no Vibration API at all, so on an iPhone this
+   is silent and the visual half carries the moment on its own. */
+/* Whether a pattern is outstanding. Without it the stop below fires on every
+   frame after the count ends — cdT is 0 forever, so `!live` is true forever —
+   and a vibrate(0) per frame would cancel every ring hit, every death and
+   every other haptic in the game a millisecond after it started. */
+var cdRumbling = false;
+function cdRumble(){
+  cdRumbling = true;
+  var pat = [], i;
+  for(i=0;i<5;i++) pat.push(50,134);     // "3" — an idle you can just feel
+  for(i=0;i<6;i++) pat.push(62,91);      // "2" — spooling up
+  for(i=0;i<7;i++) pat.push(78,53);      // "1" — roaring
+  pat.push(170);                          // GO
+  buzz(pat);
+}
+function cdRumbleStop(){
+  if(!cdRumbling) return;
+  cdRumbling = false;
+  try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){}
+}
+
 function cdArm(){
   cdT = CD_STEP*3 + CD_GO; cdNum = -9; spdRamp = 0; cdLast = 0;
+  cdPull = 0; cdSnap = 0;
   /* The pulse animations are timed off the same constant the count is, so the
      ring finishes exactly as the next number lands rather than nearly. */
   var el = document.getElementById('countdown');
@@ -7422,10 +7472,19 @@ function zonesUp(){
 function launchRun(){
   startMusic();
   sfxLaunch();
-  buzz([0, 18]);
+  /* No buzz here. The rumble pattern armed at cdArm already ends on a 170ms
+     hit timed to land on this frame, and calling vibrate again would cancel
+     it and replace it with something shorter. */
   flash = Math.max(flash, 0.30);
   flashCol.r = 0.42; flashCol.g = 0.96; flashCol.b = 0.92;
   beatPulse = 1;
+  /* Let the spring go. */
+  cdSnap = 1;
+  /* The pattern's last entry is the launch hit and it is landing right now;
+     it ends on its own, so nothing is left outstanding to cancel. */
+  cdRumbling = false;
+  aberrPunch = Math.max(aberrPunch, 0.9);
+  shockwave(0x8ff6ff, 1.5);
 }
 
 /* Called from the top of update() rather than only from the countdown branch,
@@ -7437,10 +7496,19 @@ function cdPaint(){
   if(!el) return;
   var live = (state === S_PLAY) && !teachHold && cdT > 0;
   el.classList.toggle('show', live);
-  if(!live) return;
+  /* A pause, a primer, a quit or a death all come through here, and every one
+     of them has to stop a pattern that would otherwise keep buzzing against a
+     menu for another two seconds. */
+  if(!live){ cdRumbleStop(); return; }
   var n = cdHeld() ? Math.ceil((cdT - CD_GO) / CD_STEP) : 0;
   if(n === cdNum) return;
+  /* -9 is the armed sentinel, so this is the first frame the count is
+     actually on screen. The rumble starts HERE and not in cdArm(), because
+     cdArm also runs during boot and a stray 50ms buzz as the game loads is
+     not the engine spooling up, it is a phone twitching in a pocket. */
+  var firstPaint = (cdNum === -9);
   cdNum = n;
+  if(firstPaint) cdRumble();
   var num = document.getElementById('countNum');
   num.textContent = n > 0 ? String(n) : 'GO!';
   document.getElementById('countCap').textContent = n > 0 ? 'hold' : 'conduit live';
@@ -11640,6 +11708,17 @@ function update(dt){
     spdRamp += (1 - spdRamp) * Math.min(1, dt*CD_RAMP);
     if(spdRamp > 0.999) spdRamp = 1;         // the pace has to actually arrive
   }
+  /* The tension, and its release. Quadratic on the way up so three and two
+     are a low hum and almost all of the draw happens under ONE; stiff on the
+     way down, with cdSnap carrying it past zero into the recoil. */
+  if(state === S_PLAY && cdBusy() && cdHeld()){
+    var cdProg = 1 - Math.max(0, Math.min(1, (cdT - CD_GO) / (CD_STEP*3)));
+    cdPull += (cdProg*cdProg - cdPull) * Math.min(1, dt*9);
+  } else if(cdPull > 0.0005){
+    cdPull += (0 - cdPull) * Math.min(1, dt*15);
+  } else cdPull = 0;
+  cdSnap *= Math.max(0, 1 - dt*5.2);
+  if(cdSnap < 0.002) cdSnap = 0;
 
   slowmo += (1-slowmo) * Math.min(1, dt*3.2);
   var flow = (state===S_PLAY ? speed
@@ -11655,9 +11734,19 @@ function update(dt){
   } else blackout *= Math.max(0, 1 - dt*3);
   var lightsOn = 1 - blackout*0.92;
 
+  /* Read once, above the first thing that uses it. */
+  var cdS = cdStretch();
   wallTex.offset.y -= flow*0.0026*dt;
-  wall.material.opacity = 0.48 * lightsOn;
-  horizon.material.opacity = 0.5 + Math.sin(performance.now()*0.0012)*0.18;
+  /* The tunnel is a cylinder wearing a grid, so stretching the world along
+     its axis is the same thing as running fewer bands over the same length.
+     34 is the resting figure; at full tension it is 18 and the bands are
+     drawn out into long lines converging on the vanishing point. */
+  var wRep = 34 - cdS*16;
+  if(Math.abs(wallTex.repeat.y - wRep) > 0.01) wallTex.repeat.y = wRep;
+  wall.material.opacity = (0.48 + Math.max(0, cdS)*0.22) * lightsOn;
+  /* and the point it is all being pulled toward burns brighter for it */
+  horizon.material.opacity = 0.5 + Math.sin(performance.now()*0.0012)*0.18
+                           + Math.max(0, cdS)*0.42;
 
   // wall bands sweep toward you and flare on the beat
   for(var i=0;i<bands.length;i++){
@@ -11710,7 +11799,12 @@ function update(dt){
        and starts at 32, this one is neither. Two different curves under one
        name in one function is a bug waiting for someone to move a line. */
     var streakSpd = Math.max(0, (speed-34)/46);
-    var stretch = s.len * (0.5 + streakSpd*3.4 + (over.on?1.2:0) + aberrPunch*4.0);
+    /* cdS is added rather than multiplied into s.len: at full tension every
+       streak reaches the same distance forward regardless of how long it
+       happens to be, which is what "pulled from one point" looks like. A
+       short one and a long one both end up at the vanishing point. */
+    var stretch = s.len * (0.5 + streakSpd*3.4 + (over.on?1.2:0) + aberrPunch*4.0)
+                + cdS*CD_STRETCH;
     var twist = -STREAK_TWIST * Math.tanh(wRad * (stretch / flowSafe) / STREAK_TWIST);
     var base = i3*SVERT*3;
     for(var sj=0; sj<STREAK_SEG; sj++){
@@ -11722,7 +11816,10 @@ function update(dt){
     }
   }
   streakGeo.attributes.position.needsUpdate = true;
-  streakMat.opacity = 0.22 + Math.max(0,(speed-34)/46)*0.75 + beatPulse*0.12;
+  /* Streak opacity keys off speed, and during the hold speed is zero — so
+     without this term the tension would draw out lines nobody can see. */
+  streakMat.opacity = 0.22 + Math.max(0,(speed-34)/46)*0.75 + beatPulse*0.12
+                    + Math.max(0, cdS)*0.62;
 
   // lane ticks scroll toward the camera, giving the lane a readable speed
   for(var i4=0;i4<laneTicks.length;i4++){
