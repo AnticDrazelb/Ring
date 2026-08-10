@@ -286,10 +286,32 @@ h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;tex
 .pill[disabled]{opacity:.32;pointer-events:none;}
 .pill.icon{padding:0;width:var(--h-ctl);}
 .pill .n{font-family:var(--mono);font-size:var(--t-md);font-weight:700;}
-#lvName{flex:1;justify-content:flex-start;letter-spacing:.2em;overflow:hidden;white-space:nowrap;}
+/* The name is the first thing to go when the bar runs out of room, and on a
+   320px phone with keys, a live par and a turn counter it goes entirely.
+   That is the right order — the cube's NUMBER is what a player needs and it
+   is first in the string — but a hard cut mid-letter reads as a bug, so the
+   last few pixels fade. The fade is the width of the pill's own padding, so
+   nothing is visibly softened until there is something to soften. */
+#lvName{flex:1;justify-content:flex-start;letter-spacing:.2em;overflow:hidden;white-space:nowrap;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 13px),transparent);
+          mask-image:linear-gradient(90deg,#000 calc(100% - 13px),transparent);}
 #turnPill .n{color:var(--rust);}
 #turnPill.over .n{color:var(--gold);}
 #keyPill{color:var(--gold);box-shadow:inset 0 0 0 1px rgba(255,196,77,.3);}
+
+/* FEWEST FROM HERE. Shaped like the key pill because it is the same kind of
+   thing — a live count of something you are carrying — and coloured jade
+   because jade has meant the way out since cube one. It changes colour only
+   to say you have left the perfect line, and it is the one readout allowed
+   to say a cube is dead. */
+#goPill{color:var(--jade);box-shadow:inset 0 0 0 1px rgba(53,215,161,.30);}
+#goPill .n{color:var(--jade);}
+#goPill.slip{color:var(--gold);box-shadow:inset 0 0 0 1px rgba(255,196,77,.30);}
+#goPill.slip .n{color:var(--gold);}
+#goPill.dead{color:var(--danger);box-shadow:inset 0 0 0 1px rgba(255,90,90,.38);}
+#goPill.dead .n{color:var(--danger);}
+#goPill.think{opacity:.5;}
+#goPill.bump .n{display:inline-block;animation:turnBump .34s var(--seat);}
 
 /* the drag affordance — four ticks that light when a turn is available and
    go hollow when the far side of it has no footing. It is the only thing on
@@ -415,6 +437,7 @@ h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;tex
   <div class="bar" id="barTop">
     <div class="pill" id="lvName">—</div>
     <div class="pill" id="keyPill" style="display:none">◈ <span class="n" id="keyN">0</span></div>
+    <div class="pill" id="goPill" aria-label="fewest turns from here">◎ <span class="n" id="goN">·</span></div>
     <div class="pill" id="turnPill">TURNS <span class="n" id="turnN">0</span><span class="n" id="parN" style="color:var(--dim-2)">/0</span></div>
   </div>
   <div id="worldTag"></div>
@@ -466,6 +489,7 @@ h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;tex
     <div class="mrow"><div class="mkey">◫</div><div class="mtxt"><b>Depth is discarded.</b> Everything in a column collapses to the nearest solid thing. Two decks far apart in the cube are <span class="c">neighbours on screen</span>, and you may walk between them.</div></div>
     <div class="mrow"><div class="mkey">▦</div><div class="mtxt"><b>Brightness is distance.</b> A pale tile is near, a dim one is far. The hairlines between them mark a drop you are allowed to ignore.</div></div>
     <div class="mrow"><div class="mkey">◈</div><div class="mtxt">Keys and doors can be <b>buried</b> behind bedrock. If something is missing, it is behind you in an axis you are not looking down. Turn.</div></div>
+    <div class="mrow"><div class="mkey" style="color:#35d7a1">◎</div><div class="mtxt"><b>The jade number is how far you are.</b> Not how far the cube is — how far <i>you</i> are, from the square you are standing on, recomputed every move. While it is jade you are still on a perfect line; the moment it turns gold you have spent a turn you will not get back.</div></div>
     <div class="mrow"><div class="mkey">◱</div><div class="mtxt"><b>Hold anywhere to look inside.</b> The rock goes to glass and every key, door and exit in the cube shows where it really is. It costs nothing and changes nothing — you cannot walk or turn while you are holding, and letting go puts the stone back.</div></div>
     <div class="mrow"><div class="mkey" style="color:#a86bff">⊘</div><div class="mtxt"><b>Plates rewrite the cube.</b> Step on one and every deck becomes stone and every wall becomes floor — the same cube, a different place. Step on it again to put it back. They appear from cube 20.</div></div>
     <div class="mrow"><div class="mkey" style="color:#a86bff">⟲</div><div class="mtxt">A plate is cut clean through the rock, so you can see it from <b>every face</b> — and it always gives you footing, which means <span class="c">every turn is legal while you stand on one</span>. Plates are pivots.</div></div>
@@ -499,6 +523,7 @@ h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;tex
   <div class="row" id="rowSound"><div><div class="lbl">Sound</div><div class="hint">Clicks, latches, and the detent</div></div><div class="sw on" id="swSound"></div></div>
   <div class="row" id="rowHaptic"><div><div class="lbl">Haptics</div><div class="hint">A tick on every committed turn</div></div><div class="sw on" id="swHaptic"></div></div>
   <div class="row" id="rowDepth"><div><div class="lbl">Depth numbers</div><div class="hint">Prints each tile's distance from the camera. A crutch, and a good one while the collapse is still new.</div></div><div class="sw" id="swDepth"></div></div>
+  <div class="row" id="rowToGo"><div><div class="lbl">Turns to go</div><div class="hint">The fewest turns still possible from exactly where you stand, recomputed every move. Jade means you are still on a perfect line, gold means you have lost turns you cannot get back.</div></div><div class="sw on" id="swToGo"></div></div>
   <div class="row" id="rowFx"><div><div class="lbl">Effects</div><div class="hint">Shake, sparks, debris and bloom. Turned down, every beat still happens — quieter, and with the camera held still. Follows your device's reduce-motion setting until you touch it.</div></div><div class="sw on" id="swFx"></div></div>
   <button class="btn ghost" id="btnManual2">HOW IT WORKS</button>
 </div>
@@ -873,7 +898,12 @@ function solve(lv, budget, from){
       }
     }
   }
-  return {ok:false};
+  /* THE TWO WAYS TO FAIL ARE NOT THE SAME ANSWER. Exhausting every reachable
+     state without finding the goal means the cube is dead from here; running
+     out of budget with work still queued means only that the search stopped
+     looking. The live readout says "no way on" to the first and "40+" to the
+     second, and a caller that does not care can keep reading .ok. */
+  return {ok:false, over: !!buckets[budget+1]};
 }
 
 /* ---------- GENERATOR ---------------------------------------------------
@@ -1527,7 +1557,7 @@ function prebuild(level){
 var reduceMotion = false;
 try{ reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
 var store = {best:{}, reached:1, sound:1, haptic:1, depth:0, taught:0, sawPlate:0,
-             sawPeek:0, peekHinted:0, fx: reduceMotion ? 0 : 1};
+             sawPeek:0, peekHinted:0, togo:1, fx: reduceMotion ? 0 : 1};
 try{ var raw = localStorage.getItem('turnkey-v2'); if(raw) store = Object.assign(store, JSON.parse(raw)); }catch(e){}
 var saveT = 0;
 function save(){
@@ -1845,6 +1875,11 @@ function loadLevel(level){
   /* the tinted blocks are keyed on depth, and depth is read against N — a
      cube of a different size means every one of them is the wrong colour */
   texReset();
+  /* AND THE SOLVED-STATE CACHE IS PER CUBE. Its keys are positions and
+     orientations, which cube nine and cube ten both have plenty of — carrying
+     it across a level would answer a question about this cube with the
+     distance to a different cube's exit. */
+  remainCache = {}; remainN = 0; remain = null; remainOver = false; remainStale = false; goShown = '';
   M = ORI_ID; pos = lv.start.slice(); kmask = 0; doors = 0; turns = 0; world = 0;
   clearEff(lv); flip = null;
   var k0 = keyIndexAt(lv, pos); if(k0 >= 0) kmask |= (1<<k0);
@@ -1941,6 +1976,10 @@ function computeReach(){
       reach[k] = 1; reachDist[k] = Math.min(255, reachDist[q[i]] + 1); q.push(k);
     }
   }
+  /* ONE CHOKE POINT. Everything that can change what you may reach — a
+     landed turn, a step, a plate firing, an undo, a level loading — comes
+     through here, so the live par is asked for here and nowhere else. */
+  scheduleRemain();
 }
 function keysHeld(){ return popcnt(kmask) - popcnt(doors); }
 function popcnt(x){ var c = 0; while(x){ x &= x-1; c++; } return c; }
@@ -4027,21 +4066,129 @@ function advanceAnim(dt){
 var stuckT = 0;
 function afterAction(){
   if(samePos(pos, lv.goal)){ finish(); return; }
-  clearTimeout(stuckT);
-  stuckT = setTimeout(function(){
-    if(won || walking || anim) return;
+  /* the dead-end check used to live here as its own solver run. It is the
+     same question the live readout asks every time the state changes, so
+     there is one run now and this is just the trigger. */
+  scheduleRemain();
+}
+
+/* ============================================================
+   FEWEST FROM HERE — par, live, for the position you are actually in.
+
+   The turn counter says what a run has cost. Par says what the cube costs.
+   Neither of them answers the question a player is actually holding: is the
+   line I am on still a good one? Two turns over par is a fact you learn on
+   the win card, ten moves after the mistake, when it is too late to be
+   information and can only be a verdict.
+
+   So the solver runs from the CURRENT state and the number goes on the HUD.
+   Read it as a countdown: three to go, two to go, out. And read the colour
+   as the only judgement it makes —
+
+     jade   turns spent + turns to come is still exactly par. Perfect line.
+     gold   it is not. You have lost turns you cannot get back, and you knew
+            the instant it happened rather than at the end.
+     red    there is no way on from here at all. Undo.
+
+   This is the same search the dead-end check was already running after every
+   action, so it costs one solve per state change exactly as before — and
+   states are cached, which makes undo instant and makes walking back and
+   forth free.
+
+   IT IS NEVER ALLOWED TO COST A FRAME. The run is deferred, it refuses to
+   start while anything is animating, and until it lands the pill shows a dot
+   rather than a stale number pretending to be current.
+   ============================================================ */
+var remain = null, remainOver = false, remainStale = false, remainT = 0, remainCache = {}, remainN = 0;
+function stateKey(){
+  return vidx(N, pos[0], pos[1], pos[2]) + ':' + oriIndex(M) + ':' + kmask + ':' + doors + ':' + world;
+}
+function scheduleRemain(){
+  /* the attract cube has a level loaded and nobody playing it */
+  if(!lv || won || demo) return;
+  clearTimeout(remainT);
+  var k = stateKey(), c = remainCache[k];
+  if(c !== undefined){                     /* seen this exact state before — undo is instant */
+    remain = c.v; remainOver = c.o; remainStale = false; stuck = remain < 0; paintGo(); return;
+  }
+  /* THE LAST ANSWER STAYS UP, DIMMED, while the next one is found. Blanking
+     it to a dot after every single turn made the readout flicker at exactly
+     the moment the player was looking at it, and a number that is two
+     hundred milliseconds old and visibly greyed is more use than no number
+     that is perfectly current. The dot is only for the very first answer of
+     a cube, when there is nothing honest to leave up. */
+  remainStale = true; paintGo();
+  remainT = setTimeout(function(){ idle(runRemain); }, 70);
+}
+/* THE SEARCH GOES IN THE GAPS BETWEEN FRAMES.
+   The hardest cube in the game is twenty-five milliseconds of search here and
+   several times that on a slow phone, which is a dropped frame wherever it
+   lands. requestIdleCallback puts it in the space after a frame is done
+   rather than in the middle of one, with a timeout so it can never be
+   starved into never answering. Where there is no rIC — an old WebView — the
+   deferred call runs as it always did. */
+function idle(fn){
+  if(window.requestIdleCallback) requestIdleCallback(fn, {timeout:500});
+  else fn();
+}
+function runRemain(){
+  if(!lv || won) return;
+  /* never mid-motion: the worst cube in the game is about a tenth of a
+     second of search on a slow phone, and a tenth of a second landing inside
+     a turn is the one stutter the whole file is written to avoid */
+  if(walking || anim){ remainT = setTimeout(function(){ idle(runRemain); }, 70); return; }
+  var k = stateKey();
+  if(remainCache[k] === undefined){
     var r = solve(lv, 40, {pos:pos, ori:oriIndex(M), kmask:kmask, doors:doors, world:world});
-    stuck = !r.ok;
-    if(stuck){
-      toast('no way on from here — undo'); sfx.stuck(); buzz(30);
-      /* nothing flashes and nothing sparks: a dead end is the absence of a
-         way on, so the room simply closes in */
-      vig = 1; shake(0.22);
-    }
-  }, 60);
+    if(remainN > 600){ remainCache = {}; remainN = 0; }      /* a long session, bounded */
+    remainCache[k] = {v: r.ok ? r.turns : -1, o: !r.ok && !!r.over};
+    remainN++;
+  }
+  var e = remainCache[k];
+  var wasStuck = stuck;
+  remain = e.v; remainOver = e.o; remainStale = false;
+  stuck = remain < 0 && !remainOver;
+  if(stuck && !wasStuck){
+    toast('no way on from here — undo'); sfx.stuck(); buzz(30);
+    /* nothing flashes and nothing sparks: a dead end is the absence of a way
+       on, so the room simply closes in */
+    vig = 1; shake(0.22);
+  }
+  paintGo();
+}
+/* the pill, and every state it can be in */
+var goShown = '';
+function paintGo(){
+  var el = $('goPill'); if(!el) return;
+  if(!lv || !store.togo){ el.style.display = 'none'; return; }
+  el.style.display = won ? 'none' : '';
+  var txt, slip = false, dead = false, think = remainStale;
+  if(remain === null){ txt = '·'; think = true; }
+  else if(remainOver){ txt = '40+'; }
+  else if(remain < 0){ txt = '✕'; dead = true; }
+  else { txt = String(remain); slip = (turns + remain) > lv.par; }
+  $('goN').textContent = txt;
+  el.classList.toggle('think', think);
+  if(think && remain !== null){
+    /* A STALE NUMBER MUST NOT BE JUDGED. Turns have already gone up and the
+       count has not come down yet, so "spent + to come" reads one over for a
+       few frames — and a colour that means "you just lost the perfect line"
+       is the one thing in this game that must never fire by accident. The
+       verdict freezes at its last true value until the answer catches up. */
+    return;
+  }
+  el.classList.toggle('slip', slip);
+  el.classList.toggle('dead', dead);
+  /* the bump fires on a CHANGED answer only, so a number that is holding
+     steady is not flashing at somebody who is trying to think */
+  if(txt !== goShown && !think){
+    goShown = txt;
+    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  } else if(think) goShown = txt;
 }
 function finish(){
   won = true;
+  clearTimeout(remainT); paintGo();          /* the count is over; the card takes it from here */
   var best = store.best[levelNo];
   if(best === undefined || turns < best){ store.best[levelNo] = turns; save(); }
   if(levelNo + 1 > store.reached){ store.reached = levelNo + 1; save(); }
@@ -4237,6 +4384,9 @@ function refreshHud(){
   kp.style.display = lv.keys.length ? '' : 'none';
   $('keyN').textContent = held;
   $('btnUndo').disabled = !undoStack.length;
+  /* the live par is painted from here too, because whether it is jade or
+     gold depends on the turn count this function just wrote */
+  paintGo();
   refreshTicks();
 }
 /* The ticks are the only answer to "may I turn?", so they are recomputed on
@@ -4362,6 +4512,7 @@ bindSwitch('swSound', 'sound');
 bindSwitch('swHaptic', 'haptic');
 bindSwitch('swDepth', 'depth');
 bindSwitch('swFx', 'fx');
+bindSwitch('swToGo', 'togo');
 
 /* ============================================================
    THE THREE HOOKS A NATIVE HOST NEEDS.
