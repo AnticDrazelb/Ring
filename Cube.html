@@ -1750,7 +1750,7 @@ function prebuild(level){
 var reduceMotion = false;
 try{ reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
 var store = {best:{}, reached:1, sound:1, haptic:1, depth:0, taught:0, sawPlate:0,
-             sawPeek:0, peekHinted:0, togo:1, pixel:1, fx: reduceMotion ? 0 : 1};
+             sawPeek:0, peekHinted:0, togo:1, fx: reduceMotion ? 0 : 1};
 try{ var raw = localStorage.getItem('turnkey-v2'); if(raw) store = Object.assign(store, JSON.parse(raw)); }catch(e){}
 var saveT = 0;
 function save(){
@@ -3948,54 +3948,6 @@ function playerScreen(){
    pulse never looks like a loop, and it rides a slow bob — a thing that
    hovers is alive and a thing that sits is furniture.                      */
 /* ============================================================
-   MATTER IS PIXELS. LIGHT IS NOT.
-
-   The board is 16x16 texels a block, blitted nearest-neighbour: hard
-   edges, no half-pixels, everything landing on a grid. The character was
-   resolution-independent vector — smooth curves, sub-pixel ink lines,
-   antialiased everywhere. Those are two different rendering languages and
-   no amount of matching the colours reconciles them; a player reads the
-   mismatch instantly even if they could not name it.
-
-   So the character is rasterised onto the same kind of grid the world is
-   made of: drawn at sprite resolution into a small offscreen canvas, then
-   blitted up with smoothing off. Every curve it has becomes a staircase
-   with the same tread as the blocks it stands on.
-
-   THE SPLIT IS MATTER VERSUS LIGHT, and the game already obeys it
-   everywhere else. Blocks are pixels; their bloom is smooth. The aura, the
-   corona and everything in the glow buffer stay resolution-independent,
-   because light has no edges to alias — it is the SHELL, the ink, the
-   whirl and the face that snap to the grid. Pixel art with a soft glow
-   over it is a look with a long history; pixel art with vector characters
-   walking on it is a mistake with an equally long one.
-
-   Density is twice the world's, not equal to it. A block is sixteen texels
-   across, so a character two-thirds of a tile wide would get about ten —
-   and ten pixels cannot hold two eyes and a mouth. Doubling to a
-   half-texel grid keeps the edge language exactly and buys back the face.
-   ============================================================ */
-var PIX_PER_TILE = 32, pixCv = null, pixCtx = null;
-function pixWrap(x, y, box, fn){
-  if(!store.pixel){ fn(); return; }
-  var sp = Math.max(10, Math.round(box / (S / PIX_PER_TILE)));
-  if(sp > 96){ fn(); return; }                 /* huge on screen: draw it straight */
-  if(!pixCv){ pixCv = document.createElement('canvas'); pixCtx = pixCv.getContext('2d'); }
-  if(pixCv.width !== sp){ pixCv.width = pixCv.height = sp; }
-  pixCtx.setTransform(1, 0, 0, 1, 0, 0);
-  pixCtx.clearRect(0, 0, sp, sp);
-  var k2 = sp / box;
-  pixCtx.setTransform(k2, 0, 0, k2, sp/2 - x*k2, sp/2 - y*k2);
-  var keep = ctx;
-  ctx = pixCtx;
-  try{ fn(); } finally { ctx = keep; }
-  ctx.save();
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(pixCv, x - box/2, y - box/2, box, box);
-  ctx.restore();
-}
-
-/* ============================================================
    THE FACE — the single most Nintendo thing in this file.
 
    A glowing ball is an effect. A glowing ball with two eyes is a CHARACTER,
@@ -4225,144 +4177,48 @@ function drawPlayer(x, y, sz, k){
   ctx.restore();
   halo(x, y, sz*0.92*k, '56,214,255', 0.20*k*br);
 
-  /* DRAWN, NOT SIMULATED.
+  /* IT IS AN OBJECT IN THE SCENE NOW, not a picture on top of one.
 
-     The last one was a lighting exercise: soft gradients, additive plasma,
-     a rim term, a specular. It looked like an effect from a shader demo,
-     which is exactly the house that does not build this. The tradition
-     being aimed at draws its magic as ILLUSTRATION — flat bands of colour
-     with hard edges between them, a bold ink line around every shape, and
-     motion carried by shapes rotating rather than by light flickering. A
-     wave in that style is three flat blues and an outline, and it holds up
-     at any size on any screen ever made. That is the point of it.
+     Drawn through the same renderer as the blocks, the key, the gate and
+     the way out: real geometry, real normals, lit by the one fixed light
+     over the player's left shoulder that every solid in this game agrees
+     about. It turns, and turning shows you a sphere rather than a disc,
+     because the shading moves across it while the silhouette does not.
 
-     So there is not a gradient left in this character. Everything below is
-     a filled path or a stroked one:
+     The ring is welded into the same mesh, so its far half sorts behind the
+     body and its near half in front with no bookkeeping at all — and that
+     read survives being orbited to any angle a peek can reach, which a
+     front/back split faked in screen space never would.
 
-       AURA     concentric rings, each a single flat colour with a hard edge
-                against the next. Additive, because the board underneath can
-                be a near-white deck and a stack of opaque indigo discs on
-                one would read as a stain rather than as a glow.
-       SHELL    one filled circle and one ink line. The ink is what makes it
-                a drawing instead of a light.
-       WHIRL    three spiral arms, flat, in two blues and a white, turning
-                as a unit. Cel animation makes water move by rotating shapes
-                past each other and never by blurring them.
-       FACE     white crescents and a smile, all ink-lined
-       RING     an outlined ellipse with beads on it, half behind and half
-                in front
+     The seam pass is on and the facet edges are off: at forty pixels the
+     shading steps fall below what the eye separates, and it comes out as a
+     turned ball rather than a bag of triangles. Its own spin is slow and on
+     two axes, so the highlight travels and the ring sweeps.
 
-     The ink is a very dark navy rather than black. Pure black against
-     saturated blues reads as a hole punched in the picture; navy reads as
-     a line drawn on it. */
-  var t2 = t*0.55;
-  var INK = 'rgba(16,22,58,0.92)';
-  var ink = Math.max(1.1, rr*0.075);
-
-  /* the aura: flat rings, biggest first */
-  /* four bands, and the outermost only half a tile past the shell: on a
-     hero shot the aura can be twice the character, on a board it would sit
-     on the blocks either side and the player would lose the grid */
-  var bands = [[1.52, '70,66,168', 0.15], [1.34, '116,86,220', 0.17],
-               [1.19, '158,130,250', 0.19], [1.07, '186,230,255', 0.22]];
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for(var bi = 0; bi < bands.length; bi++){
-    ctx.fillStyle = 'rgba(' + bands[bi][1] + ',' + (bands[bi][2]*k).toFixed(3) + ')';
-    ctx.beginPath(); ctx.arc(x, y, rr*bands[bi][0]*(0.99 + 0.02*Math.sin(t*1.7 + bi)), 0, 6.284);
-    ctx.fill();
+     THE FACE STAYS FLAT AND FACING YOU, which is not an inconsistency — it
+     is what every stylised 3D game does with a character whose expression
+     has to be readable from any camera. Bodies are geometry; faces are
+     drawn on. Painting one into the sphere's surface would put an eye on
+     the far side of the ball half the time. */
+  var glow = lightCtx();
+  if(glow !== ctx){
+    glow.save(); glow.globalCompositeOperation = 'lighter';
+    var au = glow.createRadialGradient(x, y, rr*0.3, x, y, rr*2.3);
+    au.addColorStop(0,   'rgba(150,235,255,' + (0.20*k).toFixed(3) + ')');
+    au.addColorStop(0.45,'rgba(70,190,255,' + (0.10*k).toFixed(3) + ')');
+    au.addColorStop(1,   'rgba(30,110,240,0)');
+    glow.fillStyle = au;
+    glow.beginPath(); glow.arc(x, y, rr*2.3, 0, 6.284); glow.fill();
+    glow.restore();
   }
-  ctx.restore();
-
-  /* everything from here to the front half of the ring is MATTER */
-  pixWrap(x, y, rr*3.0, function(){
-  /* the orbit, split front from back */
-  var orbR = rr*1.30, orbSq = 0.30, ORB_N = 5;
-  function orbRing(front){
-    ctx.save();
-    ctx.beginPath();
-    ctx.ellipse(x, y - rr*0.04, orbR, orbR*orbSq, -0.20, front ? 0 : Math.PI, front ? Math.PI : 6.284);
-    ctx.strokeStyle = INK; ctx.lineWidth = ink*1.5; ctx.stroke();
-    ctx.strokeStyle = 'rgba(206,238,255,' + (0.95*k).toFixed(3) + ')';
-    ctx.lineWidth = ink*0.7; ctx.stroke();
-    ctx.restore();
-  }
-  function orbBeads(front){
-    for(var i = 0; i < ORB_N; i++){
-      var a = t*0.9 + i*(6.28318/ORB_N);
-      var sy = Math.sin(a);
-      if((sy > 0) !== front) continue;
-      var ca = Math.cos(-0.20), sa = Math.sin(-0.20);
-      var ux = Math.cos(a)*orbR, uy = sy*orbR*orbSq;
-      var ox = x + ux*ca - uy*sa, oy = y - rr*0.04 + ux*sa + uy*ca;
-      var br2 = rr*(0.085 + 0.045*(sy*0.5 + 0.5));
-      ctx.save();
-      ctx.fillStyle = 'rgba(226,246,255,' + (0.98*k).toFixed(3) + ')';
-      ctx.strokeStyle = INK; ctx.lineWidth = ink*0.8;
-      ctx.beginPath(); ctx.arc(ox, oy, br2, 0, 6.284); ctx.fill(); ctx.stroke();
-      ctx.restore();
-    }
-  }
-  orbRing(false); orbBeads(false);
-
-  /* the shell */
-  ctx.save();
-  ctx.fillStyle = 'rgba(74,108,206,1)';
-  ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.fill();
-  ctx.restore();
-
-  /* THE WHIRL. Each arm is a ribbon walked outward along a spiral: the
-     outer edge on the way out, the inner edge on the way back, and the
-     width tapering at both ends so it reads as a brush stroke rather than
-     as a sausage. Three of them, a third of a turn apart, in two tones —
-     and the lighter tone is drawn shorter and inset, which is how cel
-     shading fakes depth in a flat shape. */
-  function arm(a0, R0, wid, col, turns){
-    var i, u, th, rad, w, p1 = [], p2 = [], steps = 20;
-    for(i = 0; i <= steps; i++){
-      u = i/steps;
-      th = a0 + u*turns*6.28318;
-      rad = R0*(0.14 + 0.86*u);
-      w = wid*R0*Math.sin(Math.min(1, u*2.6)*3.14159*0.5)*(1 - u*0.68);
-      p1.push([x + Math.cos(th)*(rad + w), y + Math.sin(th)*(rad + w)]);
-      p2.push([x + Math.cos(th)*(rad - w), y + Math.sin(th)*(rad - w)]);
-    }
-    ctx.beginPath();
-    ctx.moveTo(p1[0][0], p1[0][1]);
-    for(i = 1; i <= steps; i++) ctx.lineTo(p1[i][0], p1[i][1]);
-    for(i = steps; i >= 0; i--) ctx.lineTo(p2[i][0], p2[i][1]);
-    ctx.closePath();
-    ctx.fillStyle = col; ctx.fill();
-    ctx.strokeStyle = INK; ctx.lineWidth = ink*0.62; ctx.stroke();
-  }
-  /* THREE ARMS, NOT NINE. The first pass stacked three tones on each of
-     three arms and the inside came out as a ball of wool — in the style
-     being copied, most of a shape is its BASE colour and the lighter tones
-     are occasional accents on top of it. Two arms of mid-blue and one
-     highlight, and the empty water between them is what makes the whirl
-     read as a whirl. */
-  ctx.save();
-  ctx.beginPath(); ctx.arc(x, y, rr*0.985, 0, 6.284); ctx.clip();
-  for(var ai = 0; ai < 3; ai++){
-    var base = t2 + ai*2.0944;
-    arm(base, rr*0.96, 0.25, 'rgba(140,182,244,1)', 0.44);
-    arm(base + 0.66, rr*0.58, 0.16, 'rgba(226,242,255,1)', 0.30);
-  }
-  ctx.restore();
-
-  /* the ink line last, over the whirl, so the silhouette is one clean
-     shape however busy the inside gets */
-  ctx.save();
-  ctx.strokeStyle = INK; ctx.lineWidth = ink*1.6;
-  ctx.beginPath(); ctx.arc(x, y, rr - ink*0.5, 0, 6.284); ctx.stroke();
-  ctx.strokeStyle = 'rgba(214,240,255,' + (0.9*k).toFixed(3) + ')';
-  ctx.lineWidth = ink*0.75;
-  ctx.beginPath(); ctx.arc(x, y, rr - ink*1.5, 0, 6.284); ctx.stroke();
-  ctx.restore();
-
+  /* the glow is deliberately thin. A solid that is also its own light
+     source loses its form: every facet clips to the same white and the ball
+     goes back to being a blob, which is the exact failure the last three
+     versions each found their own way into. It is lit like an object and it
+     GLOWS like a lamp beside it. */
+  drawSolid(CHAR, x, y, rr, t*0.55, 0.30 + 0.10*Math.sin(t*0.7), [86, 190, 255],
+            {cull:1, face:1, seam:1.1, amb:0.28, glow:0.13, glowR:1.6});
   if(k > 0.55) drawFace(x, y, rr, k);
-  orbRing(true); orbBeads(true);
-  });
   if(pushed) ctx.restore();
 }
 /* ============================================================
@@ -4440,6 +4296,61 @@ function meshTorus(seg, side, R, r){
    thing lying on a shelf waiting to be picked up wants. The player has gone
    back to being a sphere of light, which is what it always read as best,
    and the diamond is now the key. */
+/* A SPHERE, and the character is finally made of the same stuff as
+   everything else it shares a screen with.
+
+   Every other object in this game is real geometry: the blocks are quads
+   with normals, the key is an octahedron, the gate is boxes, the way out is
+   a torus. All of them go through one software renderer and are lit by one
+   fixed light. The character was the only thing that was a DRAWING — a flat
+   illustration pasted over a 3D scene — and no amount of restyling that
+   drawing was ever going to fix it, because the mismatch was never the
+   colours or the line weight. It was that one object in the picture was not
+   in the picture.
+
+   So it is a sphere, and its ring is merged into the same mesh. That merge
+   is the whole reason to build it this way: ONE depth-sorted list means the
+   half of the ring behind the sphere draws before it and the half in front
+   after — for free, correctly, every frame, from every angle a peek can be
+   dragged to. No front/back bookkeeping and nothing to get wrong.
+
+   Latitude bands rather than a subdivided icosahedron, because a UV
+   sphere's quads run along the light's gradient and shade smoothly under
+   flat shading, where an icosphere's triangles scatter it.               */
+function meshSphere(rings, seg, r){
+  var v = [], f = [], i, j;
+  v.push([0, r, 0]);
+  for(i = 1; i < rings; i++){
+    var ph = i/rings * Math.PI;
+    for(j = 0; j < seg; j++){
+      var th = j/seg * 6.28318;
+      v.push([Math.sin(ph)*Math.cos(th)*r, Math.cos(ph)*r, Math.sin(ph)*Math.sin(th)*r]);
+    }
+  }
+  v.push([0, -r, 0]);
+  var last = v.length - 1;
+  for(j = 0; j < seg; j++) f.push([0, 1 + j, 1 + (j+1)%seg]);
+  for(i = 0; i < rings-2; i++){
+    var a = 1 + i*seg, b = 1 + (i+1)*seg;
+    for(j = 0; j < seg; j++){
+      var j2 = (j+1)%seg;
+      f.push([a+j, b+j, b+j2, a+j2]);
+    }
+  }
+  var topR = 1 + (rings-2)*seg;
+  for(j = 0; j < seg; j++) f.push([last, topR + (j+1)%seg, topR + j]);
+  return {v:v, f:f};
+}
+/* tilt a mesh about X, so a ring sits on a lean rather than flat */
+function meshTilt(m, a){
+  var c = Math.cos(a), sn = Math.sin(a), v = [], i;
+  for(i = 0; i < m.v.length; i++){
+    var p = m.v[i];
+    v.push([p[0], p[1]*c - p[2]*sn, p[1]*sn + p[2]*c]);
+  }
+  return {v:v, f:m.f};
+}
+
 function meshOcta(r){
   return {v:[[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]],
           f:[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[2,0,5],[1,2,5],[3,1,5],[0,3,5]]};
@@ -4626,6 +4537,8 @@ function drawPlate(r, bit, depth){
    Cheap enough to build at boot and never think about again: the largest is
    the gate at thirty-six faces, and the whole set is under a hundred. */
 var GEM_KEY = meshOcta(1);
+/* the character: a sphere with its ring welded on, so one sort handles both */
+var CHAR = meshMerge([meshSphere(9, 14, 1), meshTilt(meshTorus(18, 5, 1.44, 0.05), 0.36)]);
 var GEM_EXIT = meshTorus(24, 12, 0.74, 0.26);
 var GATE = meshMerge([
   meshBox(0.10, 0.62, 0.10, -0.62, 0.02, 0),        /* posts */
