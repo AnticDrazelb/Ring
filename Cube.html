@@ -19,12 +19,18 @@
    every one of those would be a second copy of information the cube
    is already showing. Colour carries exactly one meaning each:
 
-     bone   walkable deck        — you may stand here
-     slate  bedrock              — solid, and no footing on this face
-     void   nothing at all       — the ground shows through; impassable
-     rust   you                  — and only you
-     jade   the way out, and the doors that gate it
-     gold   keys
+     bone    walkable deck       — you may stand here
+     slate   bedrock             — solid, and no footing on this face
+     void    nothing at all      — the ground shows through; impassable
+     rust    you                 — and only you
+     emerald keys
+     jade    the gates they open
+     gold    the way out
+
+   Jade used to carry both the exit and the doors, which meant the one
+   colour on the board that says "this is what you are here for" also said
+   "this is an obstacle". Four things now have four colours, and the pair
+   that belongs together — a key and the gate it opens — are the two greens.
 
    Brightness is depth, always, everywhere. A pale tile is near the
    camera and a dim one is far, and two tiles of wildly different
@@ -72,6 +78,11 @@
   --rust:#ff6a3d;      --rust-hi:#ff9a70;
   --jade:#35d7a1;      --jade-lo:#1c8f6b;
   --gold:#ffc44d;
+  /* Emerald is pushed off jade's teal lean toward a true green on purpose:
+     they now mean two different things a metre apart on the same board — the
+     key, and the gate it opens — and two greens that agree about hue would
+     be one colour with extra steps. */
+  --emerald:#22e06a;
 
   --ink:#f3efe7;
   --dim:#9a92a8;
@@ -342,7 +353,7 @@ h2+.manual{margin-top:14px;}
    something you SEE rather than something you have to have been watching */
 @keyframes keyPop{
   0%{transform:scale(1);}
-  38%{transform:scale(1.26);box-shadow:inset 0 0 0 1px rgba(255,196,77,.95),0 0 26px -4px rgba(255,196,77,.85);}
+  38%{transform:scale(1.26);box-shadow:inset 0 0 0 1px rgba(34,224,106,.95),0 0 26px -4px rgba(34,224,106,.85);}
   100%{transform:scale(1);}
 }
 #keyPill.pop{animation:keyPop .46s var(--seat);}
@@ -368,7 +379,7 @@ h2+.manual{margin-top:14px;}
           mask-image:linear-gradient(90deg,#000 calc(100% - 13px),transparent);}
 #turnPill .n{color:var(--rust);}
 #turnPill.over .n{color:var(--gold);}
-#keyPill{color:var(--gold);box-shadow:inset 0 0 0 1px rgba(255,196,77,.3);}
+#keyPill{color:var(--emerald);box-shadow:inset 0 0 0 1px rgba(34,224,106,.32);}
 
 /* FEWEST FROM HERE. Shaped like the key pill because it is the same kind of
    thing — a live count of something you are carrying — and coloured jade
@@ -533,7 +544,8 @@ h2+.manual{margin-top:14px;}
       display:flex;align-items:center;justify-content:center;font-style:normal;}
 .mkey.rust{color:var(--rust);}
 .mkey.jade{color:var(--jade);}
-.mkey.gold{color:var(--gold);}
+.mkey.gold{color:var(--emerald);}
+.mkey.exit{color:var(--gold);}
 .mkey.plate{color:#a86bff;}
 .mtxt{flex:1;font-size:var(--t-sm);line-height:1.4;color:var(--dim);}
 .mtxt b{display:block;color:var(--ink);font-weight:800;font-size:var(--t-md);
@@ -627,7 +639,8 @@ h2+.manual{margin-top:14px;}
     <div class="mrow"><i class="mkey rust">◉</i><div class="mtxt"><b>YOU ARE THE LIGHT</b>The only thing in here that is not stone.</div></div>
     <div class="mrow"><i class="mkey">◱</i><div class="mtxt"><b>HOLD TO LOOK INSIDE</b>The rock goes to glass. Keep holding and drag to turn it any way you like.</div></div>
     <div class="mrow"><i class="mkey jade">◎</i><div class="mtxt"><b>THE JADE NUMBER</b>Turns still to go. Gold means you spent one you cannot get back.</div></div>
-    <div class="mrow"><i class="mkey gold">◈</i><div class="mtxt"><b>KEYS CAN BE BURIED</b>Something missing? It is behind you. Turn.</div></div>
+    <div class="mrow"><i class="mkey gold">◆</i><div class="mtxt"><b>THE GREEN GEM IS A KEY</b>It opens the gate of the same colour. Buried behind bedrock? Turn.</div></div>
+    <div class="mrow"><i class="mkey exit">◎</i><div class="mtxt"><b>THE GOLD RING IS THE WAY OUT</b>Stand in it and the cube is done with you.</div></div>
     <div class="mrow"><i class="mkey plate">⊘</i><div class="mtxt"><b>PLATES FLIP THE CUBE</b>Floor becomes stone, stone becomes floor. From cube 20.</div></div>
   </div>
   <div class="stick"><button class="btn primary" id="btnManualBack">GOT IT</button></div>
@@ -3175,9 +3188,9 @@ function drawBeam(){
   var w = S*0.85 * (1 - p*0.4) * Math.min(1, p*7), a = (1-p)*(1-p)*0.6;
   if(a <= 0.004 || w <= 0) return;
   var g = c.createLinearGradient(beam.x, beam.y - H, beam.x, beam.y + S*0.5);
-  g.addColorStop(0, 'rgba(53,215,161,0)');
-  g.addColorStop(0.70, 'rgba(120,255,214,' + (a*0.5).toFixed(3) + ')');
-  g.addColorStop(1, 'rgba(214,255,240,' + a.toFixed(3) + ')');
+  g.addColorStop(0, 'rgba(255,196,77,0)');
+  g.addColorStop(0.70, 'rgba(255,214,120,' + (a*0.5).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(255,242,214,' + a.toFixed(3) + ')');
   c.save(); c.globalCompositeOperation = 'lighter';
   c.fillStyle = g; c.fillRect(beam.x - w, beam.y - H, w*2, H + S*0.5);
   c.restore();
@@ -3226,7 +3239,7 @@ function stepFlyers(dt){
       var p = $('keyPill'); p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop');
       sfx.keyIn();
       var r = p.getBoundingClientRect();
-      burst(r.left+r.width*0.32, r.top+r.height/2, 10, {spd:70, life:380, r:1.8, col:'255,196,77', g:0});
+      burst(r.left+r.width*0.32, r.top+r.height/2, 10, {spd:70, life:380, r:1.8, col:'34,224,106', g:0});
     }
   }
 }
@@ -3234,8 +3247,8 @@ function drawFlyers(){
   for(var i = 0; i < flyers.length; i++){
     var f = flyers[i], p = f.t/f.dur, e = p*p*(3-2*p);
     var x = f.x0 + (f.x1-f.x0)*e, y = f.y0 + (f.y1-f.y0)*e - Math.sin(p*Math.PI)*70;
-    halo(x, y, 24, '255,196,77', 0.5*(1-p*0.5));
-    ctx.save(); ctx.fillStyle = '#ffc44d';
+    halo(x, y, 24, '34,224,106', 0.5*(1-p*0.5));
+    ctx.save(); ctx.fillStyle = '#22e06a';
     ctx.beginPath(); ctx.arc(x, y, 5*(1-p*0.35), 0, 6.284); ctx.fill(); ctx.restore();
   }
 }
@@ -3521,7 +3534,7 @@ function draw(){
     c1.save(); c1.globalCompositeOperation = 'lighter';
     c1.globalAlpha = exitFlash * 0.5;
     var eg = c1.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W,H)*0.7);
-    eg.addColorStop(0, 'rgba(53,215,161,0.5)'); eg.addColorStop(1, 'rgba(53,215,161,0)');
+    eg.addColorStop(0, 'rgba(255,196,77,0.5)'); eg.addColorStop(1, 'rgba(255,196,77,0)');
     c1.fillStyle = eg; c1.fillRect(0,0,W,H); c1.restore();
   }
   if(impact > 0){
@@ -3822,39 +3835,68 @@ function drawPlayer(x, y, sz, k){
   ctx.restore();
   halo(x, y, sz*0.92*k, '255,120,55', 0.20*k*br);
 
-  /* THE BODY IS A SOLID NOW, and it is the one solid in the game made of
-     light: an octahedron turning on two axes, drawn additively, so what you
-     see is eight facets taking it in turns to flash. A radial gradient was
-     a glow; this is a thing that is glowing, and the difference is that it
-     has a shape you can watch move.
+  /* AN ORB, and it went back to being one on purpose.
 
-     Eight faces and not eighty: at thirty screen pixels a sphere's highlight
-     crawls and reads as a smudge, where a facet either catches the light or
-     does not, and that hard switching is what the eye reads as a gem. */
+     It was a faceted solid for a while, and the facets were good — but a
+     cut solid is a THING, and every other cut solid on this board is a
+     thing you pick up, unlock or walk into. You are not an object in the
+     cube, you are the light in it, and the one shape that says that without
+     saying anything else is a sphere with no edges at all. The board is
+     stone and everything on it is cut; you are the only round thing in the
+     game, and that is now the whole read.
+
+     Four layers, and each is a different job:
+       CORONA  a wide soft additive bloom — the light leaving
+       BODY    the sphere itself, hot at a point up and left toward the same
+               fixed light the cube is shaded by, falling to deep rust
+       TERMINATOR a thin crescent of shadow on the unlit side, which is the
+               single thing that stops a radial gradient reading as a flat
+               disc — a sphere is a gradient PLUS a dark edge
+       RIM     one bright arc on the lit limb, drawn last */
+  /* THE CORONA IS ADDITIVE AND THE BODY IS NOT, and that split is the whole
+     lesson: the deck this thing stands on is the brightest surface in the
+     game and it is lit brighter still by the orb itself, so an additive
+     sphere on top of it clips every channel and comes out as a white hole
+     in a white tile. The light around it adds; the ball itself is painted. */
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  var g = ctx.createRadialGradient(x - rr*0.30, y - rr*0.34, rr*0.04, x, y, rr*1.30);
-  g.addColorStop(0,    'rgba(255,226,180,0.42)');
-  g.addColorStop(0.44, 'rgba(255,150,80,0.26)');
-  g.addColorStop(1,    'rgba(255,74,26,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(x, y, rr*1.30, 0, 6.284); ctx.fill();
+  var co = ctx.createRadialGradient(x, y, rr*0.2, x, y, rr*1.75);
+  co.addColorStop(0,   'rgba(255,178,104,0.30)');
+  co.addColorStop(0.5, 'rgba(255,120,52,0.15)');
+  co.addColorStop(1,   'rgba(255,74,26,0)');
+  ctx.fillStyle = co;
+  ctx.beginPath(); ctx.arc(x, y, rr*1.75, 0, 6.284); ctx.fill();
   ctx.restore();
-  /* THE FACETS ARE NOT DRAWN ADDITIVELY, and that is the whole difference
-     between a gem and a blob. Added on top of a pale deck every facet
-     clips to white at once and the solid comes out as a flat lozenge; drawn
-     normally, the dark facets stay amber, the lit ones go to near-white,
-     and the eight steps between them are what the eye reads as cut. The
-     glow around it is doing the light; the shape does not have to. */
-  drawSolid(GEM_YOU, x, y, rr*0.98, t*1.55, 0.55 + t*0.85, [255, 178, 104],
-            {amb:0.42, face:0.97, edge:0.85, edgeCol:'#fff6e4', edgeW:1.1});
 
-  /* a hard core, drawn last and NOT additively, so you keep a definite
-     centre against a pale deck as well as against the void */
+  /* and the mass of it stays ORANGE. Only a small core goes near-white —
+     a sphere that is white all over is a hole, and rust has meant you since
+     the first cube. */
+  var lx = x - rr*0.32, ly = y - rr*0.36;
   ctx.save();
-  ctx.shadowColor = 'rgba(255,120,55,.9)'; ctx.shadowBlur = sz*0.5*k;
-  ctx.fillStyle = '#fff4de';
-  ctx.beginPath(); ctx.arc(x, y, rr*0.24, 0, 6.284); ctx.fill();
+  var g = ctx.createRadialGradient(lx, ly, rr*0.04, x, y, rr*1.05);
+  g.addColorStop(0,    'rgba(255,250,236,1)');
+  g.addColorStop(0.16, 'rgba(255,222,152,1)');
+  g.addColorStop(0.46, 'rgba(255,142,56,1)');
+  g.addColorStop(0.80, 'rgba(226,86,22,1)');
+  g.addColorStop(1,    'rgba(168,48,8,1)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.clip();
+  var tg = ctx.createRadialGradient(lx, ly, rr*0.5, lx, ly, rr*2.1);
+  tg.addColorStop(0, 'rgba(0,0,0,0)');
+  tg.addColorStop(1, 'rgba(38,6,0,0.72)');
+  ctx.fillStyle = tg;
+  ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(255,236,204,' + (0.55*k).toFixed(3) + ')';
+  ctx.lineWidth = Math.max(1, rr*0.16);
+  ctx.beginPath(); ctx.arc(x, y, rr*0.90, Math.PI*1.06, Math.PI*1.78); ctx.stroke();
   ctx.restore();
 }
 /* ============================================================
@@ -3900,52 +3942,36 @@ var sxA = [], syA = [], vxA = [], vyA = [], vzA = [], fzA = [], fiA = [];
         else: no normals, no uvs, no materials. Normals are computed per
         frame because these solids rotate every frame anyway. ---- */
 
-/* A BRILLIANT CUT, procedurally: a flat table on top, a ring of crown
-   facets falling to the girdle, and a pavilion running to a point. Six
-   sides is the fewest that still reads as "cut" rather than "folded". */
-function meshGem(sides, tableR, crownH, pavH){
-  var v = [], f = [], i, a;
-  for(i = 0; i < sides; i++){
-    a = i/sides * 6.28318;
-    v.push([Math.cos(a)*tableR, crownH, Math.sin(a)*tableR]);      /* table ring  0..s-1 */
+/* A TORUS, ring segments by tube segments, and the only closed surface in
+   the game. Twelve by six is coarse on purpose: at forty screen pixels a
+   smooth torus is a grey doughnut, and a faceted one throws a different
+   highlight off every segment as it turns. */
+function meshTorus(seg, side, R, r){
+  var v = [], f = [], i, j;
+  for(i = 0; i < seg; i++){
+    var a = i/seg * 6.28318, ca = Math.cos(a), sa = Math.sin(a);
+    for(j = 0; j < side; j++){
+      var b = j/side * 6.28318;
+      var rr = R + r*Math.cos(b);
+      v.push([ca*rr, r*Math.sin(b), sa*rr]);
+    }
   }
-  for(i = 0; i < sides; i++){
-    a = (i + 0.5)/sides * 6.28318;
-    v.push([Math.cos(a), 0, Math.sin(a)]);                          /* girdle ring s..2s-1 */
-  }
-  v.push([0, -pavH, 0]);                                            /* culet  2s */
-  var top = [];
-  for(i = 0; i < sides; i++) top.push(i);
-  f.push(top);                                                      /* the table */
-  for(i = 0; i < sides; i++){
-    var j = (i+1) % sides;
-    f.push([i, j, sides + i]);                                      /* crown, upper */
-    f.push([j, sides + j, sides + i]);                              /* crown, lower */
-    f.push([sides + i, sides + j, 2*sides]);                        /* pavilion */
+  for(i = 0; i < seg; i++){
+    var i2 = (i+1) % seg;
+    for(j = 0; j < side; j++){
+      var j2 = (j+1) % side;
+      f.push([i*side + j, i2*side + j, i2*side + j2, i*side + j2]);
+    }
   }
   return {v:v, f:f};
 }
 
-/* A SHARD — a bipyramid with a waist, which is what a grown crystal looks
-   like and what every game that has ever wanted to say "this is the goal"
-   has stood on end. */
-function meshShard(sides, r, top, bot){
-  var v = [], f = [], i;
-  for(i = 0; i < sides; i++){
-    var a = i/sides * 6.28318;
-    v.push([Math.cos(a)*r, 0, Math.sin(a)*r]);
-  }
-  v.push([0, top, 0]); v.push([0, -bot, 0]);
-  for(i = 0; i < sides; i++){
-    var j = (i+1) % sides;
-    f.push([i, j, sides]); f.push([j, i, sides+1]);
-  }
-  return {v:v, f:f};
-}
-
-/* An octahedron, for the one marker that is made of light: eight facets is
-   enough to flash as it turns and few enough that each flash is a whole
-   face rather than a highlight crawling over a sphere. */
+/* AN OCTAHEDRON — and it used to be the player. Eight facets is enough to
+   flash as it turns and few enough that each flash is a whole face rather
+   than a highlight crawling over a sphere, which is exactly the property a
+   thing lying on a shelf waiting to be picked up wants. The player has gone
+   back to being a sphere of light, which is what it always read as best,
+   and the diamond is now the key. */
 function meshOcta(r){
   return {v:[[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r],[0,0,-r]],
           f:[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[2,0,5],[1,2,5],[3,1,5],[0,3,5]]};
@@ -4065,28 +4091,56 @@ function drawSolid(m, x, y, s, ry, rx, col, o){
    at its own depth like everything else, so a plate far down the cube is dim
    — but it is never occluded, which is the one thing that makes planning
    with them possible. */
+/* THE PLATE IS A REFRESH, because that is exactly what it does.
+
+   It used to be a ring with a bar across it, which is the international
+   symbol for "no" — the one thing the plate is not. Two arrows chasing each
+   other round a circle is the symbol every person alive already reads as
+   "this puts the world through a change and can be done again", and the
+   plate is the only reversible thing in the game.
+
+   The two kinds turn opposite ways. INVERT and DRAIN are different rewrites
+   and a player standing on a cube with both needs to know which one is
+   under them without reading a label, so one winds clockwise and the other
+   anticlockwise. Direction is a channel nothing else in this game uses. */
 function drawPlate(r, bit, depth){
   var x = r[0] + S/2, y = r[1] + S/2, col = PLATE_COL[bit];
   var t = (Date.now() % 2600) / 2600, br = 0.55 + 0.45*Math.sin(t*6.284);
   var lit = 0.35 + 0.65 * (depth / Math.max(1, N-1));
+  var dir = bit === 1 ? 1 : -1;
+  var spin = (Date.now() % 5200) / 5200 * 6.28318 * dir;
+  var rad = S*0.26, lw = Math.max(1.7, S*0.062), head = Math.max(3, S*0.105);
   halo(x, y, S*0.95, col, 0.30*br*lit);
   ctx.save();
-  ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 + 0.4*br*lit).toFixed(3) + ')';
-  ctx.lineWidth = Math.max(1.6, S*0.065);
-  ctx.beginPath(); ctx.arc(x, y, S*0.29, 0, 6.284); ctx.stroke();
-  ctx.lineWidth = Math.max(1.3, S*0.05);
-  ctx.beginPath();
-  if(bit === 1){ ctx.moveTo(x - S*0.17, y - S*0.17); ctx.lineTo(x + S*0.17, y + S*0.17); }
-  else { ctx.moveTo(x - S*0.19, y); ctx.lineTo(x + S*0.19, y); }
-  ctx.stroke();
+  ctx.strokeStyle = ctx.fillStyle = 'rgba(' + col + ',' + (0.60 + 0.36*br*lit).toFixed(3) + ')';
+  ctx.lineWidth = lw; ctx.lineCap = 'butt';
+  var headArc = (head*1.5) / rad;                 /* what the head costs in angle */
+  for(var i = 0; i < 2; i++){
+    var a0 = spin + i*Math.PI, a1 = a0 + 2.30*dir, aEnd = a1 - dir*headArc;
+    /* THE ARC STOPS WHERE THE HEAD BEGINS. Drawn to a1 and then a triangle
+       dropped on top of the end, the head straddles the stroke and leaves a
+       notch on the inside of the curve — the arrow reads as a shape stuck
+       onto a ring rather than as the end of it. The arc gives up exactly the
+       angle the head occupies, the head's base sits on that point, and its
+       tip carries on to where the stroke would have finished. */
+    ctx.beginPath();
+    ctx.arc(x, y, rad, Math.min(a0, aEnd), Math.max(a0, aEnd));
+    ctx.stroke();
+    var ce = Math.cos(aEnd), se = Math.sin(aEnd);
+    var bx = x + ce*rad, by = y + se*rad, w2 = head*0.68;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a1)*rad, y + Math.sin(a1)*rad);
+    ctx.lineTo(bx + ce*w2, by + se*w2);
+    ctx.lineTo(bx - ce*w2, by - se*w2);
+    ctx.closePath(); ctx.fill();
+  }
   ctx.restore();
 }
 /* ---- the four solids, built once ---------------------------------------
    Cheap enough to build at boot and never think about again: the largest is
    the gate at thirty-six faces, and the whole set is under a hundred. */
-var GEM_KEY = meshGem(6, 0.62, 0.34, 1.15);
-var GEM_EXIT = meshShard(6, 0.52, 1.25, 0.62);
-var GEM_YOU = meshOcta(1);
+var GEM_KEY = meshOcta(1);
+var GEM_EXIT = meshTorus(12, 6, 0.74, 0.26);
 var GATE = meshMerge([
   meshBox(0.10, 0.62, 0.10, -0.62, 0.02, 0),        /* posts */
   meshBox(0.10, 0.62, 0.10,  0.62, 0.02, 0),
@@ -4113,31 +4167,43 @@ function stepDoors(dt){
   }
 }
 
-/* THE KEY — a cut gem, turning. Gold has meant one thing since cube one and
-   it still does; what changed is that it is now an object with facets that
-   catch a light rather than a keyhole shape sitting flat on the stone. */
+/* THE KEY — the diamond, in emerald, turning on a slow bob. Eight facets on
+   two axes of spin means a key is never showing you the same face twice,
+   which is what makes an object on a shelf read as worth crossing a board
+   for. */
+var C_KEY = [34, 224, 106], S_KEY = '34,224,106';
 function drawKey(cx, cy, sz){
   var t = Date.now()/1000;
   var y = cy - sz*0.05 - sz*0.045*Math.sin(t*1.9);
-  halo(cx, y, sz*0.95, '255,196,77', 0.20);
-  drawSolid(GEM_KEY, cx, y, sz*0.27, t*1.15, 0.30 + 0.07*Math.sin(t*1.4),
-            [255, 196, 77], {glow:0.30, glowR:1.9, edge:0.55, edgeCol:'#fff6d8', amb:0.30});
+  halo(cx, y, sz*1.0, S_KEY, 0.22);
+  drawSolid(GEM_KEY, cx, y, sz*0.30, t*1.15, 0.42 + 0.10*Math.sin(t*1.4),
+            C_KEY, {glow:0.30, glowR:1.9, edge:0.70, edgeCol:'#dcffe8', amb:0.34});
 }
 
-/* THE WAY OUT — a shard standing on its point, turning slowly, lit from
-   inside. The ground ring stays: the crystal says "here", the ring says
-   "this is the square", and those are two different facts. */
+/* THE WAY OUT — a gold torus, hanging over the square and turning about its
+   own axis.
+
+   A ring is the right shape for this and it took three goes to get there. It
+   is the only closed form on the board, so it can never be confused with a
+   gem lying on a shelf; it is a HOLE, which is what a way out is; and
+   spinning it about its own axis means the silhouette never changes — it
+   reads as a ring from the first frame to the last while the light travels
+   around it. Tilted a little off face-on so it is plainly a solid and not a
+   drawn circle. */
+var C_EXIT = [255, 196, 77], S_EXIT = '255,196,77';
 function drawGoal(cx, cy, sz){
   var t = Date.now()/1000, p = (Date.now() % 2400)/2400;
-  var y = cy - sz*0.10 - sz*0.05*Math.sin(t*1.35);
-  halo(cx, y, sz*1.35, '53,215,161', 0.26);
+  var y = cy - sz*0.06 - sz*0.04*Math.sin(t*1.35);
+  halo(cx, y, sz*1.45, S_EXIT, 0.30);
+  /* the pulse on the deck: the ring says "the way out", this says "this
+     square", and those are two different facts */
   ctx.save();
-  ctx.strokeStyle = 'rgba(53,215,161,' + (0.50*(1-p)).toFixed(3) + ')';
+  ctx.strokeStyle = 'rgba(' + S_EXIT + ',' + (0.50*(1-p)).toFixed(3) + ')';
   ctx.lineWidth = Math.max(1.4, sz*0.045);
-  ctx.beginPath(); ctx.ellipse(cx, cy + sz*0.30, sz*(0.20 + 0.30*p), sz*(0.09 + 0.13*p), 0, 0, 6.284);
+  ctx.beginPath(); ctx.ellipse(cx, cy + sz*0.32, sz*(0.20 + 0.30*p), sz*(0.09 + 0.13*p), 0, 0, 6.284);
   ctx.stroke(); ctx.restore();
-  drawSolid(GEM_EXIT, cx, y, sz*0.34, t*0.62, 0.16, [53, 215, 161],
-            {glow:0.34, glowR:2.2, edge:0.60, edgeCol:'#d8fff0', amb:0.36});
+  drawSolid(GEM_EXIT, cx, y, sz*0.40, t*0.75, 1.31 + 0.08*Math.sin(t*0.8), C_EXIT,
+            {glow:0.34, glowR:2.2, edge:0.55, edgeCol:'#fff4d4', amb:0.36, face:0.98});
 }
 
 /* THE GATE — posts, a lintel, a threshold and three bars, and the bars sink
@@ -4338,7 +4404,7 @@ function draw3d(){
          thing being revealed has to be the thing you notice */
       if(xr > 0.02){
         flushWire();
-        var mc = e.k === 2 ? '255,196,77' : e.k === 1 ? '255,140,70' : '53,215,161';
+        var mc = e.k === 2 ? S_KEY : e.k === 1 ? '255,140,70' : e.k === 4 ? S_EXIT : '53,215,161';
         halo(e.x, e.y, sz*(1.0 + xr*0.8), mc, (e.k === 1 ? 0.52 : 0.32)*xr);
       }
       /* and YOU grow under a peek. Every other marker is a place; you are
@@ -4421,7 +4487,7 @@ function tapCell(u, v){
   if(!s){ toast('nothing there'); sfx.deny(); denyAt(u, v); return; }
   if(!isWalkType(s.t)){ toast('bedrock — no footing on this face'); sfx.deny(); denyAt(u, v); return; }
   var di = doorIndexAt(lv, s.w), shut = di >= 0 && !(doors & (1<<di));
-  if(shut && keysHeld() < 1){ toast('locked — find a key'); sfx.deny(); buzz(14); denyAt(u, v, '255,196,77'); return; }
+  if(shut && keysHeld() < 1){ toast('locked — find a key'); sfx.deny(); buzz(14); denyAt(u, v, '34,224,106'); return; }
   var path = pathTo(u, v);
   if(!path){ toast(shut ? 'no way to that door' : 'not connected — turn the cube'); sfx.deny(); denyAt(u, v); return; }
   /* Tapping the cell you already stand on yields an EMPTY path, which is
@@ -4467,10 +4533,10 @@ function advanceWalk(dt){
   var ki = keyIndexAt(lv, pos);
   if(ki >= 0 && !(kmask & (1<<ki))){
     kmask |= (1<<ki); sfx.key(); buzz(12); toast('key');
-    shake(0.20); punch(0.022); hitstop(30); flash('255,196,77', 0.26, 460);
-    burst(cx2, cy2, 20, {spd:130, life:560, r:2.2, col:'255,196,77', g:20});
-    burst(cx2, cy2, 8, {kind:'ember', spd:26, lift:40, life:900, r:2.0, col:'255,220,140', g:-24});
-    ring(cx2, cy2, {r0:S*0.15, r1:S*1.9, dur:460, col:'255,196,77', a:0.7, w:3});
+    shake(0.20); punch(0.022); hitstop(30); flash('34,224,106', 0.26, 460);
+    burst(cx2, cy2, 20, {spd:130, life:560, r:2.2, col:'34,224,106', g:20});
+    burst(cx2, cy2, 8, {kind:'ember', spd:26, lift:40, life:900, r:2.0, col:'170,255,200', g:-24});
+    ring(cx2, cy2, {r0:S*0.15, r1:S*1.9, dur:460, col:'34,224,106', a:0.7, w:3});
     flyKey();
   }
   var gb = glyphAt(lv, pos);
@@ -4738,12 +4804,12 @@ function finish(){
      restraint — you are leaving, so nothing after this has to stay legible.
      The orb is drawn INTO the door: a ring of sparks falls inward first,
      then everything leaves outward. */
-  burst(gx, gy, 34, {spd:190, life:800, r:2.6, col:'53,215,161', g:0});
-  burst(gx, gy, 18, {spd:70, life:1000, r:3.4, col:'233,245,255', g:-14});
-  burst(gx, gy, 22, {kind:'ember', spd:14, lift:70, life:1500, r:2.4, col:'150,255,215', g:-40, fade:0.8});
+  burst(gx, gy, 34, {spd:190, life:800, r:2.6, col:'255,196,77', g:0});
+  burst(gx, gy, 18, {spd:70, life:1000, r:3.4, col:'255,246,224', g:-14});
+  burst(gx, gy, 22, {kind:'ember', spd:14, lift:70, life:1500, r:2.4, col:'255,226,150', g:-40, fade:0.8});
   beam = {x:gx, y:gy, t:0, dur:1100};
-  ring(gx, gy, {r0:S*0.2, r1:N*S*1.2, dur:900, col:'53,215,161', a:0.85, w:7, sq:true});
-  ring(gx, gy, {r0:S*0.2, r1:N*S*0.7, dur:600, col:'233,245,255', a:0.6, w:4});
+  ring(gx, gy, {r0:S*0.2, r1:N*S*1.2, dur:900, col:'255,196,77', a:0.85, w:7, sq:true});
+  ring(gx, gy, {r0:S*0.2, r1:N*S*0.7, dur:600, col:'255,246,224', a:0.6, w:4});
   kick(11, 0, 1); shake(1); punch(0.09);
   /* THE ONE PLACE THE CLOCK REALLY BENDS. A long stop, then a third of
      speed for most of a second, so the board comes apart at the pace of
@@ -4752,7 +4818,7 @@ function finish(){
   /* exitFlash already floods the frame green for most of a second; this one
      only has to be the leading edge of it, and two full-strength washes
      stacked read as a white-out rather than as a door opening */
-  flash('53,215,161', 0.22, 620);
+  flash('255,196,77', 0.22, 620);
   exitFlash = 1;
   /* A PERFECT LINE IS A DIFFERENT EVENT, and it has never once looked like
      one. Par is the whole scoring system in this game; clearing at par with
@@ -4762,11 +4828,14 @@ function finish(){
      are made of, and thirty chips of it thrown up through the jade. */
   if(turns <= lv.par){
     setTimeout(function(){
-      flash('255,196,77', 0.34, 900);
+      /* the exit is gold now, so a perfect line cannot also be gold — it
+         goes WHITE, which is the one step past gold anybody reads without
+         being told */
+      flash('255,252,240', 0.30, 900);
       shake(0.7); punch(0.05); sfx.vault();
-      ring(gx, gy, {r0:S*0.2, r1:N*S*1.3, dur:1000, col:'255,196,77', a:0.8, w:6, sq:true});
-      burst(gx, gy, 34, {kind:'chip', spd:210, life:1500, r:2.2, col:'255,196,77', g:180, fade:0.9});
-      burst(gx, gy, 22, {kind:'ember', spd:30, lift:120, life:1800, r:2.4, col:'255,226,150', g:-46, fade:0.85});
+      ring(gx, gy, {r0:S*0.2, r1:N*S*1.3, dur:1000, col:'255,252,240', a:0.85, w:6, sq:true});
+      burst(gx, gy, 34, {kind:'chip', spd:210, life:1500, r:2.2, col:'255,248,228', g:180, fade:0.9});
+      burst(gx, gy, 22, {kind:'ember', spd:30, lift:120, life:1800, r:2.4, col:'255,255,245', g:-46, fade:0.85});
     }, 210);
   }
   setTimeout(function(){ startWave('out', gv[0], gv[1], 420); }, 190);
