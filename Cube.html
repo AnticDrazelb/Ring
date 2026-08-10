@@ -4022,49 +4022,82 @@ function stepFace(dt){
     hopT = 0;
   }
 }
-/* eyes, drawn onto a sphere of radius rr centred at x,y */
+/* THE FACE IS MADE OF THE SAME LIGHT THE REST OF IT IS.
+
+   A white eye with a dark pupil is how you draw a character made of matter,
+   and it was the wrong material: two holes punched in a bubble of plasma,
+   floating in front of the charge rather than being part of it. Everything
+   here is now ADDITIVE and cut from the interior glow — the face is where
+   the light inside gathers, which is the only way a creature made of energy
+   can have one.
+
+   That costs the pupil, and the pupil was carrying the gaze. So the whole
+   eye moves instead: the shape itself slides toward what it is looking at,
+   the way every character without visible whites has always done it. Same
+   information, and it survives being made of light.
+
+   A mouth arrives with it, because a bubble with two eyes and nothing else
+   is a face that is merely open, and one soft arc is the difference between
+   present and pleased. */
 function drawFace(x, y, rr, k){
-  var m = face.mood, p = face.dur ? face.t/face.dur : 0;
-  var ex = rr*0.36, ey = -rr*0.14;                       /* eye offset from centre */
-  var w = rr*0.24, h = rr*0.30;                          /* eye size */
+  var m = face.mood;
+  var ex = rr*0.33, ey = -rr*0.10;
+  var w = rr*0.23, h = rr*0.27;
   var closed = face.blink < 0 || m === 'land';
   var happy = m === 'happy' || m === 'win';
   var wide = m === 'wide';
-  if(wide){ w *= 1.22; h *= 1.34; }
-  if(m === 'land'){ h *= 0.5; }
-  var px = face.lookX * w*0.42, py = face.lookY * h*0.34;
+  if(wide){ w *= 1.26; h *= 1.40; }
+  var mx = face.lookX * w*0.55, my = face.lookY * h*0.40;
+  var glow = lightCtx();
+  /* SOURCE-OVER, NOT ADDITIVE. An additive eye on a lit interior stops
+     being an eye the moment the interior gets bright — it has no upper
+     bound and simply joins the glare. Painted opaque, the shape is
+     guaranteed at every brightness the plasma can reach, and the bloom
+     buffer supplies the halo separately. */
   ctx.save();
-  ctx.translate(x, y);
   for(var i = 0; i < 2; i++){
-    var cx = (i ? ex : -ex), cy = ey;
+    var cx = x + (i ? ex : -ex) + mx, cy = y + ey + my;
+    /* the halo under each eye, into the bloom buffer, so the face is the
+       brightest part of the thing rather than a decal on it */
+    if(glow !== ctx){
+      glow.save(); glow.globalCompositeOperation = 'lighter';
+      var eg = glow.createRadialGradient(cx, cy, 0, cx, cy, w*1.7);
+      eg.addColorStop(0, 'rgba(200,250,255,' + (0.20*k).toFixed(3) + ')');
+      eg.addColorStop(1, 'rgba(120,220,255,0)');
+      glow.fillStyle = eg;
+      glow.beginPath(); glow.arc(cx, cy, w*1.7, 0, 6.284); glow.fill();
+      glow.restore();
+    }
+    ctx.fillStyle = 'rgba(236,255,255,' + (0.97*k).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(236,255,255,' + (0.97*k).toFixed(3) + ')';
+    ctx.lineCap = 'round';
     if(happy){
-      /* two upward arcs, which is the entire vocabulary of delight */
-      ctx.strokeStyle = 'rgba(9,20,52,0.92)';
-      ctx.lineWidth = Math.max(1.6, rr*0.13);
-      ctx.lineCap = 'round';
+      /* a crescent: the full eye with a bite taken out of its underside,
+         which is a closed happy eye and reads at any size */
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(cx, cy, w, h*0.96, 0, 0, 6.284); ctx.clip();
+      ctx.fillRect(cx - w*1.2, cy - h*1.2, w*2.4, h*2.4);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath(); ctx.ellipse(cx, cy + h*0.62, w*1.05, h*0.92, 0, 0, 6.284); ctx.fill();
+      ctx.restore();
+    } else if(closed){
+      ctx.lineWidth = Math.max(1.4, rr*0.10);
       ctx.beginPath();
-      ctx.arc(cx, cy + h*0.34, w*0.92, Math.PI*1.12, Math.PI*1.88);
+      ctx.moveTo(cx - w*0.9, cy); ctx.lineTo(cx + w*0.9, cy);
       ctx.stroke();
-      continue;
+    } else {
+      ctx.beginPath(); ctx.ellipse(cx, cy, w, h, 0, 0, 6.284); ctx.fill();
     }
-    if(closed){
-      ctx.strokeStyle = 'rgba(9,20,52,0.92)';
-      ctx.lineWidth = Math.max(1.5, rr*0.12);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(cx - w*0.82, cy); ctx.lineTo(cx + w*0.82, cy);
-      ctx.stroke();
-      continue;
-    }
-    /* the white, then the pupil, then the one catchlight that makes an eye
-       an eye rather than a hole */
-    ctx.fillStyle = 'rgba(252,255,255,0.97)';
-    ctx.beginPath(); ctx.ellipse(cx, cy, w, h, 0, 0, 6.284); ctx.fill();
-    ctx.fillStyle = 'rgba(9,20,52,0.95)';
-    ctx.beginPath(); ctx.ellipse(cx + px, cy + py, w*0.54, h*0.56, 0, 0, 6.284); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    ctx.beginPath(); ctx.arc(cx + px - w*0.22, cy + py - h*0.26, w*0.20, 0, 6.284); ctx.fill();
   }
+  /* the mouth: a soft arc, wider and higher when it is pleased */
+  var mw = happy ? rr*0.40 : wide ? rr*0.16 : rr*0.28;
+  var mo = happy ? rr*0.30 : rr*0.36;
+  ctx.lineWidth = Math.max(1.2, rr*(happy ? 0.10 : 0.075));
+  ctx.strokeStyle = 'rgba(226,255,255,' + ((happy ? 0.95 : 0.62)*k).toFixed(3) + ')';
+  ctx.beginPath();
+  if(wide) ctx.ellipse(x + mx*0.5, y + mo, mw*0.7, mw*0.7, 0, 0, 6.284);
+  else ctx.arc(x + mx*0.5, y + mo - mw*0.5, mw, Math.PI*0.18, Math.PI*0.82);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -4148,96 +4181,153 @@ function drawPlayer(x, y, sz, k){
   ctx.restore();
   halo(x, y, sz*0.92*k, '56,214,255', 0.20*k*br);
 
-  /* AN ORB, and it went back to being one on purpose.
+  /* A PLASMA BUBBLE, not a marble.
 
-     It was a faceted solid for a while, and the facets were good — but a
-     cut solid is a THING, and every other cut solid on this board is a
-     thing you pick up, unlock or walk into. You are not an object in the
-     cube, you are the light in it, and the one shape that says that without
-     saying anything else is a sphere with no edges at all. The board is
-     stone and everything on it is cut; you are the only round thing here.
+     A shaded sphere is a solid: a snooker ball, a planet, something with
+     mass that light falls ON. This is not that. It is a glass shell with a
+     charge loose inside it — the light comes from WITHIN, the shell only
+     catches a rim and a highlight, and the interior is never still. The
+     difference between the two is the difference between a marker and a
+     creature, and it is all in which direction the light travels.
 
-     AND YOU ARE THE ONLY COOL THING HERE. Rust was fine, and rust is also
-     the interface — the ticks, the reach hints and every button wear it, so
-     the player was the same colour as the chrome around them. An arc-light
-     blue-green belongs to nothing else on the board or off it: not the
-     emerald key, not the jade gate, not the gold ring, not one pixel of the
-     HUD. Exactly one object in this game is cyan and it is you.
+     Built from the outside in:
 
-     SIX LAYERS, because a radial gradient is a disc and a sphere is not:
+       CORONA    the discharge, wide and additive
+       ORBIT     a ring and a few sparks going round it. The ones behind
+                 are drawn before the shell and the ones in front after, so
+                 the sphere is plainly a volume they are circling and not a
+                 sticker they are next to. Two lines of maths, and it is the
+                 single strongest 3D cue on the whole object.
+       SHELL     dark at the limb, clear in the middle. Dark edges are what
+                 make glass read as glass — a bright edge would be a ball
+       PLASMA    five drifting cells and three filaments, each on its own
+                 speed, clipped inside the shell. Nothing loops together, so
+                 it never repeats
+       RIM       one bright ring all the way round, brightest toward the
+                 light. This is the surface of the bubble
+       SPECULAR  the single blob that says "and it is polished"
 
-       CORONA      wide, additive, cool — the light leaving
-       BODY        white core through spring green, cyan and blue to a deep
-                   navy limb. TWO hues in the ramp rather than one, which is
-                   most of what stops it reading as a coloured circle
-       TERMINATOR  the crescent of shadow on the unlit side. This alone is
-                   what turns a gradient into a ball
-       OCCLUSION   a darkening low and behind, where it meets its own shadow
-       RIM         a cool bright arc on the FAR limb — light wrapping round
-                   the back of a sphere
-       SPECULAR    one small hot spot up and left, toward the same fixed
-                   light the cube itself is shaded by, drawn last and not
-                   moving with the shading. A sphere is sold by this. */
+     The shell stays OPAQUE even though the thing it is imitating is not.
+     A genuinely translucent sphere over the brightest deck in the game
+     washes to nothing, and the read has to survive the worst tile it can
+     stand on. Dark glass with a fire inside it is the honest version that
+     also happens to work. */
+  var t2 = t*0.62;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  var co = ctx.createRadialGradient(x, y, rr*0.2, x, y, rr*1.8);
-  co.addColorStop(0,   'rgba(120,240,255,0.30)');
-  co.addColorStop(0.5, 'rgba(46,190,255,0.15)');
+  var co = ctx.createRadialGradient(x, y, rr*0.2, x, y, rr*1.95);
+  co.addColorStop(0,   'rgba(130,240,255,0.34)');
+  co.addColorStop(0.5, 'rgba(48,180,255,0.16)');
   co.addColorStop(1,   'rgba(20,90,220,0)');
   ctx.fillStyle = co;
-  ctx.beginPath(); ctx.arc(x, y, rr*1.8, 0, 6.284); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, rr*1.95, 0, 6.284); ctx.fill();
   ctx.restore();
 
-  /* painted, never added: the deck under the player is the brightest
-     surface in the game and is lit brighter still by the player, so an
-     additive sphere on top of it clips every channel and comes out as a
-     white hole in a white tile */
+  /* the orbit, tilted, and split front from back around the sphere */
+  var ORB_N = 4, orbR = rr*1.34, orbSquash = 0.34;
+  function orbSpark(i, front){
+    var a = t*1.15 + i*(6.28318/ORB_N);
+    var sy = Math.sin(a);
+    if((sy > 0) !== front) return;
+    var ox = x + Math.cos(a)*orbR, oy = y + sy*orbR*orbSquash - rr*0.06;
+    var sc = 0.62 + 0.38*(sy*0.5 + 0.5);
+    var c2 = lightCtx();
+    c2.save(); c2.globalCompositeOperation = 'lighter';
+    var sg = c2.createRadialGradient(ox, oy, 0, ox, oy, rr*0.30*sc);
+    sg.addColorStop(0, 'rgba(230,255,255,' + (0.85*k*sc).toFixed(3) + ')');
+    sg.addColorStop(1, 'rgba(90,210,255,0)');
+    c2.fillStyle = sg;
+    c2.beginPath(); c2.arc(ox, oy, rr*0.30*sc, 0, 6.284); c2.fill();
+    c2.restore();
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = 'rgba(240,255,255,' + (0.9*k*sc).toFixed(3) + ')';
+    ctx.beginPath(); ctx.arc(ox, oy, rr*0.075*sc, 0, 6.284); ctx.fill();
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(120,220,255,' + (0.20*k).toFixed(3) + ')';
+  ctx.lineWidth = Math.max(1, rr*0.045);
+  ctx.beginPath(); ctx.ellipse(x, y - rr*0.06, orbR, orbR*orbSquash, 0, 0, 6.284); ctx.stroke();
+  ctx.restore();
+  for(var oi = 0; oi < ORB_N; oi++) orbSpark(oi, false);
+
+  /* the shell */
   var lx = x - rr*0.30, ly = y - rr*0.34;
   ctx.save();
-  var g = ctx.createRadialGradient(lx, ly, rr*0.04, x, y, rr*1.06);
-  /* the GREEN has to hold a band of its own or the ramp collapses to "a
-     blue ball": white, spring green, turquoise, cyan, then blue — five
-     stops so no single hue owns it and the eye reads a charge rather than
-     a colour */
-  g.addColorStop(0,    'rgba(246,255,255,1)');
-  g.addColorStop(0.17, 'rgba(160,255,222,1)');
-  g.addColorStop(0.44, 'rgba(62,238,214,1)');
-  g.addColorStop(0.68, 'rgba(44,198,248,1)');
-  g.addColorStop(0.88, 'rgba(28,124,230,1)');
-  g.addColorStop(1,    'rgba(16,68,170,1)');
+  var g = ctx.createRadialGradient(lx, ly, rr*0.06, x, y, rr*1.04);
+  g.addColorStop(0,    'rgba(46,130,208,1)');
+  g.addColorStop(0.52, 'rgba(24,86,178,1)');
+  g.addColorStop(0.84, 'rgba(14,50,132,1)');
+  g.addColorStop(1,    'rgba(8,26,86,1)');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.fill();
   ctx.restore();
 
+  /* the charge inside it */
   ctx.save();
-  ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.clip();
-  var tg = ctx.createRadialGradient(lx, ly, rr*0.5, lx, ly, rr*2.1);
-  tg.addColorStop(0, 'rgba(0,0,0,0)');
-  tg.addColorStop(1, 'rgba(2,14,54,0.78)');
-  ctx.fillStyle = tg;
-  ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
-  var og = ctx.createRadialGradient(x + rr*0.30, y + rr*0.46, rr*0.1, x + rr*0.30, y + rr*0.46, rr*1.15);
-  og.addColorStop(0, 'rgba(2,10,44,0.42)');
-  og.addColorStop(1, 'rgba(2,10,44,0)');
-  ctx.fillStyle = og;
-  ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
+  ctx.beginPath(); ctx.arc(x, y, rr*0.985, 0, 6.284); ctx.clip();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.strokeStyle = 'rgba(150,250,255,' + (0.62*k).toFixed(3) + ')';
-  ctx.lineWidth = Math.max(1, rr*0.15);
-  ctx.beginPath(); ctx.arc(x, y, rr*0.90, Math.PI*0.10, Math.PI*0.86); ctx.stroke();
+  var ci;
+  for(ci = 0; ci < 5; ci++){
+    var a2 = t2*(0.9 + ci*0.37) + ci*2.19;
+    var cxp = x + Math.cos(a2)*rr*(0.16 + ci*0.045);
+    var cyp = y + Math.sin(a2*1.27 + ci)*rr*(0.14 + ci*0.04);
+    var cr = rr*(0.62 - ci*0.075);
+    var pg = ctx.createRadialGradient(cxp, cyp, 0, cxp, cyp, cr);
+    pg.addColorStop(0, 'rgba(180,255,255,' + (0.20 - ci*0.022).toFixed(3) + ')');
+    pg.addColorStop(0.55, 'rgba(60,200,255,' + (0.10 - ci*0.015).toFixed(3) + ')');
+    pg.addColorStop(1, 'rgba(30,120,255,0)');
+    ctx.fillStyle = pg;
+    ctx.beginPath(); ctx.arc(cxp, cyp, cr, 0, 6.284); ctx.fill();
+  }
+  /* filaments: thin bright arcs, each turning at its own rate, which is
+     what stops the interior reading as a soft blob */
+  for(ci = 0; ci < 3; ci++){
+    var fa = t2*(1.5 - ci*0.42) + ci*2.1;
+    ctx.strokeStyle = 'rgba(196,255,255,' + (0.30 - ci*0.07).toFixed(3) + ')';
+    ctx.lineWidth = Math.max(0.8, rr*(0.075 - ci*0.017));
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(fa*0.8)*rr*0.16, y + Math.sin(fa*0.6)*rr*0.14,
+            rr*(0.36 + ci*0.19), fa, fa + 2.4 - ci*0.4);
+    ctx.stroke();
+  }
+  /* the hot centre */
+  /* the hot centre sits BELOW the eyes and stays under them in value.
+     Anything bright behind a bright face erases the face: the eye stops
+     being a shape and becomes part of a glare, which is exactly what the
+     first version did. */
+  var hc = ctx.createRadialGradient(x, y + rr*0.20, 0, x, y + rr*0.20, rr*0.52);
+  hc.addColorStop(0, 'rgba(230,255,255,0.30)');
+  hc.addColorStop(0.4, 'rgba(140,240,255,0.15)');
+  hc.addColorStop(1, 'rgba(60,190,255,0)');
+  ctx.fillStyle = hc;
+  ctx.beginPath(); ctx.arc(x, y + rr*0.20, rr*0.52, 0, 6.284); ctx.fill();
   ctx.restore();
 
+  /* the surface of the bubble: a rim all the way round, weighted to the
+     light, and one polished blob */
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  var sp = ctx.createRadialGradient(lx, ly, 0, lx, ly, rr*0.42);
-  sp.addColorStop(0, 'rgba(255,255,255,' + (0.92*k).toFixed(3) + ')');
-  sp.addColorStop(0.45, 'rgba(210,255,255,' + (0.30*k).toFixed(3) + ')');
+  var rg = ctx.createLinearGradient(x - rr, y - rr, x + rr, y + rr);
+  rg.addColorStop(0, 'rgba(214,255,255,' + (0.90*k).toFixed(3) + ')');
+  rg.addColorStop(0.45, 'rgba(120,225,255,' + (0.38*k).toFixed(3) + ')');
+  rg.addColorStop(1, 'rgba(150,235,255,' + (0.62*k).toFixed(3) + ')');
+  ctx.strokeStyle = rg;
+  ctx.lineWidth = Math.max(1.1, rr*0.085);
+  ctx.beginPath(); ctx.arc(x, y, rr*0.955, 0, 6.284); ctx.stroke();
+  var spx = x - rr*0.42, spy = y - rr*0.46;
+  var sp = ctx.createRadialGradient(spx, spy, 0, spx, spy, rr*0.30);
+  sp.addColorStop(0, 'rgba(255,255,255,' + (0.52*k).toFixed(3) + ')');
+  sp.addColorStop(0.42, 'rgba(214,255,255,' + (0.16*k).toFixed(3) + ')');
   sp.addColorStop(1, 'rgba(160,240,255,0)');
   ctx.fillStyle = sp;
-  ctx.beginPath(); ctx.arc(lx, ly, rr*0.42, 0, 6.284); ctx.fill();
+  ctx.beginPath(); ctx.arc(spx, spy, rr*0.30, 0, 6.284); ctx.fill();
   ctx.restore();
 
   if(k > 0.55) drawFace(x, y, rr, k);
+  for(oi = 0; oi < ORB_N; oi++) orbSpark(oi, true);
   if(pushed) ctx.restore();
 }
 /* ============================================================
