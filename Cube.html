@@ -466,6 +466,7 @@ h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;tex
     <div class="mrow"><div class="mkey">◫</div><div class="mtxt"><b>Depth is discarded.</b> Everything in a column collapses to the nearest solid thing. Two decks far apart in the cube are <span class="c">neighbours on screen</span>, and you may walk between them.</div></div>
     <div class="mrow"><div class="mkey">▦</div><div class="mtxt"><b>Brightness is distance.</b> A pale tile is near, a dim one is far. The hairlines between them mark a drop you are allowed to ignore.</div></div>
     <div class="mrow"><div class="mkey">◈</div><div class="mtxt">Keys and doors can be <b>buried</b> behind bedrock. If something is missing, it is behind you in an axis you are not looking down. Turn.</div></div>
+    <div class="mrow"><div class="mkey">◱</div><div class="mtxt"><b>Hold anywhere to look inside.</b> The rock goes to glass and every key, door and exit in the cube shows where it really is. It costs nothing and changes nothing — you cannot walk or turn while you are holding, and letting go puts the stone back.</div></div>
     <div class="mrow"><div class="mkey" style="color:#a86bff">⊘</div><div class="mtxt"><b>Plates rewrite the cube.</b> Step on one and every deck becomes stone and every wall becomes floor — the same cube, a different place. Step on it again to put it back. They appear from cube 20.</div></div>
     <div class="mrow"><div class="mkey" style="color:#a86bff">⟲</div><div class="mtxt">A plate is cut clean through the rock, so you can see it from <b>every face</b> — and it always gives you footing, which means <span class="c">every turn is legal while you stand on one</span>. Plates are pivots.</div></div>
   </div>
@@ -498,6 +499,7 @@ h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;tex
   <div class="row" id="rowSound"><div><div class="lbl">Sound</div><div class="hint">Clicks, latches, and the detent</div></div><div class="sw on" id="swSound"></div></div>
   <div class="row" id="rowHaptic"><div><div class="lbl">Haptics</div><div class="hint">A tick on every committed turn</div></div><div class="sw on" id="swHaptic"></div></div>
   <div class="row" id="rowDepth"><div><div class="lbl">Depth numbers</div><div class="hint">Prints each tile's distance from the camera. A crutch, and a good one while the collapse is still new.</div></div><div class="sw" id="swDepth"></div></div>
+  <div class="row" id="rowFx"><div><div class="lbl">Effects</div><div class="hint">Shake, sparks, debris and bloom. Turned down, every beat still happens — quieter, and with the camera held still. Follows your device's reduce-motion setting until you touch it.</div></div><div class="sw on" id="swFx"></div></div>
   <button class="btn ghost" id="btnManual2">HOW IT WORKS</button>
 </div>
 
@@ -1517,7 +1519,15 @@ function prebuild(level){
    PERSISTENCE — one key, and it is allowed to fail.
    A WebView with storage disabled should still play; it just forgets.
    ============================================================ */
-var store = {best:{}, reached:1, sound:1, haptic:1, depth:0, taught:0, sawPlate:0};
+/* EFFECTS DEFAULT TO WHAT THE DEVICE ALREADY ASKED FOR. A player who has
+   set "reduce motion" at the OS level has already told every app they open
+   how much shake they want, and making them find a switch to say it again
+   is not a preference, it is a tax. They still get the game — the beats are
+   all there at 40% — and the switch is in the pause menu either way. */
+var reduceMotion = false;
+try{ reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
+var store = {best:{}, reached:1, sound:1, haptic:1, depth:0, taught:0, sawPlate:0,
+             sawPeek:0, peekHinted:0, fx: reduceMotion ? 0 : 1};
 try{ var raw = localStorage.getItem('turnkey-v2'); if(raw) store = Object.assign(store, JSON.parse(raw)); }catch(e){}
 var saveT = 0;
 function save(){
@@ -1658,7 +1668,15 @@ var sfx = {
     setTimeout(function(){ tone(bit === 1 ? 1046 : 784, 0.5, 'triangle', 0.09, 0, 0.7); }, 120);
   },
   undo:  function(){ tone(420, 0.16, 'sine', 0.06, 700, 0.3); noise(0.07, 1800, 0.05, 0.2); },
-  stuck: function(){ tone(200, 0.34, 'sine', 0.07, 118, 0.4); }
+  stuck: function(){ tone(200, 0.34, 'sine', 0.07, 118, 0.4); },
+  /* the peek is stone becoming glass and back again: a filter opening
+     upward on the way in, and a short dry knock on the way out, so the hand
+     is told the cube has shut even when the eye is elsewhere */
+  peek:  function(){
+    noise(0.30, 700, 0.055, 0.55, 5200);
+    tone(392, 0.34, 'sine', 0.045, 784, 0.55);
+  },
+  peekOff: function(){ noise(0.06, 2600, 0.05, 0.18); tone(196, 0.10, 'sine', 0.05, 130, 0.15); }
 };
 function buzz(ms){ if(store.haptic && navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){} }
 
@@ -1703,7 +1721,7 @@ function fit(){
      a texture drawn at block resolution must never be. Rotate the phone and
      it would silently come back on. */
   ctx.imageSmoothingEnabled = false;
-  layout(); buildSky(); buildMotes(); shS = -1;
+  layout(); buildSky(); buildMotes(); buildGlow(); shS = -1;
 }
 var S = 40, CX = 0, CY = 0;
 /* LAYOUT — MOBILE FIRST, AND THE BOARD ALWAYS FITS.
@@ -1787,8 +1805,14 @@ function curSurf(){ return demo ? (demoSurf || surf) : surf; }
 function liveBasis(){
   if(demo) return heroBasis();
   var a = liveAngle(), B = baseBasis();
-  if(!a || Math.abs(a.ang) < 1e-4) return B;
-  return a.axis === 'x' ? yawBasis(B, a.ang) : pitchBasis(B, a.ang);
+  if(a && Math.abs(a.ang) > 1e-4) B = a.axis === 'x' ? yawBasis(B, a.ang) : pitchBasis(B, a.ang);
+  /* the peek leans on top of whatever the cube was already doing, so a hold
+     that begins mid-spring still arrives at the same pose */
+  if(peek.amt > 0.001){
+    var e = peekE();
+    B = pitchBasis(yawBasis(B, PEEK_YAW*e), PEEK_PITCH*e);
+  }
+  return B;
 }
 /* A square rotating about a screen axis projects (cos+sin) times as wide, so
    pulling the camera back by exactly that keeps the cube inside the frame
@@ -1797,9 +1821,16 @@ function liveZoom(){
   /* the plinth sticks out past the cube and perspective enlarges whatever is
      nearest, so the fit box is the cube's footprint less a margin for both */
   if(demo) return fitScale(heroBasis(), N*S*0.74, N*S*0.74);
-  var a = liveAngle(); if(!a) return 1;
-  var t = Math.abs(a.ang);
-  return 1 / (Math.cos(t) + Math.sin(t));
+  var a = liveAngle(), z = 1;
+  if(a){ var t = Math.abs(a.ang); z = 1 / (Math.cos(t) + Math.sin(t)); }
+  /* a cube leaned about two axes at once sweeps a far wider silhouette than
+     a turn about one does, so the peek measures its own pose and fits to it
+     rather than trusting a closed form that only holds for single turns */
+  if(peek.amt > 0.001){
+    var e2 = peekE();
+    z = z*(1-e2) + fitScale(liveBasis(), N*S*0.82, N*S*0.82)*e2;
+  }
+  return z;
 }
 
 /* ============================================================
@@ -1822,12 +1853,24 @@ function loadLevel(level){
   if(band !== curBand || !skyCv){ curBand = band; setStyle(band); }
   buildFaces();
   layout(); settle();
-  parts = []; flyers = []; exitFlash = 0; exitPull = -1; kickV.t = 1;
+  /* a new cube starts on a clean camera and an empty stage: debris, rings,
+     flashes and a half-decayed shake belong to the level that is over */
+  parts = []; rings = []; flashes = []; flyers = []; orbTrail = []; beam = null;
+  exitFlash = 0; exitPull = -1; vig = 0;
+  CAM.it = 1; CAM.tr = 0; CAM.punch = 0;
+  peek.on = false; peek.amt = 0;
   var sv = viewOf(N, M, pos);
   startWave('in', sv[0], sv[1], 380);
   revealT = -120;
   ambience(band);
   if(levelNo > store.reached){ store.reached = levelNo; save(); }
+  /* THE ONE NUDGE. A gesture nobody can see is a gesture nobody has, and the
+     peek is the answer to the exact frustration that starts around here — so
+     it is offered once, on the third cube, and never mentioned again. */
+  if(!store.sawPeek && !store.peekHinted && levelNo >= 3){
+    store.peekHinted = 1; save();
+    setTimeout(function(){ if(!won && !walking && !anim) toast('hold anywhere to look inside the cube'); }, 1100);
+  }
   /* TEACH IT WHEN IT SHOWS UP, ONCE. Not in the manual four screens earlier,
      not as a toast that has gone before it is read — on the cube that has one,
      with the thing itself waiting behind the card. */
@@ -2107,7 +2150,10 @@ function finishTex(a, t){
    shades smoothly, coarse enough that the whole cube costs a few dozen
    16x16 canvases. They are built on demand and thrown away whenever the
    palette, the material or the cube's size changes underneath them. */
-var TEXPAT = {'+':null, '#':null}, texCache = {}, texCount = 0, TEX_LIT = 20;
+var TEXPAT = {'+':null, '#':null}, texCache = {}, texCount = 0;
+/* twentieths of the palette colour, and five steps of headroom above it so a
+   deck can be lit BRIGHTER than its own material by something standing on it */
+var TEX_LIT = 20, TEX_LIT_MAX = 25;
 function texReset(){ texCache = {}; texCount = 0; }
 function buildPats(band){
   var kit = TEX_KITS[((band % TEX_KITS.length) + TEX_KITS.length) % TEX_KITS.length];
@@ -2118,7 +2164,13 @@ function buildPats(band){
 function texFor(t, d, lit){
   var mt = isWalkType(t) ? '+' : '#';
   var dq = Math.max(0, Math.min((N-1)*2, Math.round(d*2)));
-  var lq = lit === undefined ? TEX_LIT : Math.max(0, Math.min(TEX_LIT, Math.round(lit*TEX_LIT)));
+  /* A DECK MAY BE LIT PAST ITS OWN COLOUR AND BEDROCK MAY NOT — clamped
+     here, at the one place a tint can enter, rather than trusted to every
+     caller. Brightening a deck can only ever widen the gap the material read
+     depends on; brightening bedrock would close it, so bedrock is capped at
+     unlit whatever anybody asks for. */
+  if(mt === '#' && lit > 1) lit = 1;
+  var lq = lit === undefined ? TEX_LIT : Math.max(0, Math.min(TEX_LIT_MAX, Math.round(lit*TEX_LIT)));
   var key = mt + dq + '_' + lq, c = texCache[key];
   if(c) return c;
   /* One cube's worth is a few hundred of these, and the cache is thrown away
@@ -2144,6 +2196,17 @@ function texFor(t, d, lit){
    flat fills had, so no hairline of void can open between two neighbours. */
 function drawBlock(t, d, x, y, w, h, lit){
   ctx.drawImage(texFor(t, d, lit), x, y, w, h);
+}
+
+/* THE LAMP YOU ARE CARRYING. Two cells of falloff, decks only, and it is
+   applied by choosing a brighter tint for the tile rather than by painting
+   light on top of it — see the note at the call site. */
+var lightU = -99, lightV = -99;
+function deckLight(u, v, t){
+  if(!isWalkType(t) || lightU < -50) return 1;
+  var du = u - lightU, dv = v - lightV, d2 = du*du + dv*dv;
+  if(d2 > 7) return 1;
+  return 1 + 0.16 * Math.exp(-d2*0.40);
 }
 
 /* One block, turning. Under this projection a face is a parallelogram, so
@@ -2421,58 +2484,356 @@ function stepDemo(dt){
   }
 }
 
-/* ---------- CAMERA KICK ---------------------------------------------------
-   Directional, not random: a turn about the screen-up axis kicks sideways,
-   a turn about screen-right kicks vertically, so the shake tells you which
-   way the mass went. Decays as a damped sine, which reads as a mechanism
-   settling rather than an earthquake. Only the BOARD moves — the HUD is DOM
-   and stays nailed down, which is what keeps it legible mid-impact. */
-var kickV = {x:0, y:0, t:1, dur:1, mag:0};
+/* ============================================================
+   THE CAMERA — one place where every shove the picture gets is added up.
+
+   There used to be a single directional kick here and it was right about the
+   important thing: a turn about the screen-up axis should throw the board
+   SIDEWAYS, because then the shake is telling you which way the mass went
+   rather than merely that something happened. Random shake is noise; aimed
+   shake is information, and that is kept.
+
+   What it could not do is stack. A landing, a plate firing under your feet
+   and the exit all wanted to move the camera at once, and one damped sine
+   cannot hold three events. So there are now three channels that sum:
+
+     IMPULSE  aimed, damped, decaying — the mechanism seating. Unchanged.
+     TRAUMA   a 0..1 reservoir, spent as trauma SQUARED across translation,
+              a little rotation and a little zoom. Squaring is what makes a
+              small event stay small and a big one feel dangerous, and the
+              rotation is what separates "the camera was shoved" from "the
+              picture is vibrating".
+     PUNCH    a zoom pop, fast in and fast out. The cheapest way to make a
+              hit land, and the first thing to remove if it ever nauseates.
+
+   Trauma is driven by summed sines rather than by rand(): random per frame
+   reads as a broken cable, and two irrational frequencies read as a heavy
+   thing rocking. And still only the BOARD moves — the HUD is DOM and stays
+   nailed down, which is what lets the impacts be as big as they are.
+   ============================================================ */
+var CAM = {ix:0, iy:0, imag:0, it:1, idur:1, tr:0, punch:0, clock:0};
+/* One dial for every effect in the file, so "less of this, please" is a
+   switch rather than a rebuild. Nothing turns OFF at 0.4 — a game that stops
+   answering the hand is worse than a game that moves too much — it is the
+   same beats, quieter. */
+function fxAmt(){ return store.fx ? 1 : 0.4; }
 function kick(mag, dx, dy){
-  kickV.mag = mag; kickV.x = dx; kickV.y = dy; kickV.t = 0; kickV.dur = 380;
+  CAM.imag = mag * fxAmt(); CAM.ix = dx; CAM.iy = dy; CAM.it = 0; CAM.idur = 380;
 }
-function kickOffset(){
-  if(kickV.t >= 1) return null;
-  var p = kickV.t, damp = Math.pow(1 - p, 2.2), w = Math.sin(p * Math.PI * 5.5) * damp;
-  return [kickV.x * kickV.mag * w, kickV.y * kickV.mag * w];
+function shake(amt){ CAM.tr = Math.min(1, CAM.tr + amt * fxAmt()); }
+function punch(amt){ CAM.punch = Math.min(0.10, CAM.punch + amt * fxAmt()); }
+function stepCam(dt){
+  CAM.clock += dt;
+  if(CAM.it < 1) CAM.it = Math.min(1, CAM.it + dt/CAM.idur);
+  CAM.tr = Math.max(0, CAM.tr - dt/820);
+  CAM.punch *= Math.pow(0.0025, dt/1000);
+}
+function camState(){
+  var t = CAM.clock/1000, tr = CAM.tr*CAM.tr;
+  var o = {x:0, y:0, rot:0, zoom:1 + CAM.punch};
+  if(CAM.it < 1){
+    var p = CAM.it, damp = Math.pow(1 - p, 2.2), w = Math.sin(p * Math.PI * 5.5) * damp;
+    o.x += CAM.ix * CAM.imag * w; o.y += CAM.iy * CAM.imag * w;
+  }
+  if(tr > 0.0002){
+    var A = 24 * tr;
+    o.x += (Math.sin(t*37.1) + Math.sin(t*61.7)*0.6) * A * 0.6;
+    o.y += (Math.sin(t*43.3 + 1.7) + Math.sin(t*71.9)*0.6) * A * 0.6;
+    o.rot += Math.sin(t*29.7 + 0.9) * 0.020 * tr;
+    o.zoom += tr * 0.010;
+  }
+  return o;
+}
+/* Everything drawn between these two is drawn THROUGH the camera, main
+   canvas and glow buffer alike — they must agree to the pixel or the bloom
+   detaches from the thing that is glowing. */
+function camBegin(){
+  var c = camState();
+  ctx.save();
+  ctx.translate(CX, CY); ctx.rotate(c.rot); ctx.scale(c.zoom, c.zoom);
+  ctx.translate(-CX + c.x, -CY + c.y);
+  if(gx){
+    gx.save();
+    gx.translate(CX, CY); gx.rotate(c.rot); gx.scale(c.zoom, c.zoom);
+    gx.translate(-CX + c.x, -CY + c.y);
+  }
+}
+function camEnd(){ ctx.restore(); if(gx) gx.restore(); }
+
+/* ============================================================
+   THE PEEK — hold, and the cube turns to glass.
+
+   This game hides things on purpose. A key can sit behind bedrock in an axis
+   you are not looking down, and the manual's answer is "turn" — which is
+   correct, and which is also the moment a new player decides the game is
+   being unfair rather than that they have not looked yet.
+
+   So: press and hold anywhere and the solid opens. It leans into a
+   three-quarter view, every block fades to a lit sheet of glass, the edges
+   come up as a wireframe, and every key, door, plate and exit in the cube
+   floats in front of it wherever it actually is. Let go and it slams shut.
+
+   THE RULES THIS OBEYS, because a see-through mode in a hidden-information
+   game is a design decision and not a filter:
+
+     it shows you GEOMETRY, never a solution — the same facts a turn would
+       have shown you, gathered into one pose instead of four;
+     it costs a hold, and you cannot act during one. Nothing can be tapped,
+       nothing can be turned, no state changes. It is looking, not playing;
+     it is never a mode. There is no button, no toggle and nothing to
+       remember to switch off — it exists exactly as long as your thumb does.
+
+   Which is what makes it juice as well as information: it is the one gesture
+   in the game where the whole cube moves at once, and it is worth holding
+   just to watch it happen.
+   ============================================================ */
+var peek = {on:false, amt:0}, PEEK_YAW = 0.62, PEEK_PITCH = 0.42;
+function peekOn(){
+  if(peek.on || demo || won || walking || anim || !lv) return;
+  peek.on = true;
+  sfx.peek(); buzz(9);
+  flash('180,220,255', 0.15, 420);
+  ring(CX, CY, {r0:N*S*0.12, r1:N*S*0.66, dur:560, col:'180,220,255', a:0.45, w:2.5, sq:true});
+  if(!store.sawPeek){ store.sawPeek = 1; save(); toast('peek — the whole cube, for as long as you hold'); }
+}
+function peekOff(){
+  if(!peek.on) return;
+  peek.on = false;
+  sfx.peekOff(); punch(0.018); shake(0.10);
+}
+function stepPeek(dt){
+  var to = peek.on ? 1 : 0;
+  if(peek.amt === to) return;
+  var sp = dt / (peek.on ? 240 : 200);
+  peek.amt = to > peek.amt ? Math.min(1, peek.amt + sp) : Math.max(0, peek.amt - sp);
+}
+/* smoothstep, so the lean starts and ends at rest — a linear open reads as a
+   slide and this has to read as a lid being lifted */
+function peekE(){ var p = peek.amt; return p*p*(3 - 2*p); }
+
+/* ---------- THE GLOW BUFFER -----------------------------------------------
+   Real bloom, for about the price of the halos it replaces.
+
+   Every glowing thing — halos, sparks, embers, rings, flashes — is drawn a
+   second time into an offscreen canvas at a third of the resolution. At the
+   end of the frame that canvas is composited back additively, twice, at two
+   scales, with SMOOTHING ON. The upscale filter is the blur: no kernel, no
+   passes, no readback, and light bleeds past the edges of the thing making
+   it, which is the entire visual difference between "coloured shape" and
+   "light source".
+
+   A third of the resolution is not a compromise, it is the point — a bloom
+   buffer wants to be blurry, so the cheapest version is also the best
+   looking one.                                                              */
+var glowCv = null, gx = null, GLOW_S = 0.32;
+function buildGlow(){
+  if(!W || !H) return;
+  glowCv = document.createElement('canvas');
+  glowCv.width  = Math.max(1, Math.round(W * GLOW_S));
+  glowCv.height = Math.max(1, Math.round(H * GLOW_S));
+  gx = glowCv.getContext('2d');
+}
+/* the target for anything that is LIGHT rather than matter: the low-res
+   buffer when bloom is on, the frame itself when it is not, so turning
+   effects down never turns a marker's glow off entirely */
+function lightCtx(){ return (store.fx && gx) ? gx : ctx; }
+function glowBegin(){
+  if(!gx) return;
+  gx.setTransform(GLOW_S, 0, 0, GLOW_S, 0, 0);
+  gx.clearRect(0, 0, W, H);
+}
+function glowEnd(){
+  if(!gx || !store.fx) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 0.85; ctx.drawImage(glowCv, 0, 0, W, H);
+  ctx.globalAlpha = 0.48; ctx.drawImage(glowCv, -W*0.035, -H*0.035, W*1.07, H*1.07);
+  ctx.imageSmoothingEnabled = false;
+  ctx.restore();
+}
+
+/* ---------- FLASHES AND THE VIGNETTE --------------------------------------
+   A flash is not white light on the lens, it is the room the board is in
+   being lit for a moment by whatever just happened, so it is coloured by the
+   event and it is centred on the board rather than on the screen.
+
+   The vignette is safe to do what it likes, which is worth writing down: it
+   is a single smooth gradient over the whole picture, so it darkens any two
+   NEIGHBOURING tiles by the same amount. The material read is a comparison
+   between neighbours, and a term that cannot separate them cannot break it.
+   That is not true of the drop shadows, which is exactly why those are
+   capped and this is not.                                                    */
+var flashes = [], vig = 0;
+function flash(col, amt, dur){
+  flashes.push({col:col, a:amt * fxAmt(), t:0, dur:dur || 420});
+  if(flashes.length > 6) flashes.shift();
+}
+function stepFlashes(dt){
+  for(var i = flashes.length-1; i >= 0; i--){
+    flashes[i].t += dt;
+    if(flashes[i].t >= flashes[i].dur) flashes.splice(i, 1);
+  }
+  vig = Math.max(0, vig - dt/700);
+}
+function drawFlashes(){
+  if(!flashes.length) return;
+  var c = lightCtx();
+  for(var i = 0; i < flashes.length; i++){
+    var f = flashes[i], p = f.t/f.dur, a = f.a * (1-p) * (1-p);
+    if(a <= 0.002) continue;
+    var r = Math.max(W, H) * (0.55 + p*0.45);
+    var g = c.createRadialGradient(CX, CY, 0, CX, CY, r);
+    g.addColorStop(0, 'rgba(' + f.col + ',' + a.toFixed(3) + ')');
+    g.addColorStop(0.45, 'rgba(' + f.col + ',' + (a*0.42).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(' + f.col + ',0)');
+    c.save(); c.globalCompositeOperation = 'lighter';
+    c.fillStyle = g; c.fillRect(0, 0, W, H); c.restore();
+  }
+}
+function drawVignette(){
+  var g = ctx.createRadialGradient(CX, CY, Math.min(W,H)*0.30, CX, CY, Math.max(W,H)*0.76);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,' + (0.28 + vig*0.34).toFixed(3) + ')');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 }
 
 /* ---------- PARTICLES -----------------------------------------------------
-   One pool, additive, capped. Dust off a footfall, grit shaken loose by a
-   turn, sparks off a latch. They exist to make the board feel like it has
-   mass and dirt on it, so they are always small, always short, and never
-   drawn over the play surface densely enough to hide a tile. */
-var parts = [], PART_CAP = 220;
+   Four kinds, because "particles" is not a look — a thing coming off a stone
+   is either matter or light, and matter and light do not move, shade or
+   composite the same way.
+
+     CHIP   a knocked-off piece of block. Opaque, tumbling, heavy, drawn as a
+            little square with a lit top edge and coloured FROM THE TILE IT
+            CAME OFF, which is what sells it as part of the board rather than
+            as an effect layer over it.
+     SPARK  light. Additive, drawn as a streak along its own velocity rather
+            than as a dot, because a dot moving fast is a dot and a streak
+            moving fast is speed.
+     EMBER  slow light. Rises, flickers, lives a long time. This is what the
+            orb sheds.
+     RING   an expanding front. Circles for light, SQUARES for anything the
+            grid did, because the board is a grid and a square shockwave says
+            so without a word.
+   ============================================================ */
+var parts = [], rings = [];
+function partCap(){ return store.fx ? 460 : 130; }
 function burst(x, y, n, o){
   o = o || {};
-  for(var i = 0; i < n && parts.length < PART_CAP; i++){
+  var cap = partCap(), kind = o.kind || 'spark';
+  n = Math.round(n * (store.fx ? 1 : 0.45));
+  for(var i = 0; i < n && parts.length < cap; i++){
     var a = o.ang === undefined ? Math.random()*6.284 : o.ang + (Math.random()-0.5)*(o.spread||6.284);
     var sp = (o.spd || 40) * (0.35 + Math.random()*0.9);
     parts.push({x:x, y:y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - (o.lift||0),
                 life:0, max:(o.life||500)*(0.6+Math.random()*0.7),
                 r:(o.r||2)*(0.5+Math.random()), col:o.col || '233,225,209',
-                g:(o.g === undefined ? 42 : o.g), fade:o.fade||1});
+                g:(o.g === undefined ? 42 : o.g), fade:o.fade||1, kind:kind,
+                rot:Math.random()*6.284, vr:(Math.random()-0.5)*9, drag:o.drag || 0.985});
   }
 }
+function ring(x, y, o){
+  o = o || {};
+  if(rings.length > 14) rings.shift();
+  rings.push({x:x, y:y, r0:o.r0 || 0, r1:o.r1 || 120, t:0, dur:o.dur || 460,
+              col:o.col || '255,255,255', a:(o.a === undefined ? 0.6 : o.a) * fxAmt(),
+              w:o.w || 3, sq:!!o.sq});
+}
 function stepParts(dt){
-  var k = dt/1000;
-  for(var i = parts.length-1; i >= 0; i--){
+  var k = dt/1000, i;
+  for(i = parts.length-1; i >= 0; i--){
     var p = parts[i];
     p.life += dt;
     if(p.life >= p.max){ parts.splice(i,1); continue; }
-    p.x += p.vx*k; p.y += p.vy*k; p.vy += p.g*k; p.vx *= 0.985; p.vy *= 0.985;
+    p.x += p.vx*k; p.y += p.vy*k; p.vy += p.g*k;
+    p.vx *= p.drag; p.vy *= p.drag;
+    if(p.kind === 'chip') p.rot += p.vr*k;
+  }
+  for(i = rings.length-1; i >= 0; i--){
+    rings[i].t += dt;
+    if(rings[i].t >= rings[i].dur) rings.splice(i,1);
   }
 }
 function drawParts(){
-  if(!parts.length) return;
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  for(var i = 0; i < parts.length; i++){
-    var p = parts[i], t = 1 - p.life/p.max;
-    ctx.globalAlpha = Math.max(0, t*t*p.fade);
-    ctx.fillStyle = 'rgb(' + p.col + ')';
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*(0.4+t*0.6), 0, 6.284); ctx.fill();
+  var i, p, t, c = lightCtx();
+  /* matter first, under the light */
+  if(parts.length){
+    ctx.save();
+    for(i = 0; i < parts.length; i++){
+      p = parts[i];
+      if(p.kind !== 'chip') continue;
+      t = 1 - p.life/p.max;
+      ctx.globalAlpha = Math.max(0, Math.min(1, t*2.2)) * p.fade;
+      var s = p.r*1.7*(0.55 + t*0.45);
+      ctx.save();
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = 'rgb(' + p.col + ')';
+      ctx.fillRect(-s, -s, s*2, s*2);
+      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      ctx.fillRect(-s, -s, s*2, Math.max(1, s*0.55));
+      ctx.restore();
+    }
+    ctx.restore();
   }
-  ctx.restore();
+  /* then light, into whichever buffer is doing the glowing */
+  if(parts.length){
+    c.save(); c.globalCompositeOperation = 'lighter'; c.lineCap = 'round';
+    for(i = 0; i < parts.length; i++){
+      p = parts[i];
+      if(p.kind === 'chip') continue;
+      t = 1 - p.life/p.max;
+      var fl = p.kind === 'ember' ? (0.65 + 0.35*Math.sin(p.life*0.013 + p.rot)) : 1;
+      c.globalAlpha = Math.max(0, t*t*p.fade*fl);
+      c.strokeStyle = c.fillStyle = 'rgb(' + p.col + ')';
+      if(p.kind === 'spark'){
+        var sx = p.x - p.vx*0.022, sy = p.y - p.vy*0.022;
+        c.lineWidth = p.r*(0.5 + t*0.9);
+        c.beginPath(); c.moveTo(sx, sy); c.lineTo(p.x, p.y); c.stroke();
+      } else {
+        c.beginPath(); c.arc(p.x, p.y, p.r*(0.4 + t*0.7), 0, 6.284); c.fill();
+      }
+    }
+    c.restore();
+  }
+  for(i = 0; i < rings.length; i++){
+    var g2 = rings[i], q = g2.t/g2.dur, e = 1 - Math.pow(1-q, 3);
+    var rr = g2.r0 + (g2.r1 - g2.r0)*e, al = g2.a * (1-q) * (1-q);
+    if(al <= 0.003) continue;
+    c.save(); c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = al; c.strokeStyle = 'rgb(' + g2.col + ')';
+    c.lineWidth = g2.w * (1 - q*0.7) + 0.4;
+    c.beginPath();
+    if(g2.sq) c.rect(g2.x - rr, g2.y - rr, rr*2, rr*2);
+    else c.arc(g2.x, g2.y, rr, 0, 6.284);
+    c.stroke(); c.restore();
+  }
+}
+/* the colour a chip knocked off this tile should be, so debris always
+   belongs to the block it came from */
+function chipCol(t, d){
+  var c = tileRGB(isWalkType(t) ? '+' : '#', d);
+  return (c[0]|0) + ',' + (c[1]|0) + ',' + (c[2]|0);
+}
+
+/* ---------- THE BEAM ------------------------------------------------------
+   One shaft of light, in the whole game, at the one moment that has earned
+   it: the square you just walked out of. It is drawn in board space so it
+   shakes with the board, and it is the only effect allowed to leave the
+   cube's silhouette. */
+var beam = null;
+function stepBeam(dt){ if(beam){ beam.t += dt; if(beam.t > beam.dur) beam = null; } }
+function drawBeam(){
+  if(!beam) return;
+  var p = beam.t/beam.dur, c = lightCtx();
+  var w = S*0.85 * (1 - p*0.4) * Math.min(1, p*7), a = (1-p)*(1-p)*0.6;
+  if(a <= 0.004 || w <= 0) return;
+  var g = c.createLinearGradient(beam.x, beam.y - H, beam.x, beam.y + S*0.5);
+  g.addColorStop(0, 'rgba(53,215,161,0)');
+  g.addColorStop(0.70, 'rgba(120,255,214,' + (a*0.5).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(214,255,240,' + a.toFixed(3) + ')');
+  c.save(); c.globalCompositeOperation = 'lighter';
+  c.fillStyle = g; c.fillRect(beam.x - w, beam.y - H, w*2, H + S*0.5);
+  c.restore();
 }
 
 /* ---------- THE TILE WAVE -------------------------------------------------
@@ -2557,9 +2918,20 @@ function firePlate(bit, cx, cy){
   revealT = -260;                       /* the reachable sweep follows the front */
   kick(13, 0, 1);
   impact = 1;
+  /* THE BIGGEST EVENT IN THE GAME, and the only one that changes the board
+     rather than the view of it. Two square fronts leave the plate at
+     different speeds, the room floods with the plate's own colour, and the
+     trauma is the largest number this file hands out. */
+  /* the flash is deliberately short of a white-out: the whole point of the
+     flip is that the old material is SEEN leaving, and a frame that blows
+     out for a quarter of a second is a frame nobody got to watch */
+  shake(0.95); punch(0.075); flash(PLATE_COL[bit], 0.24, 560);
+  ring(cx, cy, {r0:S*0.2, r1:N*S*1.05, dur:760, col:PLATE_COL[bit], a:0.75, w:6, sq:true});
+  ring(cx, cy, {r0:S*0.2, r1:N*S*0.62, dur:520, col:'240,240,255', a:0.5, w:3, sq:true});
   sfx.plate(bit); buzz(34);
-  burst(cx, cy, 26, {spd:150, life:760, r:2.6, col:PLATE_COL[bit], g:0});
-  burst(cx, cy, 12, {spd:52, life:1000, r:3.6, col:'240,240,255', g:-16});
+  burst(cx, cy, 30, {spd:170, life:780, r:2.6, col:PLATE_COL[bit], g:0});
+  burst(cx, cy, 14, {spd:56, life:1000, r:3.6, col:'240,240,255', g:-16});
+  burst(cx, cy, 16, {kind:'chip', spd:150, life:900, r:2.2, col:chipCol('#', N-1), g:300});
   toast(world ? (PLATE_NAME[bit] + ' — the cube is a different place') : 'restored');
 }
 function stepFlip(dt){
@@ -2629,15 +3001,19 @@ function drawMotes(){
   }
   ctx.restore();
 }
-/* an additive halo, so the three things that mean something glow rather
-   than merely being coloured differently */
+/* an additive halo, so the things that mean something glow rather than
+   merely being coloured differently. It paints into the glow buffer now, at
+   a third of the resolution — which costs a ninth of what it used to and
+   comes back through the bloom composite wider and softer than a full-res
+   gradient could be. */
 function halo(x, y, r, col, a){
-  var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  var c = lightCtx();
+  var g = c.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, 'rgba(' + col + ',' + a + ')');
   g.addColorStop(0.5, 'rgba(' + col + ',' + (a*0.32).toFixed(3) + ')');
   g.addColorStop(1, 'rgba(' + col + ',0)');
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = g; ctx.fillRect(x-r, y-r, r*2, r*2); ctx.restore();
+  c.save(); c.globalCompositeOperation = 'lighter';
+  c.fillStyle = g; c.fillRect(x-r, y-r, r*2, r*2); c.restore();
 }
 
 /* A FIXED LIGHT, NOT A FACING TERM.
@@ -2692,23 +3068,58 @@ function drawCage(m, z, alpha, pv){
     pt.push([CX + (m.R[0]*wx + m.R[1]*wy + m.R[2]*wz)*S*z*k,
              CY - (m.U[0]*wx + m.U[1]*wy + m.U[2]*wz)*S*z*k]);
   }
+  var col = (ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0);
+  var a2 = alpha + impact*0.5, lw = 1.25 + impact*1.6;
   ctx.save();
-  ctx.strokeStyle = 'rgba(' + (ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0) + ',' + (alpha + impact*0.5) + ')';
-  ctx.lineWidth = 1.25 + impact*1.6; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(' + col + ',' + a2 + ')';
+  ctx.lineWidth = lw; ctx.lineJoin = 'round';
   ctx.beginPath();
   for(var e = 0; e < 12; e++){
     ctx.moveTo(pt[CAGE_E[e][0]][0], pt[CAGE_E[e][0]][1]);
     ctx.lineTo(pt[CAGE_E[e][1]][0], pt[CAGE_E[e][1]][1]);
   }
   ctx.stroke(); ctx.restore();
+  /* twelve lines is nothing, so the cage is drawn a second time into the
+     glow buffer: the box the whole game happens inside should read as lit
+     wire rather than as a hairline, and it is the one edge that must survive
+     a shake, a flash and a peek all at once */
+  var lc = lightCtx();
+  if(lc !== ctx){
+    lc.save(); lc.globalCompositeOperation = 'lighter';
+    lc.strokeStyle = 'rgba(' + col + ',' + Math.min(1, a2*0.9 + peekE()*0.5) + ')';
+    lc.lineWidth = lw + 1.4; lc.lineJoin = 'round';
+    lc.beginPath();
+    for(var e2 = 0; e2 < 12; e2++){
+      lc.moveTo(pt[CAGE_E[e2][0]][0], pt[CAGE_E[e2][0]][1]);
+      lc.lineTo(pt[CAGE_E[e2][1]][0], pt[CAGE_E[e2][1]][1]);
+    }
+    lc.stroke(); lc.restore();
+  }
 }
 function tileRect(u, v, z){
   z = z || 1;
   return [CX + (u - N/2)*S*z, CY + (N/2 - 1 - v)*S*z, S*z, S*z];
 }
 
+/* THE ORDER OF A FRAME, and every line of it is a decision:
+
+     sky            behind everything, parallaxed, never shaken
+     [camera on]
+     board          blocks, markers, you
+     particles      matter and light, in the board's own space so debris
+                    shakes with the thing it came off
+     [camera off]
+     flyers, motes  screen-space furniture
+     vignette       one smooth gradient, cannot separate two neighbours
+     bloom          the glow buffer, blurred by being small
+     flashes        already inside the bloom, so they bleed like light
+
+   The sky is outside the camera on purpose: shaking the starfield along with
+   the board would say the UNIVERSE moved, and the whole point of a shake is
+   that something inside it did.                                             */
 function draw(){
   ctx.clearRect(0, 0, W, H);
+  glowBegin();
   if(!lv) return;
   /* the sky first, parallaxed off the view basis: turn the cube and the
      stars slide, which is the cheapest way to say the WORLD moved */
@@ -2721,12 +3132,10 @@ function draw(){
     ctx.drawImage(skyCv, -PAD - m0.F[0]*11 - m0.R[0]*4, -PAD + m0.U[1]*8 - m0.F[1]*9, W + PAD*2, H + PAD*2);
     ctx.imageSmoothingEnabled = false;
   }
-  /* the kick moves the BOARD, never the HUD — a shaken readout is an
+  /* the camera moves the BOARD, never the HUD — a shaken readout is an
      unreadable one, and the DOM chrome staying nailed down is what lets the
-     impact be as big as it is */
-  var ko = kickOffset();
-  ctx.save();
-  if(ko) ctx.translate(ko[0], ko[1]);
+     impacts be as big as they are */
+  camBegin();
   /* THE LIGHT INSIDE — and ONLY on the attract screen.
      Drawn before the cube and never masked, so the only places it survives
      are the void columns: the gaps you are looking straight through. The cube
@@ -2749,31 +3158,46 @@ function draw(){
     ctx.restore();
   }
   var a = liveAngle();
-  if(demo || (a && Math.abs(a.ang) > 1e-4)) draw3d();
+  if(demo || peek.amt > 0.001 || (a && Math.abs(a.ang) > 1e-4)) draw3d();
   else drawFlat();
+  drawBeam();
   drawParts();
-  ctx.restore();
+  camEnd();
   drawFlyers();
   drawMotes();
+  drawVignette();
   if(exitFlash > 0){
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = exitFlash * 0.5;
-    var eg = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W,H)*0.7);
+    var c1 = lightCtx();
+    c1.save(); c1.globalCompositeOperation = 'lighter';
+    c1.globalAlpha = exitFlash * 0.5;
+    var eg = c1.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W,H)*0.7);
     eg.addColorStop(0, 'rgba(53,215,161,0.5)'); eg.addColorStop(1, 'rgba(53,215,161,0)');
-    ctx.fillStyle = eg; ctx.fillRect(0,0,W,H); ctx.restore();
+    c1.fillStyle = eg; c1.fillRect(0,0,W,H); c1.restore();
   }
   if(impact > 0){
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    var r = Math.max(W, H)*0.62, g = ctx.createRadialGradient(CX, CY, N*S*0.30, CX, CY, r);
-    g.addColorStop(0, 'rgba(' + (ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0) + ',' + (impact*0.10).toFixed(3) + ')');
+    var c2 = lightCtx();
+    c2.save(); c2.globalCompositeOperation = 'lighter';
+    var r = Math.max(W, H)*0.62, g = c2.createRadialGradient(CX, CY, N*S*0.30, CX, CY, r);
+    g.addColorStop(0, 'rgba(' + (ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0) + ',' + (impact*0.12).toFixed(3) + ')');
     g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+    c2.fillStyle = g; c2.fillRect(0, 0, W, H); c2.restore();
   }
+  drawFlashes();
+  glowEnd();
 }
 
 function drawFlat(){
   var u, v, s, r, i, SF = curSurf(), BM = baseBasis();
   if(!SF) return;
+  /* where the lamp is, in cell coordinates, tracked through a walk so the
+     light slides across the floor with you instead of jumping a cell at a
+     time. The attract cube has nobody holding it, so it has no lamp. */
+  if(demo || won){ lightU = -99; }
+  else {
+    var lp = playerScreen();
+    lightU = (lp[0] - CX - S/2)/S + N/2;
+    lightV = N/2 - 1 - (lp[1] - CY - S/2)/S;
+  }
   buildDrops();
   drawCage(BM, 1, 0.16, 0);
   /* 1. the tiles, each riding whatever wave is passing through the board */
@@ -2807,8 +3231,16 @@ function drawFlat(){
     /* The white inset that used to mark a walkable tile is gone with the
        flat fills: the deck is laid stone or boards and the bedrock is
        rubble, so "may I stand there" is now answered twice over — by the
-       brightness band, and by whether the block looks made. */
-    drawBlock(s.t, s.d, r[0], r[1], r[2] + 0.6, r[3] + 0.6);
+       brightness band, and by whether the block looks made.
+
+       AND THE ORB ACTUALLY LIGHTS THE FLOOR. Not as an additive layer over
+       the board — that was tried, and it lifts bedrock as hard as it lifts
+       deck, which eats the one separation the game is read off. The light
+       goes in at the SOURCE instead: the tile is tinted a few percent
+       brighter before its texture is built, and only ever if it is a deck.
+       Bedrock next to you stays dark, the light falls where you could walk,
+       and the band guarantee never even hears about it. */
+    drawBlock(s.t, s.d, r[0], r[1], r[2] + 0.6, r[3] + 0.6, deckLight(u, v, s.t));
   }
   if(anyWave){ drawWaveExtras(); return; }
   /* 2. THE DROPS. Where two neighbouring columns sit at different depths the
@@ -2861,7 +3293,8 @@ function drawFlat(){
     var lit = Math.max(0, Math.min(1, (revealT - reachDist[rk]*46) / 150));
     if(lit <= 0) continue;
     r = tileRect(u, v);
-    ctx.strokeStyle = 'rgba(255,106,61,' + (0.42*lit).toFixed(3) + ')';
+    var brth = 0.85 + 0.15*Math.sin(Date.now()/560 + rk);
+    ctx.strokeStyle = 'rgba(255,106,61,' + (0.42*lit*brth).toFixed(3) + ')';
     ctx.strokeRect(r[0] + S*0.07, r[1] + S*0.07, S*0.86, S*0.86);
     if(lit < 1){
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -2869,6 +3302,16 @@ function drawFlat(){
       ctx.fillStyle = 'rgba(255,106,61,1)';
       ctx.fillRect(r[0] + S*0.07, r[1] + S*0.07, S*0.86, S*0.86);
       ctx.restore();
+      /* THE FRONT ITSELF, not just the tiles behind it. The sweep is the
+         connectivity graph being traced, so the moment it arrives at a tile
+         that tile throws a spark and the eye follows the edge of the
+         answer outward instead of watching a region fill in. */
+      if(lit < 0.30){
+        halo(r[0] + S/2, r[1] + S/2, S*0.85, '255,140,80', 0.30*(1-lit));
+        if(Math.random() < 0.22)
+          burst(r[0] + S*(0.2 + Math.random()*0.6), r[1] + S*(0.2 + Math.random()*0.6), 1,
+                {spd:26, lift:20, life:520, r:1.5, col:'255,170,110', g:-6, fade:0.8});
+      }
     }
   }
   /* 4. depth numerals, for as long as someone wants the crutch */
@@ -2962,6 +3405,40 @@ function playerScreen(){
    It breathes on two frequencies that do not divide into each other, so the
    pulse never looks like a loop, and it rides a slow bob — a thing that
    hovers is alive and a thing that sits is furniture.                      */
+/* THE ORB IS ALIVE BETWEEN FRAMES TOO.
+   It sheds embers while it stands and a comet's worth while it walks, and
+   the trail is positions rather than a stretched sprite because the board is
+   a grid and the path it took should read as the path it took. */
+var orbEmit = 0, orbTrail = [];
+function stepOrb(dt){
+  var i;
+  for(i = orbTrail.length-1; i >= 0; i--){
+    orbTrail[i].t += dt;
+    if(orbTrail[i].t > 300) orbTrail.splice(i, 1);
+  }
+  if(!lv || demo || won || !$('hud').classList.contains('on')) return;
+  var p = playerScreen();
+  if(walking && orbTrail.length < 40) orbTrail.push({x:p[0], y:p[1], t:0});
+  orbEmit -= dt;
+  if(orbEmit <= 0){
+    orbEmit = walking ? 42 : 150;
+    burst(p[0] + (Math.random()-0.5)*S*0.22, p[1] + (Math.random()-0.5)*S*0.22, 1,
+          {kind:'ember', spd:8, lift:14, life:900, r:1.5, col:'255,152,74',
+           g:-10, fade:0.65, drag:0.99});
+  }
+}
+function drawOrbTrail(){
+  if(!orbTrail.length) return;
+  var c = lightCtx();
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for(var i = 0; i < orbTrail.length; i++){
+    var q = orbTrail[i], a = 1 - q.t/300;
+    c.globalAlpha = a*a*0.34;
+    c.fillStyle = 'rgb(255,140,64)';
+    c.beginPath(); c.arc(q.x, q.y, S*0.16*a, 0, 6.284); c.fill();
+  }
+  c.restore();
+}
 function drawPlayer(x, y, sz, k){
   /* on the way out you do not blink off the board, you are drawn into the
      door — down to nothing, brightening as it closes, over a quarter second */
@@ -2970,13 +3447,17 @@ function drawPlayer(x, y, sz, k){
     if(k <= 0.02) return;
   }
   k = k === undefined ? 1 : k;
+  if(k > 0.9) drawOrbTrail();
   var t = Date.now() / 1000;
   var br = 0.90 + 0.10*Math.sin(t*3.1) + 0.045*Math.sin(t*7.3);
   var rr = sz*0.29*k*br;
   y -= sz*0.022*Math.sin(t*2.2)*k;
 
-  /* the pool: what the orb does to the block it is standing over */
-  halo(x, y, sz*1.60*k, '255,150,80', 0.13*k*br);
+  /* the pool: what the orb does to the block it is standing over. Both
+     halos are quieter than they look here — they are drawn into the glow
+     buffer and come back through the bloom composite twice, so anything
+     bright enough to read on its own ends up as a white smear. */
+  halo(x, y, sz*1.60*k, '255,150,80', 0.085*k*br);
   /* the contact seat, and the only thing here that removes light */
   ctx.save();
   var sg = ctx.createRadialGradient(x, y + sz*0.06, 0, x, y + sz*0.06, sz*0.46*k);
@@ -2985,15 +3466,15 @@ function drawPlayer(x, y, sz, k){
   ctx.fillStyle = sg;
   ctx.fillRect(x - sz*0.5, y - sz*0.44, sz, sz);
   ctx.restore();
-  halo(x, y, sz*0.92*k, '255,120,55', 0.34*k*br);
+  halo(x, y, sz*0.92*k, '255,120,55', 0.20*k*br);
 
   /* the body */
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   var g = ctx.createRadialGradient(x - rr*0.30, y - rr*0.34, rr*0.04, x, y, rr);
-  g.addColorStop(0,    'rgba(255,252,240,1)');
-  g.addColorStop(0.30, 'rgba(255,216,150,0.96)');
-  g.addColorStop(0.66, 'rgba(255,122,52,0.70)');
+  g.addColorStop(0,    'rgba(255,250,236,0.92)');
+  g.addColorStop(0.30, 'rgba(255,212,144,0.80)');
+  g.addColorStop(0.66, 'rgba(255,118,48,0.58)');
   g.addColorStop(1,    'rgba(255,74,26,0)');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.fill();
@@ -3118,11 +3599,14 @@ function draw3d(){
     out[0] = CX + (m.R[0]*qx + m.R[1]*qy + m.R[2]*qz) * S * z * k;
     out[1] = CY - (m.U[0]*qx + m.U[1]*qy + m.U[2]*qz) * S * z * k;
   }
-  var tmp = [0,0,0];
+  var tmp = [0,0,0], xr = peekE();
   for(i = 0; i < faces.length; i++){
     var fc = faces[i], d = FACE_D[fc.f];
     var nz = m.F[0]*d[0] + m.F[1]*d[1] + m.F[2]*d[2];
-    if(nz <= 0.02) continue;                                  /* pointing away — never drawn */
+    var back = nz <= 0.02;
+    /* pointing away — never drawn, until the solid is glass and the far side
+       of it is half the reason to be looking */
+    if(back && xr < 0.12) continue;
     var nx = m.R[0]*d[0] + m.R[1]*d[1] + m.R[2]*d[2];
     var ny = m.U[0]*d[0] + m.U[1]*d[1] + m.U[2]*d[2];
     var q = FACE_Q[fc.f], pts = [], dep = 0;
@@ -3132,14 +3616,17 @@ function draw3d(){
     }
     px(fc.x, fc.y, fc.z, tmp);
     var mo = ((fc.x*73856093 ^ fc.y*19349663 ^ fc.z*83492791) >>> 8) % 100;
-    list.push({d:dep/4, k:0, pts:pts, t:fc.t, dep:tmp[2] + c, lit:LIT(nx, ny, nz),
-               up: ny > 0.55, moss: mo < 34 ? (mo/34) : 0});
+    list.push({d:dep/4, k:0, pts:pts, t:fc.t, dep:tmp[2] + c,
+               lit: back ? LIT(nx, ny, -nz)*0.72 : LIT(nx, ny, nz),
+               back: back, up: ny > 0.55, moss: mo < 34 ? (mo/34) : 0});
   }
   /* markers ride half a cell proud of their own face so they stay visible
-     as the solid turns under them */
+     as the solid turns under them — and once the rock is glass they are
+     sorted in front of ALL of it, because a key you can only just make out
+     through six translucent blocks is a key you have not been shown */
   function marker(w, kind, extra){
     px(w[0] + m.F[0]*0.62, w[1] + m.F[1]*0.62, w[2] + m.F[2]*0.62, tmp);
-    list.push({d:tmp[2] + 0.62, k:kind, x:tmp[0], y:tmp[1], extra:extra});
+    list.push({d:tmp[2] + 0.62 + (xr > 0.35 ? 1000 : 0), k:kind, x:tmp[0], y:tmp[1], extra:extra});
   }
   if(!demo){
     for(i = 0; i < lv.doors.length; i++) marker(lv.doors[i], 3, !!(doors & (1<<i)));
@@ -3185,10 +3672,59 @@ function draw3d(){
   }
   list.sort(function(a, b){ return a.d - b.d; });
   var sz = S*z;
-  drawCage(m, z, demo ? 0.10 : 0.46, pv);
+  /* THE WIREFRAME IS FOUR STROKES, NOT TWELVE HUNDRED.
+
+     Every face under a peek wants an edge, and a stroke call per face on a
+     seven-cube meant over a thousand of them: it measured at 4ms a frame,
+     which is a quarter of the budget for one held gesture. But the edges
+     only come in four flavours — deck or bedrock, facing you or facing
+     away — so they are accumulated into four paths and stroked once each.
+     The picture is identical and the call count is a rounding error.
+
+     They flush the moment the sorted list reaches its first marker, so the
+     wire lands over the glass and under everything that matters. */
+  var wire = [[],[],[],[]], wireDone = false;
+  function wireCol(gi){
+    var c = (gi < 2) ? ST.dN : ST.rN, back = gi & 1;
+    return 'rgba(' + (c[0]|0) + ',' + (c[1]|0) + ',' + (c[2]|0) + ','
+      + (xr * (back ? 0.22 : 0.62) * (gi < 2 ? 1 : 0.66)).toFixed(3) + ')';
+  }
+  function flushWire(){
+    if(wireDone) return;
+    wireDone = true;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineJoin = 'round';
+    for(var g3 = 0; g3 < 4; g3++){
+      var arr = wire[g3];
+      if(!arr.length) continue;
+      ctx.strokeStyle = wireCol(g3);
+      ctx.lineWidth = 1 + xr*0.5;
+      ctx.beginPath();
+      for(var w3 = 0; w3 < arr.length; w3++){
+        var q3 = arr[w3];
+        ctx.moveTo(q3[0], q3[1]); ctx.lineTo(q3[2], q3[3]);
+        ctx.lineTo(q3[4], q3[5]); ctx.lineTo(q3[6], q3[7]); ctx.closePath();
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  drawCage(m, z, (demo ? 0.10 : 0.46) + xr*0.40, pv);
   for(i = 0; i < list.length; i++){
     var e = list[i];
     if(e.k === 0){
+      /* GLASS. The solid does not vanish under a peek, it thins: the fill
+         drops toward a sheet, the texture goes first because a 16x16 pattern
+         at a tenth of an alpha is mud, and the edges come UP as it goes —
+         so what is left at the end of the lean is a lit wireframe with a
+         film of material still stretched across it. */
+      if(e.back){
+        /* the far side of the cube is wire only. A translucent fill behind a
+           translucent fill behind a translucent fill is mud, and mud is the
+           opposite of what a look-inside is for. */
+        wire[isWalkType(e.t) ? 1 : 3].push(e.pts);
+        continue;
+      }
+      ctx.globalAlpha = 1 - 0.78*xr;
       ctx.fillStyle = tileFill(e.t, e.dep, e.lit);
       ctx.beginPath();
       ctx.moveTo(e.pts[0], e.pts[1]); ctx.lineTo(e.pts[2], e.pts[3]);
@@ -3199,29 +3735,52 @@ function draw3d(){
          the right material behind it. A face a few pixels across keeps the
          fill and skips the texture, because at that size the clip costs
          more than the detail is worth and nobody can see either. */
-      if(quadArea(e.pts) > texGate) texQuad(e.pts, texFor(e.t, e.dep, e.lit));
+      if(xr < 0.45 && !e.back && quadArea(e.pts) > texGate) texQuad(e.pts, texFor(e.t, e.dep, e.lit));
       /* the path is rebuilt rather than reused: texQuad begins its own, and
          a current path is not part of what save/restore puts back */
       ctx.beginPath();
       ctx.moveTo(e.pts[0], e.pts[1]); ctx.lineTo(e.pts[2], e.pts[3]);
       ctx.lineTo(e.pts[4], e.pts[5]); ctx.lineTo(e.pts[6], e.pts[7]);
       ctx.closePath();
-      ctx.strokeStyle = 'rgba(10,9,16,.5)'; ctx.lineWidth = 0.7; ctx.stroke();
+      ctx.globalAlpha = 1;
+      if(xr > 0.02){
+        /* the wireframe is coloured by MATERIAL — a deck edge glows bone and
+           a bedrock edge stays cold — so the thing you are looking through
+           still answers the only question that matters. Batched: see
+           flushWire above. */
+        wire[isWalkType(e.t) ? 0 : 2].push(e.pts);
+      } else {
+        ctx.strokeStyle = 'rgba(10,9,16,.5)'; ctx.lineWidth = 0.7; ctx.stroke();
+      }
       /* weathering, and only where weather would reach: the faces that point
          up. Seeded off the cell so a given block is always mossy. */
-      if(e.up && e.moss){
-        ctx.save(); ctx.globalAlpha = 0.16 + 0.2*e.moss;
+      if(e.up && e.moss && xr < 0.5){
+        ctx.save(); ctx.globalAlpha = (0.16 + 0.2*e.moss) * (1 - xr*2);
         ctx.fillStyle = 'rgb(126,150,86)';
         ctx.beginPath();
         ctx.moveTo(e.pts[0], e.pts[1]); ctx.lineTo(e.pts[2], e.pts[3]);
         ctx.lineTo(e.pts[4], e.pts[5]); ctx.lineTo(e.pts[6], e.pts[7]);
         ctx.closePath(); ctx.fill(); ctx.restore();
       }
-    } else if(e.k === 1) drawPlayer(e.x, e.y, sz);
-    else if(e.k === 2) drawKey([e.x - sz/2, e.y - sz/2]);
-    else if(e.k === 3) drawDoor([e.x - sz/2, e.y - sz/2], e.extra);
-    else if(e.k === 4) drawGoal([e.x - sz/2, e.y - sz/2]);
+      ctx.globalAlpha = 1;
+    } else {
+      /* under a peek every marker gets a lantern of its own, because the
+         thing being revealed has to be the thing you notice */
+      if(xr > 0.02){
+        flushWire();
+        var mc = e.k === 2 ? '255,196,77' : e.k === 1 ? '255,140,70' : '53,215,161';
+        halo(e.x, e.y, sz*(1.0 + xr*0.8), mc, (e.k === 1 ? 0.52 : 0.32)*xr);
+      }
+      /* and YOU grow under a peek. Every other marker is a place; you are
+         the one the eye has to find first, and the cube it is floating in
+         has just filled with light. */
+      if(e.k === 1) drawPlayer(e.x, e.y, sz*(1 + xr*0.22));
+      else if(e.k === 2) drawKey([e.x - sz/2, e.y - sz/2]);
+      else if(e.k === 3) drawDoor([e.x - sz/2, e.y - sz/2], e.extra);
+      else if(e.k === 4) drawGoal([e.x - sz/2, e.y - sz/2]);
+    }
   }
+  flushWire();                    /* a cube with no markers on screen at all */
   if(t0){
     var ms = nowMs() - t0;
     if(ms > 9) texGate = Math.min(6000, texGate * 1.4);
@@ -3278,15 +3837,23 @@ function pathTo(tu, tv){
   return out;
 }
 
+/* A REFUSED TAP POINTS AT ITSELF. The toast says why; the ring says WHERE,
+   which is the half the toast could never do — on a board of forty-nine
+   blocks, "not connected" is only useful if you know which one it meant. */
+function denyAt(u, v, col){
+  var r = tileRect(u, v);
+  ring(r[0] + S/2, r[1] + S/2, {r0:S*0.62, r1:S*0.30, dur:340, col:col || '255,90,90', a:0.75, w:3, sq:true});
+  vig = Math.max(vig, 0.55); shake(0.10);
+}
 function tapCell(u, v){
   if(walking || anim || won) return;
   var s = surf[u*N + v];
-  if(!s){ toast('nothing there'); sfx.deny(); return; }
-  if(!isWalkType(s.t)){ toast('bedrock — no footing on this face'); sfx.deny(); return; }
+  if(!s){ toast('nothing there'); sfx.deny(); denyAt(u, v); return; }
+  if(!isWalkType(s.t)){ toast('bedrock — no footing on this face'); sfx.deny(); denyAt(u, v); return; }
   var di = doorIndexAt(lv, s.w), shut = di >= 0 && !(doors & (1<<di));
-  if(shut && keysHeld() < 1){ toast('locked — find a key'); sfx.deny(); buzz(14); return; }
+  if(shut && keysHeld() < 1){ toast('locked — find a key'); sfx.deny(); buzz(14); denyAt(u, v, '255,196,77'); return; }
   var path = pathTo(u, v);
-  if(!path){ toast(shut ? 'no way to that door' : 'not connected — turn the cube'); sfx.deny(); return; }
+  if(!path){ toast(shut ? 'no way to that door' : 'not connected — turn the cube'); sfx.deny(); denyAt(u, v); return; }
   /* Tapping the cell you already stand on yields an EMPTY path, which is
      truthy — it used to start a walk with nothing in it, and the next frame
      read surf[undefined].w and took the render loop down with it. */
@@ -3308,25 +3875,42 @@ function advanceWalk(dt){
   var cx2 = pr2[0] + S/2, cy2 = pr2[1] + S/2;
   var di = doorIndexAt(lv, pos);
   if(di >= 0 && !(doors & (1<<di))){
+    /* A DOOR OPENING IS THE LOUDEST THING THAT IS NOT A TURN. It is the only
+       moment a key stops being a number and becomes a thing that did
+       something, so it gets the whole kit: shards off the bars, a jade front
+       running out across the board, and the room lit green for a beat. */
     doors |= (1<<di); sfx.door(); buzz(24); toast('unlocked');
-    kick(5, 0, 1);
-    burst(cx2, cy2, 22, {spd:120, life:620, r:2.4, col:'53,215,161', g:90});
+    kick(5, 0, 1); shake(0.34); punch(0.030); flash('53,215,161', 0.30, 520);
+    burst(cx2, cy2, 26, {spd:150, life:640, r:2.4, col:'53,215,161', g:110});
+    burst(cx2, cy2, 10, {kind:'chip', spd:110, life:760, r:2.0, col:'40,150,116', g:340});
+    ring(cx2, cy2, {r0:S*0.2, r1:S*2.6, dur:520, col:'53,215,161', a:0.65, w:3.5});
   } else {
     sfx.step();
-    burst(cx2, cy2 + S*0.22, 3, {spd:20, life:340, r:1.5, col:'200,190,170', g:34, fade:0.6});
+    /* a footfall knocks grit off the block, and the block answers with a
+       square front one cell wide — small, but it is the difference between
+       a marker moving and a thing landing on stone */
+    burst(cx2, cy2 + S*0.20, 4, {kind:'chip', spd:34, life:420, r:1.5,
+                                 col:chipCol(cell.t, cell.d), g:260, fade:0.9});
+    ring(cx2, cy2, {r0:S*0.30, r1:S*0.62, dur:260, col:'255,150,80', a:0.30, w:2, sq:true});
+    shake(0.045);
   }
   var ki = keyIndexAt(lv, pos);
   if(ki >= 0 && !(kmask & (1<<ki))){
     kmask |= (1<<ki); sfx.key(); buzz(12); toast('key');
-    burst(cx2, cy2, 16, {spd:95, life:520, r:2.2, col:'255,196,77', g:20});
+    shake(0.20); punch(0.022); flash('255,196,77', 0.26, 460);
+    burst(cx2, cy2, 20, {spd:130, life:560, r:2.2, col:'255,196,77', g:20});
+    burst(cx2, cy2, 8, {kind:'ember', spd:26, lift:40, life:900, r:2.0, col:'255,220,140', g:-24});
+    ring(cx2, cy2, {r0:S*0.15, r1:S*1.9, dur:460, col:'255,196,77', a:0.7, w:3});
     flyKey();
   }
   var gb = glyphAt(lv, pos);
   if(gb){ firePlate(gb, cx2, cy2); }
   walking.t = 0;
   if(!walking.queue.length){
-    walking = null; sfx.land(); kick(3, 0, 1);
-    burst(cx2, cy2 + S*0.24, 6, {spd:38, life:420, r:1.8, col:'210,200,180', g:56, fade:0.7});
+    walking = null; sfx.land(); kick(3, 0, 1); shake(0.10);
+    burst(cx2, cy2 + S*0.24, 7, {kind:'chip', spd:44, life:460, r:1.7,
+                                 col:chipCol(cell.t, cell.d), g:300, fade:0.8});
+    burst(cx2, cy2, 5, {kind:'ember', spd:20, lift:26, life:700, r:1.6, col:'255,170,90', g:-18});
     settle(); afterAction();
   }
   else { computeReach(); refreshHud(); }
@@ -3355,7 +3939,18 @@ function refuseTurn(t){
   var from = drag && drag.axis === axis ? drag.ang : sgn * 0.14;
   drag = null;
   anim = {axis:axis, ang:from, from:from, to:0, t:0, dur:260, turn:-1, back:0, hard:1};
+  /* A REFUSAL IS A COLLISION. It gets more trauma than a successful turn and
+     none of the reward: no flash, no front going out, no zoom in — the frame
+     jolts, the walls close in for a beat, and stone chips off the stop it
+     just hit. The vignette doing the work here is deliberate: light means
+     yes in this game, so no has to be told in the dark. */
   kick(5, t < 2 ? -sgn : 0, t < 2 ? 0 : sgn);
+  shake(0.5); vig = 1; punch(-0.012);
+  var rr0 = tileRect(N/2 - 0.5 + (t < 2 ? -sgn*N*0.42 : 0), N/2 - 0.5 + (t < 2 ? 0 : sgn*N*0.42));
+  burst(rr0[0] + S/2, rr0[1] + S/2, 12, {kind:'chip', spd:120, life:620, r:1.8,
+                                         col:chipCol('#', N-1), g:420, fade:0.8,
+                                         ang: t < 2 ? (sgn > 0 ? 0 : Math.PI) : (sgn > 0 ? -1.57 : 1.57),
+                                         spread:1.6});
   sfx.deny(); buzz(18); toast('no footing that way');
 }
 function springBack(){
@@ -3391,16 +3986,32 @@ function advanceAnim(dt){
   if(ki >= 0 && !(kmask & (1<<ki))){ kmask |= (1<<ki); sfx.key(); flyKey(); toast('key'); }
   turns++;
   impact = 1;
-  /* the mass arrives: kick the camera along the turn's own axis, shake grit
-     off the whole board, and start the reachable set sweeping outward */
+  /* THE LANDING IS THE VERB. Everything else in this file is scored under
+     it, and it gets four separate things happening at once on purpose:
+
+       the AIMED kick, along the turn's own axis, so the shove has a direction
+       TRAUMA on top of it, so the whole frame is briefly unsafe
+       a PUNCH of zoom, which is what makes it read as a hit rather than a slide
+       a SQUARE front leaving the cube at board scale, because the thing that
+         just moved was a grid and a circle would be lying about that
+
+     and then grit rains off every part of the board, seeded across the whole
+     face rather than at the player, because the mass that arrived was the
+     cube's and not yours. */
   var sgn = (t === 1 || t === 2) ? 1 : -1;
   kick(9, t < 2 ? -sgn : 0, t < 2 ? 0 : sgn);
+  shake(0.62); punch(0.055);
+  flash((ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0), 0.20, 480);
+  ring(CX, CY, {r0:N*S*0.18, r1:N*S*0.92, dur:620, col:(ST.dN[0]|0)+','+(ST.dN[1]|0)+','+(ST.dN[2]|0), a:0.5, w:5, sq:true});
   var pv = viewOf(N, M, pos), pr = tileRect(pv[0], pv[1]);
-  for(var g = 0; g < 5; g++){
-    var gx = CX + (Math.random()-0.5)*N*S*0.9, gy = CY + (Math.random()-0.5)*N*S*0.9;
-    burst(gx, gy, 3, {spd:26, life:620, r:1.5, col:'190,180,160', g:70, fade:0.5});
+  for(var g = 0; g < 9; g++){
+    var gu = (Math.random()*N)|0, gv = (Math.random()*N)|0, gs = surf[gu*N + gv];
+    var grr = tileRect(gu, gv);
+    burst(grr[0] + S*Math.random(), grr[1] + S*Math.random(), 2,
+          {kind:'chip', spd:30, life:760, r:1.6, g:300, fade:0.65,
+           col: gs ? chipCol(gs.t, gs.d) : '190,180,160'});
   }
-  burst(pr[0]+S/2, pr[1]+S/2, 8, {spd:64, life:420, r:2.1, col:'255,140,90', g:60});
+  burst(pr[0]+S/2, pr[1]+S/2, 10, {spd:78, life:440, r:2.1, col:'255,150,90', g:60});
   revealT = 0;
   sfx.turn(); buzz(11);
   settle(); afterAction();
@@ -3421,7 +4032,12 @@ function afterAction(){
     if(won || walking || anim) return;
     var r = solve(lv, 40, {pos:pos, ori:oriIndex(M), kmask:kmask, doors:doors, world:world});
     stuck = !r.ok;
-    if(stuck){ toast('no way on from here — undo'); sfx.stuck(); buzz(30); }
+    if(stuck){
+      toast('no way on from here — undo'); sfx.stuck(); buzz(30);
+      /* nothing flashes and nothing sparks: a dead end is the absence of a
+         way on, so the room simply closes in */
+      vig = 1; shake(0.22);
+    }
   }, 60);
 }
 function finish(){
@@ -3437,9 +4053,21 @@ function finish(){
   var gv = viewOf(N, M, pos), gr = tileRect(gv[0], gv[1]);
   var gx = gr[0] + S/2, gy = gr[1] + S/2;
   exitPull = 0;
-  burst(gx, gy, 30, {spd:190, life:800, r:2.6, col:'53,215,161', g:0});
-  burst(gx, gy, 16, {spd:70, life:1000, r:3.4, col:'233,245,255', g:-14});
-  kick(11, 0, 1);
+  /* THE EXIT, and the only place the effects budget is spent without
+     restraint — you are leaving, so nothing after this has to stay legible.
+     The orb is drawn INTO the door: a ring of sparks falls inward first,
+     then everything leaves outward. */
+  burst(gx, gy, 34, {spd:190, life:800, r:2.6, col:'53,215,161', g:0});
+  burst(gx, gy, 18, {spd:70, life:1000, r:3.4, col:'233,245,255', g:-14});
+  burst(gx, gy, 22, {kind:'ember', spd:14, lift:70, life:1500, r:2.4, col:'150,255,215', g:-40, fade:0.8});
+  beam = {x:gx, y:gy, t:0, dur:1100};
+  ring(gx, gy, {r0:S*0.2, r1:N*S*1.2, dur:900, col:'53,215,161', a:0.85, w:7, sq:true});
+  ring(gx, gy, {r0:S*0.2, r1:N*S*0.7, dur:600, col:'233,245,255', a:0.6, w:4});
+  kick(11, 0, 1); shake(1); punch(0.09);
+  /* exitFlash already floods the frame green for most of a second; this one
+     only has to be the leading edge of it, and two full-strength washes
+     stacked read as a white-out rather than as a door opening */
+  flash('53,215,161', 0.22, 620);
   exitFlash = 1;
   setTimeout(function(){ startWave('out', gv[0], gv[1], 420); }, 190);
   sfx.win(); buzz(40);
@@ -3474,18 +4102,31 @@ function pointer(e){
   var t = e.touches ? e.touches[0] : e;
   return {x:t.clientX, y:t.clientY};
 }
+/* THE THIRD VERB, AND IT COSTS THE OTHER TWO NOTHING.
+   A gesture is a tap until it travels (drag) or until it stays (peek). The
+   timer is armed on every touch and disarmed by the first pixel of travel,
+   so a drag can never become a peek and a peek can never become a walk —
+   once the cube is glass, letting go only closes it. */
+var HOLD_MS = 210, holdT = 0;
+function armHold(){
+  clearTimeout(holdT);
+  holdT = setTimeout(function(){ if(drag && !drag.axis) peekOn(); }, HOLD_MS);
+}
+function dropHold(){ clearTimeout(holdT); }
 function onDown(e){
   if(won || anim || walking || !lv) return;
   if(!$('hud').classList.contains('on')) return;
   audio();
   var p = pointer(e);
   drag = {x0:p.x, y0:p.y, axis:null, ang:0};
+  armHold();
 }
 function onMove(e){
   if(!drag) return;
   var p = pointer(e), dx = p.x - drag.x0, dy = p.y - drag.y0;
   if(!drag.axis){
     if(Math.abs(dx) < TAP_SLOP && Math.abs(dy) < TAP_SLOP) return;
+    dropHold(); peekOff();
     drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
   }
   if(e.cancelable) e.preventDefault();
@@ -3500,10 +4141,14 @@ function onMove(e){
   refreshTicks();
 }
 function onUp(e){
-  if(!drag) return;
+  dropHold();
+  if(!drag){ peekOff(); return; }
   if(!drag.axis){
+    var wasPeek = peek.on;
     var p = {x:drag.x0, y:drag.y0};
     drag = null;
+    peekOff();
+    if(wasPeek) return;                 /* a hold is looking, never walking */
     var u = Math.round((p.x - CX)/S + N/2 - 0.5), v = Math.round((CY - p.y)/S + N/2 - 0.5);
     if(u >= 0 && v >= 0 && u < N && v < N) tapCell(u, v);
     return;
@@ -3518,7 +4163,7 @@ function onUp(e){
 cv.addEventListener('touchstart', onDown, {passive:true});
 cv.addEventListener('touchmove', onMove, {passive:false});
 cv.addEventListener('touchend', onUp);
-cv.addEventListener('touchcancel', function(){ springBack(); });
+cv.addEventListener('touchcancel', function(){ dropHold(); peekOff(); springBack(); });
 cv.addEventListener('mousedown', onDown);
 window.addEventListener('mousemove', onMove);
 window.addEventListener('mouseup', onUp);
@@ -3532,7 +4177,13 @@ window.addEventListener('keydown', function(e){
   }
   else if(e.key === 'z') undo();
   else if(e.key === 'Escape') show('scPause');
+  /* the peek, for a keyboard: hold it exactly the way a thumb would */
+  else if((e.key === ' ' || e.key === 'Shift') && !e.repeat){ e.preventDefault(); peekOn(); }
 });
+window.addEventListener('keyup', function(e){
+  if(e.key === ' ' || e.key === 'Shift') peekOff();
+});
+window.addEventListener('blur', function(){ dropHold(); peekOff(); });
 
 /* ============================================================
    UI
@@ -3545,6 +4196,10 @@ function toast(msg){
   clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('on'); }, 1500);
 }
 function show(id){
+  /* any screen opening ends a peek: the cube must never be left as glass
+     behind a card, and a thumb still down when a menu appears is no longer
+     holding anything */
+  dropHold(); peekOff(); drag = null;
   ['scTitle','scCubes','scManual','scPause','scWin','scPlate'].forEach(function(s){
     $(s).classList.toggle('hide', s !== id);
   });
@@ -3603,7 +4258,13 @@ function refreshTicks(){
 function undo(){
   if(!undoStack.length || walking || anim) return;
   restore(undoStack.pop());
-  sfx.step();
+  sfx.undo();
+  /* an undo is time running backwards, so the front runs INWARD — same
+     mechanism as every other beat, sign flipped, and it reads instantly as
+     the opposite of the thing that put you here */
+  ring(CX, CY, {r0:N*S*0.75, r1:N*S*0.10, dur:420, col:'150,190,255', a:0.5, w:3, sq:true});
+  flash('120,170,255', 0.13, 320); shake(0.16); punch(0.02);
+  revealT = 0;
 }
 function hint(){
   if(!lv || won) return;
@@ -3700,6 +4361,7 @@ function bindSwitch(id, key){
 bindSwitch('swSound', 'sound');
 bindSwitch('swHaptic', 'haptic');
 bindSwitch('swDepth', 'depth');
+bindSwitch('swFx', 'fx');
 
 /* ============================================================
    THE THREE HOOKS A NATIVE HOST NEEDS.
@@ -3769,7 +4431,7 @@ function loop(ts){
     advanceAnim(dt);
     advanceWalk(dt);
     stepMotes(dt); stepParts(dt); stepWave(dt); stepFlip(dt); stepFlyers(dt); stepDemo(dt);
-    if(kickV.t < 1) kickV.t = Math.min(1, kickV.t + dt/kickV.dur);
+    stepCam(dt); stepFlashes(dt); stepPeek(dt); stepOrb(dt); stepBeam(dt);
     if(revealT < 2000) revealT += dt;
     if(exitFlash > 0) exitFlash = Math.max(0, exitFlash - dt/620);
     if(exitPull >= 0){ exitPull += dt/260; if(exitPull > 1) exitPull = 1; }
