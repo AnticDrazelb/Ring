@@ -113,6 +113,7 @@
   --t-2xl:clamp(22px,6.3vw,28px);
   --t-3xl:clamp(30px,9.2vw,42px);
 
+
   /* ---- MOTION ------------------------------------------------------
      Three curves and no others. --seat overshoots and settles, and is for
      anything arriving that should feel like it has mass. --snap is for
@@ -252,7 +253,39 @@ h2+.manual{margin-top:14px;}
 .sub{color:var(--dim);font-size:var(--t-sm);text-align:center;line-height:1.5;max-width:31ch;margin:0 auto 26px;}
 .eyebrow{font-size:var(--t-tiny);letter-spacing:.24em;color:var(--dim-2);text-transform:uppercase;font-weight:700;}
 
+/* A TELEVISION IS NOT A BIG PHONE.
+
+   Every rung above is calibrated in vw, which is the right unit for a
+   device held at arm's length where the width is the scarce thing. Sit the
+   same layout on a 1080p screen across a room and every one of those clamps
+   pins to its maximum — a 13px readout, four metres away. Console UI is
+   sized against the HEIGHT of the picture and against viewing distance, so
+   on anything wide enough to be a television the whole scale is rebuilt in
+   vh and the controls grow with it. Handheld at 1280x720 lands in between,
+   which is exactly where it should be. */
+@media (min-aspect-ratio: 13/10) and (min-width: 900px){
+  :root{
+    --t-micro:clamp(9px,1.15vh,14px);
+    --t-tiny:clamp(10px,1.3vh,16px);
+    --t-fine:clamp(11px,1.5vh,18px);
+    --t-sm:clamp(12.5px,1.85vh,22px);
+    --t-md:clamp(14px,2.15vh,26px);
+    --t-lg:clamp(16px,2.5vh,30px);
+    --t-xl:clamp(19px,3.2vh,38px);
+    --t-2xl:clamp(23px,4vh,48px);
+    --t-3xl:clamp(32px,5.8vh,70px);
+    --h-read:clamp(40px,5.4vh,64px);
+    --h-ctl:clamp(48px,6.4vh,76px);
+    --h-btn:clamp(54px,7.6vh,88px);
+    --h-row:clamp(56px,7.4vh,86px);
+  }
+  .tick{width:clamp(26px,2.6vh,44px);height:clamp(5px,0.7vh,9px);}
+}
+
 /* ---------- BUTTONS ---------- */
+/* every menu column is already capped, which is what makes the landscape
+   layer look composed rather than stretched — the only thing that had to
+   change for a wide screen is that the layer centres its own scroll */
 .btn{
   min-height:var(--h-btn);width:100%;max-width:340px;
   display:flex;align-items:center;justify-content:center;gap:10px;
@@ -283,6 +316,10 @@ h2+.manual{margin-top:14px;}
 .bar{
   position:absolute;left:0;right:0;display:flex;align-items:center;gap:9px;
   padding:0 calc(var(--sa-left) + 14px) 0 calc(var(--sa-right) + 14px);
+  /* --barw is the board's width, written by layout(). On a phone it is the
+     screen and this does nothing; in landscape it is what stops the HUD
+     from being flung into the corners of a television. */
+  max-width:var(--barw,none);margin-left:auto;margin-right:auto;
 }
 #barTop{top:calc(var(--sa-top) + 8px);}
 #barBot{bottom:calc(var(--sa-bottom) + 12px);justify-content:center;gap:12px;}
@@ -320,7 +357,13 @@ h2+.manual{margin-top:14px;}
    is first in the string — but a hard cut mid-letter reads as a bug, so the
    last few pixels fade. The fade is the width of the pill's own padding, so
    nothing is visibly softened until there is something to soften. */
-#lvName{flex:1;justify-content:flex-start;letter-spacing:.2em;overflow:hidden;white-space:nowrap;
+/* THE NAME SIZES TO ITS NAME, and a spacer takes the rest. It used to be
+   the flexible item, which is correct on a phone where the leftover is a
+   few pixels and wrong on a television where the leftover is six hundred:
+   the cube's name came out as a pill half a metre wide with three words
+   floating at one end of it. */
+.grow{flex:1 1 auto;min-width:0;}
+#lvName{flex:0 1 auto;min-width:0;justify-content:flex-start;letter-spacing:.2em;overflow:hidden;white-space:nowrap;
   -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 13px),transparent);
           mask-image:linear-gradient(90deg,#000 calc(100% - 13px),transparent);}
 #turnPill .n{color:var(--rust);}
@@ -519,6 +562,7 @@ h2+.manual{margin-top:14px;}
 <div id="hud">
   <div class="bar" id="barTop">
     <div class="pill" id="lvName">—</div>
+    <div class="grow"></div>
     <div class="pill" id="keyPill" style="display:none">◈ <span class="n" id="keyN">0</span></div>
     <div class="pill" id="goPill" aria-label="fewest turns from here">◎ <span class="n" id="goN">·</span></div>
     <div class="pill" id="turnPill">TURNS <span class="n" id="turnN">0</span><span class="n" id="parN" style="color:var(--dim-2)">/0</span></div>
@@ -1850,7 +1894,7 @@ function fit(){
      a texture drawn at block resolution must never be. Rotate the phone and
      it would silently come back on. */
   ctx.imageSmoothingEnabled = false;
-  layout(); buildSky(); buildMotes(); buildGlow(); shS = -1;
+  layout(); buildSky(); buildMotes(); buildGlow(); buildSmear(); shS = -1;
 }
 var S = 40, CX = 0, CY = 0;
 /* LAYOUT — MOBILE FIRST, AND THE BOARD ALWAYS FITS.
@@ -1869,9 +1913,38 @@ var S = 40, CX = 0, CY = 0;
    the gap over it. That is not symmetry for its own sake: the bottom of a
    phone is where the thumb lives and where the controls are, and a board
    sitting dead-centre crowds them. */
+/* ============================================================
+   THE OTHER SHAPE OF SCREEN.
+
+   Every measurement in this file was written against a phone held upright,
+   where the width binds and the height has slack. A console is the exact
+   opposite: 1280x720 in the hand, 1920x1080 on a television, and in both of
+   them the HEIGHT binds and there is more horizontal room than the board
+   can ever use.
+
+   Two things have to change and only two. The board sizes against the
+   height, which the existing clamp already does correctly — it takes the
+   smaller of the two and that is the right answer in both orientations. And
+   the chrome has to stop being pinned to the far edges: a turn counter
+   nine hundred pixels from the cube it is counting is not a HUD, it is
+   scenery. So the bars are given the board's own width to live in and
+   centred over it, which changes nothing on a phone (where that width is
+   the screen) and everything on a television.
+
+   The overscan margin is the third thing and it is not a design decision,
+   it is a platform rule: a TV throws away the outer few percent of the
+   picture, so nothing that has to be read may live there. It applies only
+   on displays wide enough to be a television.
+   ============================================================ */
+function landscape(){ return W > H * 1.18; }
 function layout(){
   if(!N) return;
   var ins = insets();
+  if(landscape() && W >= 900){
+    /* docked: assume a television is eating the edges until told otherwise */
+    var ov = Math.round(Math.min(W, H) * 0.035);
+    ins = {t:ins.t + ov, r:ins.r + ov, b:ins.b + ov, l:ins.l + ov};
+  }
   /* On the title screen the chrome owns a band at each end and the cube owns
      the middle, so it is sized and centred against THAT band rather than the
      whole plate — which is what stops the hero sitting under the buttons. */
@@ -1883,6 +1956,9 @@ function layout(){
   S = side / N;
   CX = ins.l + (W - ins.l - ins.r)/2;
   CY = topBar + availH/2 - (demo ? 0 : Math.min(30, (availH - side)*0.14));
+  /* the chrome follows the board rather than the screen */
+  document.documentElement.style.setProperty('--barw',
+    Math.round(Math.max(300, Math.min(W - ins.l - ins.r, side + S*1.2))) + 'px');
 }
 
 /* ---------- the render basis: M, bent by whatever turn is in progress ---- */
@@ -2636,7 +2712,42 @@ function stepDemo(dt){
    thing rocking. And still only the BOARD moves — the HUD is DOM and stays
    nailed down, which is what lets the impacts be as big as they are.
    ============================================================ */
-var CAM = {ix:0, iy:0, imag:0, it:1, idur:1, tr:0, punch:0, clock:0};
+/* ============================================================
+   TIME — the juice nothing else can fake.
+
+   Shake, flash and debris all say "that was big" AFTER the fact. Stopping
+   the clock says it AT the fact, and it is the single largest difference
+   between a game that feels good and a game that has effects on it. Two
+   tools, and they are not the same tool:
+
+     HITSTOP  the world stops dead for 40-140ms and the frame keeps being
+              drawn. The eye reads the freeze as impact, and — this is the
+              part people miss — the shake that was already running resumes
+              on the far side of it, so the picture lurches out of the stop
+              rather than easing out. Every hit in this game gets one, sized
+              to the hit.
+
+     SLOWMO   the clock runs at a fraction and eases back. Reserved for the
+              two moments that are ABOUT something rather than just loud:
+              the plate turning the cube inside out, and walking out.
+
+   The loop takes real milliseconds and hands the game scaled ones. Input is
+   event-driven and never scaled, so a frozen frame still takes your thumb.
+   ============================================================ */
+var freezeT = 0, timeScale = 1, slowT = 0, slowDur = 1, slowFrom = 1;
+function hitstop(ms){ freezeT = Math.max(freezeT, ms * fxAmt()); }
+function slowmo(scale, ms){ slowFrom = scale; slowT = 0; slowDur = ms; timeScale = scale; }
+function stepTime(raw){
+  if(slowT < slowDur){
+    slowT += raw;
+    var p = Math.min(1, slowT/slowDur);
+    timeScale = slowFrom + (1 - slowFrom) * (p*p);
+  } else timeScale = 1;
+  if(freezeT > 0){ freezeT -= raw; return 0; }
+  return raw * timeScale;
+}
+
+var CAM = {ix:0, iy:0, imag:0, it:1, idur:1, tr:0, punch:0, clock:0, sqx:0, sqy:0, sqt:1};
 /* One dial for every effect in the file, so "less of this, please" is a
    switch rather than a rebuild. Nothing turns OFF at 0.4 — a game that stops
    answering the hand is worse than a game that moves too much — it is the
@@ -2647,11 +2758,25 @@ function kick(mag, dx, dy){
 }
 function shake(amt){ CAM.tr = Math.min(1, CAM.tr + amt * fxAmt()); }
 function punch(amt){ CAM.punch = Math.min(0.10, CAM.punch + amt * fxAmt()); }
+/* SQUASH AND STRETCH, on the whole board. A cube that has just been slammed
+   through ninety degrees should be wider than it is tall for a few frames
+   and then overshoot the other way — it is the oldest trick in animation and
+   the reason a landing reads as mass rather than as a transition ending. The
+   axis comes from the turn, so a yaw squashes horizontally and a pitch
+   squashes vertically, and the board deforms along the direction the force
+   actually came from. */
+function squash(ax, amt){
+  amt *= fxAmt();
+  CAM.sqx = ax === 'x' ? amt : -amt*0.62;
+  CAM.sqy = ax === 'x' ? -amt*0.62 : amt;
+  CAM.sqt = 0;
+}
 function stepCam(dt){
   CAM.clock += dt;
   if(CAM.it < 1) CAM.it = Math.min(1, CAM.it + dt/CAM.idur);
   CAM.tr = Math.max(0, CAM.tr - dt/820);
   CAM.punch *= Math.pow(0.0025, dt/1000);
+  if(CAM.sqt < 1) CAM.sqt = Math.min(1, CAM.sqt + dt/480);
 }
 function camState(){
   var t = CAM.clock/1000, tr = CAM.tr*CAM.tr;
@@ -2667,6 +2792,14 @@ function camState(){
     o.rot += Math.sin(t*29.7 + 0.9) * 0.020 * tr;
     o.zoom += tr * 0.010;
   }
+  /* the squash rings down as a damped sine rather than easing to zero, so it
+     overshoots into a stretch and back — one bounce you can see, two you can
+     feel, and nothing after that */
+  o.sx = 1; o.sy = 1;
+  if(CAM.sqt < 1){
+    var q = CAM.sqt, w = Math.sin(q * Math.PI * 2.6) * Math.pow(1-q, 2.4);
+    o.sx = 1 + CAM.sqx * w; o.sy = 1 + CAM.sqy * w;
+  }
   return o;
 }
 /* Everything drawn between these two is drawn THROUGH the camera, main
@@ -2675,11 +2808,11 @@ function camState(){
 function camBegin(){
   var c = camState();
   ctx.save();
-  ctx.translate(CX, CY); ctx.rotate(c.rot); ctx.scale(c.zoom, c.zoom);
+  ctx.translate(CX, CY); ctx.rotate(c.rot); ctx.scale(c.zoom*c.sx, c.zoom*c.sy);
   ctx.translate(-CX + c.x, -CY + c.y);
   if(gx){
     gx.save();
-    gx.translate(CX, CY); gx.rotate(c.rot); gx.scale(c.zoom, c.zoom);
+    gx.translate(CX, CY); gx.rotate(c.rot); gx.scale(c.zoom*c.sx, c.zoom*c.sy);
     gx.translate(-CX + c.x, -CY + c.y);
   }
 }
@@ -2804,6 +2937,67 @@ function glowEnd(){
   ctx.globalAlpha = 0.48; ctx.drawImage(glowCv, -W*0.035, -H*0.035, W*1.07, H*1.07);
   ctx.imageSmoothingEnabled = false;
   ctx.restore();
+}
+
+/* ---------- THE SMEAR ------------------------------------------------------
+   Motion blur, by feeding the frame back into itself.
+
+   A cube being slammed through ninety degrees in a fifth of a second moves
+   further between two frames than its own blocks are wide, and every one of
+   those frames is perfectly sharp — which is exactly what makes fast motion
+   on a 60Hz panel look like a slideshow of poses instead of a movement. The
+   fix is not to draw the cube three times: that is triple the cost of the
+   most expensive path in the file. It is to keep the LAST frame at half
+   resolution and lay it back over the new one additively while the thing is
+   moving fast. Bright edges leave trails, the dark board does not, and the
+   whole effect is two scaled drawImages.
+
+   It is gated on angular speed, so it exists only during a turn or an orbit
+   and costs literally nothing the rest of the time.                        */
+var smearCv = null, sx2 = null, smearOn = 0, lastAng = 0, angVel = 0;
+function buildSmear(){
+  if(!W || !H) return;
+  smearCv = document.createElement('canvas');
+  smearCv.width = Math.max(1, Math.round(W*0.5));
+  smearCv.height = Math.max(1, Math.round(H*0.5));
+  sx2 = smearCv.getContext('2d');
+}
+function stepSmear(dt){
+  var a = liveAngle(), cur = a ? a.ang : 0;
+  if(peek.amt > 0.01) cur += peek.yaw + peek.pitch;
+  var v = dt > 0 ? Math.abs(cur - lastAng)/dt*1000 : 0;
+  lastAng = cur;
+  angVel = angVel*0.6 + v*0.4;
+  /* a hand-paced drag is about 2 rad/s and should stay sharp — you are
+     reading the board while you do it. A committed turn is twelve, and that
+     is the only thing in the game moving fast enough to need blurring. */
+  var want = store.fx ? Math.max(0, Math.min(1, (angVel - 3.0)/5.0)) : 0;
+  smearOn = smearOn*0.55 + want*0.45;
+}
+function drawSmear(){
+  if(!sx2 || smearOn < 0.03) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  /* a quarter, and not a third: the smear is additive, so anything the
+     board was already showing bright doubles where the trail crosses it,
+     and the deck is the brightest thing on screen by design */
+  ctx.globalAlpha = 0.26 * smearOn;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(smearCv, 0, 0, W, H);
+  ctx.imageSmoothingEnabled = false;
+  ctx.restore();
+}
+var smearHeld = false;
+function keepSmear(){
+  if(!sx2) return;
+  if(smearOn < 0.03){
+    /* clear once on the way down, not every frame for the rest of the game */
+    if(smearHeld){ sx2.clearRect(0, 0, smearCv.width, smearCv.height); smearHeld = false; }
+    return;
+  }
+  smearHeld = true;
+  sx2.globalCompositeOperation = 'copy';
+  sx2.drawImage(cv, 0, 0, smearCv.width, smearCv.height);
 }
 
 /* ---------- FLASHES AND THE VIGNETTE --------------------------------------
@@ -3079,6 +3273,9 @@ function firePlate(bit, cx, cy){
      flip is that the old material is SEEN leaving, and a frame that blows
      out for a quarter of a second is a frame nobody got to watch */
   shake(0.95); punch(0.075); flash(PLATE_COL[bit], 0.24, 560);
+  /* the world turning inside out is worth a held breath: a long stop, then
+     a third of speed easing back over most of a second */
+  hitstop(120); slowmo(0.34, 620); squash('x', 0.09);
   ring(cx, cy, {r0:S*0.2, r1:N*S*1.05, dur:760, col:PLATE_COL[bit], a:0.75, w:6, sq:true});
   ring(cx, cy, {r0:S*0.2, r1:N*S*0.62, dur:520, col:'240,240,255', a:0.5, w:3, sq:true});
   sfx.plate(bit); buzz(34);
@@ -3335,8 +3532,10 @@ function draw(){
     g.addColorStop(1, 'rgba(0,0,0,0)');
     c2.fillStyle = g; c2.fillRect(0, 0, W, H); c2.restore();
   }
+  drawSmear();
   drawFlashes();
   glowEnd();
+  keepSmear();
 }
 
 function drawFlat(){
@@ -4251,7 +4450,7 @@ function advanceWalk(dt){
        something, so it gets the whole kit: shards off the bars, a jade front
        running out across the board, and the room lit green for a beat. */
     doors |= (1<<di); sfx.door(); buzz(24); toast('unlocked');
-    kick(5, 0, 1); shake(0.34); punch(0.030); flash('53,215,161', 0.30, 520);
+    kick(5, 0, 1); shake(0.34); punch(0.030); hitstop(46); flash('53,215,161', 0.30, 520);
     burst(cx2, cy2, 26, {spd:150, life:640, r:2.4, col:'53,215,161', g:110});
     burst(cx2, cy2, 10, {kind:'chip', spd:110, life:760, r:2.0, col:'40,150,116', g:340});
     ring(cx2, cy2, {r0:S*0.2, r1:S*2.6, dur:520, col:'53,215,161', a:0.65, w:3.5});
@@ -4268,7 +4467,7 @@ function advanceWalk(dt){
   var ki = keyIndexAt(lv, pos);
   if(ki >= 0 && !(kmask & (1<<ki))){
     kmask |= (1<<ki); sfx.key(); buzz(12); toast('key');
-    shake(0.20); punch(0.022); flash('255,196,77', 0.26, 460);
+    shake(0.20); punch(0.022); hitstop(30); flash('255,196,77', 0.26, 460);
     burst(cx2, cy2, 20, {spd:130, life:560, r:2.2, col:'255,196,77', g:20});
     burst(cx2, cy2, 8, {kind:'ember', spd:26, lift:40, life:900, r:2.0, col:'255,220,140', g:-24});
     ring(cx2, cy2, {r0:S*0.15, r1:S*1.9, dur:460, col:'255,196,77', a:0.7, w:3});
@@ -4315,8 +4514,11 @@ function refuseTurn(t){
      jolts, the walls close in for a beat, and stone chips off the stop it
      just hit. The vignette doing the work here is deliberate: light means
      yes in this game, so no has to be told in the dark. */
+  /* a refusal gets a LONGER stop than a landing and no reward at all: the
+     cube hit a wall, and a wall is the one thing in this game that should
+     take a frame away from you */
   kick(5, t < 2 ? -sgn : 0, t < 2 ? 0 : sgn);
-  shake(0.5); vig = 1; punch(-0.012);
+  shake(0.5); vig = 1; punch(-0.012); hitstop(78); squash(t < 2 ? 'x' : 'y', 0.045);
   var rr0 = tileRect(N/2 - 0.5 + (t < 2 ? -sgn*N*0.42 : 0), N/2 - 0.5 + (t < 2 ? 0 : sgn*N*0.42));
   burst(rr0[0] + S/2, rr0[1] + S/2, 12, {kind:'chip', spd:120, life:620, r:1.8,
                                          col:chipCol('#', N-1), g:420, fade:0.8,
@@ -4371,7 +4573,7 @@ function advanceAnim(dt){
      cube's and not yours. */
   var sgn = (t === 1 || t === 2) ? 1 : -1;
   kick(9, t < 2 ? -sgn : 0, t < 2 ? 0 : sgn);
-  shake(0.62); punch(0.055);
+  shake(0.62); punch(0.055); hitstop(52); squash(t < 2 ? 'x' : 'y', 0.075);
   flash((ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0), 0.20, 480);
   ring(CX, CY, {r0:N*S*0.18, r1:N*S*0.92, dur:620, col:(ST.dN[0]|0)+','+(ST.dN[1]|0)+','+(ST.dN[2]|0), a:0.5, w:5, sq:true});
   var pv = viewOf(N, M, pos), pr = tileRect(pv[0], pv[1]);
@@ -4543,11 +4745,30 @@ function finish(){
   ring(gx, gy, {r0:S*0.2, r1:N*S*1.2, dur:900, col:'53,215,161', a:0.85, w:7, sq:true});
   ring(gx, gy, {r0:S*0.2, r1:N*S*0.7, dur:600, col:'233,245,255', a:0.6, w:4});
   kick(11, 0, 1); shake(1); punch(0.09);
+  /* THE ONE PLACE THE CLOCK REALLY BENDS. A long stop, then a third of
+     speed for most of a second, so the board comes apart at the pace of
+     something ending rather than something being dismissed. */
+  hitstop(150); slowmo(0.30, 900);
   /* exitFlash already floods the frame green for most of a second; this one
      only has to be the leading edge of it, and two full-strength washes
      stacked read as a white-out rather than as a door opening */
   flash('53,215,161', 0.22, 620);
   exitFlash = 1;
+  /* A PERFECT LINE IS A DIFFERENT EVENT, and it has never once looked like
+     one. Par is the whole scoring system in this game; clearing at par with
+     the same exit as clearing four over says the game does not care, and
+     the card saying FEWEST POSSIBLE forty frames later is a receipt, not a
+     celebration. Gold, because gold is what the marks on the level select
+     are made of, and thirty chips of it thrown up through the jade. */
+  if(turns <= lv.par){
+    setTimeout(function(){
+      flash('255,196,77', 0.34, 900);
+      shake(0.7); punch(0.05); sfx.vault();
+      ring(gx, gy, {r0:S*0.2, r1:N*S*1.3, dur:1000, col:'255,196,77', a:0.8, w:6, sq:true});
+      burst(gx, gy, 34, {kind:'chip', spd:210, life:1500, r:2.2, col:'255,196,77', g:180, fade:0.9});
+      burst(gx, gy, 22, {kind:'ember', spd:30, lift:120, life:1800, r:2.4, col:'255,226,150', g:-46, fade:0.85});
+    }, 210);
+  }
   setTimeout(function(){ startWave('out', gv[0], gv[1], 420); }, 190);
   sfx.win(); buzz(40);
   setTimeout(function(){
@@ -4921,6 +5142,106 @@ if(window.visualViewport){
 }
 
 /* ============================================================
+   A CONTROLLER, BECAUSE DOCKED THERE IS NO TOUCHSCREEN.
+
+   Handheld this game is a touchscreen game and stays one — every gesture in
+   the file is the primary way to play it. But a console is the same
+   software on a television with a pad in your hands and no glass to touch
+   at all, and a build that cannot be played that way is not a build.
+
+   The mapping is chosen so the pad expresses the same three verbs the thumb
+   does, and nothing else:
+
+     STICK / DPAD   walk one block. The board is a four-way grid and the
+                    game already routes a tap to an adjacent cell, so a
+                    direction IS a step — no cursor to drive, nothing to
+                    select, no second layer of interface.
+     L / R          turn the cube left and right.
+     ZL / ZR        turn it up and down. Four shoulders, four turns, which
+                    is the same four the ticks above the thumb show.
+     Y (hold)       peek. Right stick orbits it, exactly as a drag does.
+     B              undo.      A   confirm, on whatever card is open.
+     + or -         pause.
+
+   Repeat is deliberately slow — this is a puzzle, and a stick that fires
+   four steps because it was held a beat too long is a stick that undoes
+   your plan. Edge-triggered everywhere except walking, which repeats at
+   four a second after a third of a second of holding.
+   ============================================================ */
+var padPrev = {}, padRepeat = 0, padWasPeek = false;
+function padGet(){
+  if(!navigator.getGamepads) return null;
+  var list = navigator.getGamepads();
+  for(var i = 0; i < list.length; i++) if(list[i] && list[i].connected) return list[i];
+  return null;
+}
+function padPoll(raw){
+  var g = padGet();
+  if(!g){ if(padWasPeek){ padWasPeek = false; peekOff(); } return; }
+  var b = g.buttons, ax = g.axes || [], i;
+  function down(n){ return !!(b[n] && (b[n].pressed || b[n].value > 0.4)); }
+  function hit(n){
+    var d = down(n), was = padPrev[n];
+    padPrev[n] = d;
+    return d && !was;
+  }
+  /* the peek is the one control that is held rather than pressed */
+  var wantPeek = down(3);                                   /* Y / triangle */
+  if(wantPeek && !padWasPeek){ padWasPeek = true; audio(); peekOn(); }
+  else if(!wantPeek && padWasPeek){ padWasPeek = false; peekOff(); }
+  if(peek.on){
+    var rx = ax[2] || 0, ry = ax[3] || 0;
+    if(Math.abs(rx) > 0.16) peek.yaw += rx * raw/1000 * 2.4;
+    if(Math.abs(ry) > 0.16) peek.pitch = Math.max(-PEEK_MAXP, Math.min(PEEK_MAXP, peek.pitch - ry * raw/1000 * 2.0));
+  }
+  /* a card is open: the pad drives the card, not the cube */
+  if(!$('hud').classList.contains('on')){
+    if(hit(0) || hit(9) || hit(1)){
+      var layerOn = ['scWin','scPause','scPlate','scManual','scCubes','scTitle'].filter(function(id){
+        return !$(id).classList.contains('hide');
+      })[0];
+      if(layerOn){
+        var btn = $(layerOn).querySelector('.btn.primary') || $(layerOn).querySelector('.btn');
+        if(btn) btn.click();
+      }
+    }
+    for(i = 0; i < 12; i++) padPrev[i] = down(i);
+    return;
+  }
+  if(hit(9) || hit(8)){ show('scPause'); return; }
+  if(hit(1)) undo();
+  if(hit(2)) hint();                                        /* X */
+  if(!peek.on){
+    if(hit(4)) { if(!tryTurn(0)) refuseTurn(0); }            /* L  — turn left */
+    if(hit(5)) { if(!tryTurn(1)) refuseTurn(1); }            /* R  — turn right */
+    if(hit(6)) { if(!tryTurn(2)) refuseTurn(2); }            /* ZL — turn up */
+    if(hit(7)) { if(!tryTurn(3)) refuseTurn(3); }            /* ZR — turn down */
+  }
+  /* walking: dpad or the left stick, one block a press and four a second held */
+  var dx = (down(15) ? 1 : 0) - (down(14) ? 1 : 0) + ((ax[0] || 0) > 0.55 ? 1 : (ax[0] || 0) < -0.55 ? -1 : 0);
+  var dy = (down(13) ? 1 : 0) - (down(12) ? 1 : 0) + ((ax[1] || 0) > 0.55 ? 1 : (ax[1] || 0) < -0.55 ? -1 : 0);
+  dx = Math.max(-1, Math.min(1, dx)); dy = Math.max(-1, Math.min(1, dy));
+  if(!dx && !dy){ padRepeat = 0; }
+  else if(!peek.on && !walking && !anim && !won){
+    padRepeat -= raw;
+    if(padRepeat <= 0){
+      padRepeat = padPrev.walked ? 250 : 330;
+      padPrev.walked = 1;
+      var v = viewOf(N, M, pos);
+      /* THE BOARD'S V AXIS POINTS UP THE SCREEN and the stick's does not:
+         tileRect puts v = 0 at the BOTTOM (y = CY + (N/2 - 1 - v)*S), while
+         a stick pushed down reads +1. Adding them walked the player away
+         from the direction the thumb was pointing, which is the one thing a
+         d-pad is not allowed to do. */
+      tapCell(v[0] + dx, v[1] - (dy > 0 ? 1 : dy < 0 ? -1 : 0));
+    }
+  }
+  if(!dx && !dy) padPrev.walked = 0;
+  for(i = 0; i < 18; i++) padPrev[i] = down(i);
+}
+window.addEventListener('gamepadconnected', function(){ toast('controller connected'); });
+
+/* ============================================================
    LOOP
    ============================================================ */
 var running = true, last = 0;
@@ -4936,13 +5257,16 @@ var running = true, last = 0;
    fails loudly rather than quietly passing. */
 function loop(ts){
   if(!running) return;
-  var dt = last ? Math.min(64, ts - last) : 16;
+  var raw = last ? Math.min(64, ts - last) : 16;
   last = ts;
+  var dt = stepTime(raw);
   try{
+    padPoll(raw);                       /* input is never scaled, and never frozen */
     advanceAnim(dt);
     advanceWalk(dt);
     stepMotes(dt); stepParts(dt); stepWave(dt); stepFlip(dt); stepFlyers(dt); stepDemo(dt);
     stepCam(dt); stepFlashes(dt); stepPeek(dt); stepOrb(dt); stepBeam(dt); stepDoors(dt);
+    stepSmear(raw);
     if(revealT < 2000) revealT += dt;
     if(exitFlash > 0) exitFlash = Math.max(0, exitFlash - dt/620);
     if(exitPull >= 0){ exitPull += dt/260; if(exitPull > 1) exitPull = 1; }
