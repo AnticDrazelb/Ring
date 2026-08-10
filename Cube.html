@@ -101,7 +101,10 @@
   --edge-on:rgba(255,106,61,.42);
 
   /* ---- SHAPE ---- */
-  --r-chip:12px; --r-ctl:15px; --r-btn:18px; --r-card:22px; --r-sheet:26px; --r-pill:999px;
+  /* ROUNDER. Every corner in the interface is softer than it was, because
+     the shape language on the board is now round and a UI of tight
+     rectangles around it reads as two games stapled together. */
+  --r-chip:16px; --r-ctl:22px; --r-btn:26px; --r-card:28px; --r-sheet:32px; --r-pill:999px;
 
   /* ---- CONTROL HEIGHTS --------------------------------------------
      These scale with the viewport rather than stepping at hand-written
@@ -356,6 +359,14 @@ h2+.manual{margin-top:14px;}
   font-size:var(--t-sm);font-weight:800;letter-spacing:.1em;
   transition:transform .16s var(--seat),opacity .18s var(--ease),box-shadow .18s var(--ease);
 }
+/* A GUMMY PRESS. Nothing in this interface used to move when you touched
+   it — the game underneath had squash, kick and hitstop, and the buttons
+   were a spreadsheet. They give under a thumb now and spring back past
+   where they started, on the same --seat curve the cube itself lands on. */
+.btn:active,.pill:active{transform:scale(.945);}
+.btn,.pill{transition:transform .13s var(--seat),opacity .18s var(--ease),box-shadow .18s var(--ease);}
+.row:active .sw{transform:scale(.94);}
+.cube:active{transform:scale(.95);}
 .pill:active{transform:scale(.9) translateY(1px);}
 /* the counter flinches when a key lands in it, so the number changing is
    something you SEE rather than something you have to have been watching */
@@ -1555,15 +1566,32 @@ var BAKED = [
    authored hues, so vault ninety has a look nobody chose but nobody has
    seen either — which is the honest deal for a game with no last level.
    ============================================================ */
+/* EIGHT WORLDS, NOT EIGHT QUARRIES.
+
+   These were named for industry and lit like one: eight variations on wet
+   stone in a dark room, every deck a shade of bone and every sky within a
+   few points of black. It read as serious, which is not the same as good,
+   and it is the opposite of what this game is — a bright object turning in
+   your hands.
+
+   So each vault is a PLACE with a colour it could only be. The rule that
+   makes them work is the one Galaxy uses: the ground is candy-saturated and
+   the sky behind it is deep and SATURATED TOO — never grey, never black.
+   A dark violet sky makes a lime platform sing; a dark grey one makes it
+   look like a lime platform in a car park.
+
+   The bands still hold. Deck luminance stays high, bedrock is walked down
+   by enforceBands as it always was, and the guarantee has not moved an inch
+   — it is the hues that changed, not the contract.                        */
 var VAULTS = [
-  {name:'THE SHALLOWS',  dF:[96,80,62],  dN:[246,238,222], rF:[15,14,21], rN:[56,61,82],  vd:[10,9,16],  st:[190,200,235], at:[90,110,190]},
-  {name:'THE IRONWORKS', dF:[92,74,52],  dN:[240,222,196], rF:[22,14,11], rN:[86,52,38],  vd:[14,9,7],   st:[255,200,150], at:[200,110,50]},
-  {name:'GLASSWORKS',    dF:[58,92,96],  dN:[220,248,250], rF:[8,18,22],  rN:[36,72,84],  vd:[5,12,16],  st:[160,235,245], at:[60,180,200]},
-  {name:'THE ORCHARD',   dF:[80,92,50],  dN:[232,246,200], rF:[12,18,12], rN:[48,74,46],  vd:[8,13,9],   st:[190,240,180], at:[90,180,90]},
-  {name:'CINDERS',       dF:[104,66,48], dN:[250,226,206], rF:[20,10,10], rN:[74,40,36],  vd:[13,7,7],   st:[255,170,130], at:[220,90,50]},
-  {name:'THE SALT',      dF:[82,92,104], dN:[240,248,255], rF:[12,15,20], rN:[62,74,92],  vd:[8,10,14],  st:[220,235,255], at:[120,160,220]},
-  {name:'THE VEIN',      dF:[96,78,44],  dN:[250,232,182], rF:[16,10,22], rN:[62,44,86],  vd:[11,7,16],  st:[210,180,255], at:[150,90,220]},
-  {name:'THE DEEP',      dF:[72,72,78],  dN:[236,236,242], rF:[8,8,10],   rN:[42,44,52],  vd:[5,5,7],    st:[180,185,200], at:[80,90,120]}
+  {name:'MEADOW',     dF:[104,168,72],  dN:[196,246,150], rF:[38,44,30],  rN:[88,74,52],   vd:[14,18,34],  st:[210,240,255], at:[70,120,220]},
+  {name:'SANDCASTLE', dF:[186,148,72],  dN:[255,232,168], rF:[62,42,30],  rN:[126,84,52],  vd:[20,16,34],  st:[255,226,180], at:[210,140,70]},
+  {name:'BUBBLEGUM',  dF:[196,110,158], dN:[255,196,228], rF:[52,28,58],  rN:[104,58,116], vd:[26,12,36],  st:[255,206,246], at:[214,90,190]},
+  {name:'GLACIER',    dF:[112,168,196], dN:[206,244,255], rF:[26,42,64],  rN:[62,92,134],  vd:[10,18,40],  st:[220,244,255], at:[80,150,240]},
+  {name:'EMBERFALL',  dF:[204,116,64],  dN:[255,206,158], rF:[62,24,20],  rN:[128,50,34],  vd:[28,10,14],  st:[255,190,150], at:[240,96,54]},
+  {name:'LAGOON',     dF:[86,178,166],  dN:[186,250,238], rF:[20,48,52],  rN:[48,104,110], vd:[8,24,34],   st:[190,255,246], at:[54,190,196]},
+  {name:'TWILIGHT',   dF:[146,128,208], dN:[218,208,255], rF:[36,28,64],  rN:[78,64,134],  vd:[16,10,34],  st:[226,210,255], at:[140,96,240]},
+  {name:'HONEYCOMB',  dF:[204,158,60],  dN:[255,224,146], rF:[58,40,18],  rN:[122,86,34],  vd:[26,18,10],  st:[255,232,176], at:[236,160,50]}
 ];
 var VAULT_A = ['IRON','SALT','GLASS','ASH','BONE','SLATE','AMBER','TIDE','EMBER','FROST','COPPER','SHALE'];
 var VAULT_B = ['REACH','WELL','SPINE','GATE','HOLLOW','WORKS','MARCH','VAULT','TERRACE','CANT'];
@@ -1816,62 +1844,123 @@ function ambience(band){
 
 /* Steps drift in pitch so a run of them sounds like walking rather than a
    stuck record — the cheapest possible fix for the most repeated sound. */
+/* ============================================================
+   BUBBLY, NOT GRITTY.
+
+   Every sound in here used to be a filtered noise burst: a stone click, a
+   stone scrape, a stone latch. Accurate, and joyless. The sound design that
+   goes with a round blue character with eyes is MELODIC — bouncy, pitched,
+   and generous, where even the failure states are friendly.
+
+   Two rules do most of the work.
+
+   FIRST, EVERYTHING IS IN A KEY. The whole game plays on one pentatonic
+   scale, so no two sounds can ever collide badly no matter how fast they
+   are triggered — a player mashing steps is playing a tune rather than
+   causing a pile-up. Pentatonic because it has no semitone clashes in it
+   at all; you cannot make it sound wrong.
+
+   SECOND, PITCH RISES ON GOOD AND FALLS ON BAD, always, with no exceptions.
+   A key sweeps up. A door sweeps up. A turn lands up. A refusal falls, a
+   dead end falls. That single convention teaches the whole game's feedback
+   without a word of text, and it is the reason a five-year-old knows they
+   did something wrong in a Mario game before they have parsed the screen.
+
+   Sines and triangles almost throughout: a sawtooth is a machine and a
+   square is a buzzer, where a triangle is a toy xylophone.
+   ============================================================ */
+var PENT = [523.25, 587.33, 698.46, 783.99, 880.00,        /* C D F G A */
+            1046.50, 1174.66, 1396.91, 1567.98, 1760.00];
+/* a bell: the note, plus its octave underneath at a third of the level, is
+   the cheapest way to make a sine sound like something struck */
+function bell(f, dur, gain, slide, send){
+  tone(f, dur, 'triangle', gain, slide || 0, send === undefined ? 0.4 : send);
+  tone(f*0.5, dur*0.8, 'sine', gain*0.34, 0, 0.2);
+}
+function arp(notes, step, gain, type){
+  notes.forEach(function(f, i){
+    setTimeout(function(){ tone(f, 0.34, type || 'triangle', gain, 0, 0.45); }, i*step);
+  });
+}
 var stepN = 0;
 var sfx = {
+  /* a footfall walks up the scale and resets, so crossing a board is a
+     phrase rather than a repeated click */
   step:  function(){
+    var f = PENT[stepN % 5] * 0.5;
     stepN++;
-    noise(0.05, 700 + (stepN % 3) * 190, 0.07, 0.10);
-    tone(150 + (stepN % 4) * 11, 0.06, 'sine', 0.045, 0, 0.08);
+    tone(f, 0.13, 'triangle', 0.075, f*1.02, 0.16);
+    tone(f*2, 0.07, 'sine', 0.030, 0, 0.10);
   },
-  land:  function(){ noise(0.09, 520, 0.10, 0.3); tone(78, 0.14, 'sine', 0.07, 58, 0.25); },
-  /* the detent, in three layers: the latch, the stone it is set in, and the
-     mass arriving underneath a beat late */
+  land:  function(){
+    stepN = 0;
+    tone(196, 0.16, 'sine', 0.085, 262, 0.28);
+    tone(392, 0.09, 'triangle', 0.045, 0, 0.2);
+  },
+  /* the detent: a rising sweep that ARRIVES on a bell, so the turn has a
+     landing note and not just a stop */
   turn:  function(){
-    noise(0.035, 5200, 0.16, 0.12);
-    noise(0.30, 2400, 0.10, 0.42, 380);
-    tone(104, 0.30, 'triangle', 0.13, 52, 0.34);
-    tone(41, 0.42, 'sine', 0.16, 33, 0.10);
+    tone(220, 0.20, 'sine', 0.075, 660, 0.30);
+    noise(0.16, 3200, 0.045, 0.30, 900);
+    setTimeout(function(){ bell(783.99, 0.42, 0.10); }, 90);
+    tone(87.31, 0.34, 'sine', 0.13, 65, 0.12);
   },
-  creak: function(v){ noise(0.10, 320 + v*900, 0.020 + v*0.03, 0.3); },
-  deny:  function(){ noise(0.08, 420, 0.16, 0.2); tone(68, 0.16, 'square', 0.07, 50, 0.1); },
+  /* the vault complaining as it moves, pitched instead of scraped */
+  creak: function(v){
+    tone(120 + v*260, 0.09, 'sine', 0.018 + v*0.022, 0, 0.18);
+  },
+  /* a bonk. Falls, lands on a soft low note, and is impossible to hear as
+     punishing — the cube said no, it did not tell you off */
+  deny:  function(){
+    tone(392, 0.13, 'triangle', 0.10, 175, 0.14);
+    setTimeout(function(){ tone(147, 0.16, 'sine', 0.075, 131, 0.2); }, 70);
+  },
+  /* the coin. Two notes, a fifth apart, the second late and brighter. */
   key:   function(){
-    tone(1046, 0.10, 'triangle', 0.10, 0, 0.4);
-    setTimeout(function(){ tone(1568, 0.20, 'triangle', 0.085, 0, 0.5); }, 62);
+    bell(1046.50, 0.16, 0.10);
+    setTimeout(function(){ bell(1567.98, 0.40, 0.095); }, 78);
   },
-  keyIn: function(){ tone(2093, 0.13, 'sine', 0.07, 0, 0.4); },
+  keyIn: function(){ bell(2093, 0.22, 0.055); },
+  /* a gate opening is the biggest good news short of the exit, so it gets a
+     whole ascending triad and a shimmer on top */
   door:  function(){
-    noise(0.24, 900, 0.20, 0.4, 260); tone(126, 0.30, 'sawtooth', 0.07, 84, 0.3);
-    setTimeout(function(){ noise(0.05, 3800, 0.11, 0.3); }, 190);
+    arp([523.25, 698.46, 1046.50], 66, 0.085);
+    tone(130.81, 0.5, 'sine', 0.10, 196, 0.3);
+    setTimeout(function(){ noise(0.30, 5200, 0.05, 0.5, 9000); }, 150);
   },
   win:   function(){
-    [523,659,784,1047,1319].forEach(function(f,i){
-      setTimeout(function(){ tone(f, 0.65, 'triangle', 0.10, 0, 0.55); }, i*88);
-    });
-    tone(65, 0.9, 'sine', 0.15, 44, 0.3);
-    noise(0.5, 2600, 0.09, 0.6, 300);
+    /* the fanfare: up the pentatonic, then the octave held */
+    arp([523.25, 698.46, 880, 1046.50, 1396.91], 92, 0.105);
+    setTimeout(function(){ bell(2093, 1.1, 0.10); }, 470);
+    tone(130.81, 1.0, 'sine', 0.13, 174.61, 0.35);
+    noise(0.5, 6000, 0.045, 0.6, 11000);
   },
   vault: function(){
-    [196,262,330,392].forEach(function(f,i){ setTimeout(function(){ tone(f,1.5,'sine',0.09,0,0.7); }, i*130); });
-    noise(1.1, 1500, 0.07, 0.8, 200);
+    arp([392, 523.25, 659.25, 783.99, 1046.50, 1318.51], 128, 0.09);
+    tone(98, 1.6, 'sine', 0.11, 130.81, 0.7);
   },
-  /* the world turning over: a long filtered sweep in the direction of the
-     change, a bell for the plate, and a sub under both */
+  /* the world turning inside out: a sweep that goes the direction the world
+     went, and a bell at the other end of it */
   plate: function(bit){
-    noise(0.85, 240, 0.20, 0.75, bit === 1 ? 3200 : 160);
-    tone(bit === 1 ? 174 : 330, 0.8, 'sawtooth', 0.10, bit === 1 ? 520 : 116, 0.6);
-    tone(55, 1.0, 'sine', 0.17, 40, 0.25);
-    setTimeout(function(){ tone(bit === 1 ? 1046 : 784, 0.5, 'triangle', 0.09, 0, 0.7); }, 120);
+    var up = bit === 1;
+    tone(up ? 262 : 1046, 0.7, 'sine', 0.10, up ? 1046 : 262, 0.55);
+    arp(up ? [523.25, 783.99, 1046.50, 1567.98] : [1567.98, 1046.50, 783.99, 523.25], 84, 0.075);
+    tone(65.41, 0.9, 'sine', 0.15, 49, 0.25);
+    noise(0.6, 2000, 0.05, 0.7, up ? 9000 : 400);
   },
-  undo:  function(){ tone(420, 0.16, 'sine', 0.06, 700, 0.3); noise(0.07, 1800, 0.05, 0.2); },
-  stuck: function(){ tone(200, 0.34, 'sine', 0.07, 118, 0.4); },
-  /* the peek is stone becoming glass and back again: a filter opening
-     upward on the way in, and a short dry knock on the way out, so the hand
-     is told the cube has shut even when the eye is elsewhere */
+  /* time running backwards, so the phrase does too */
+  undo:  function(){ arp([784, 587.33, 440], 52, 0.06, 'sine'); },
+  /* two notes falling a tone: the universal "hm" */
+  stuck: function(){
+    tone(440, 0.24, 'triangle', 0.075, 0, 0.3);
+    setTimeout(function(){ tone(349.23, 0.5, 'triangle', 0.075, 0, 0.4); }, 190);
+  },
+  /* stone to glass and back: a breath in, a soft knock out */
   peek:  function(){
-    noise(0.30, 700, 0.055, 0.55, 5200);
-    tone(392, 0.34, 'sine', 0.045, 784, 0.55);
+    tone(523.25, 0.5, 'sine', 0.05, 1046.50, 0.6);
+    noise(0.34, 900, 0.030, 0.5, 7000);
   },
-  peekOff: function(){ noise(0.06, 2600, 0.05, 0.18); tone(196, 0.10, 'sine', 0.05, 130, 0.15); }
+  peekOff: function(){ tone(659.25, 0.14, 'sine', 0.05, 440, 0.2); }
 };
 function buzz(ms){ if(store.haptic && navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){} }
 
@@ -2265,8 +2354,8 @@ function patBricks(rng, bw, bh, stagger){
   for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++){
     var row = Math.floor(y / bh), off = stagger ? row * (bw >> 1) : 0;
     var lx = (x + off) % bw, ly = y % bh, col = Math.floor((x + off) / bw);
-    var v = cellShade(row*7 + col*13 + 3) + (rng()-0.5)*0.05;
-    if(lx === 0 || ly === 0) v *= 0.80;                     /* the mortar course */
+    var v = cellShade(row*7 + col*13 + 3) + (rng()-0.5)*0.025;
+    if(lx === 0 || ly === 0) v *= 0.87;                     /* the mortar course */
     else if(lx === 1 || ly === 1) v *= 1.06;                /* the block's lit lip */
     else if(lx === bw-1 || ly === bh-1) v *= 0.92;
     a[y*TEXN + x] = v;
@@ -2292,7 +2381,7 @@ function patCobble(rng, sites, rough){
       if(d < b1){ b2 = b1; b1 = d; bi = i; } else if(d < b2) b2 = d;
     }
     var edge = Math.sqrt(b2) - Math.sqrt(b1), v = pts[bi][2];
-    if(edge < 1.2) v *= 0.58 + 0.35*edge;                   /* the gap between stones */
+    if(edge < 1.2) v *= 0.70 + 0.26*edge;                   /* the gap between stones */
     else if(edge < 2.0) v *= 1.05;                          /* and the stone's own shoulder */
     a[y*TEXN + x] = v + (rng()-0.5)*rough;
   }
@@ -2307,8 +2396,8 @@ function patPlanks(rng){
     var row = Math.floor(y / ph), ly = y % ph, base = cellShade(row*29 + 11);
     var grain = 1 + (((row * 2654435761) >>> 27) % 3);      /* which line in this board has the grain */
     for(x = 0; x < TEXN; x++){
-      var v = base + (rng()-0.5)*0.035;
-      if(ly === 0) v *= 0.70;                               /* the seam between boards */
+      var v = base + (rng()-0.5)*0.02;
+      if(ly === 0) v *= 0.80;                               /* the seam between boards */
       else if(ly === 1) v *= 1.07;                          /* the next board's lit top */
       else if(ly === grain) v *= 0.93 + 0.05*Math.sin(x*1.3 + row*2.1);
       if(ly > 0){
@@ -2328,7 +2417,7 @@ function patPlanks(rng){
 function patSmooth(rng){
   var a = texNew(1), x, y;
   for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++){
-    var v = 1 + Math.sin(y*0.85 + Math.sin(x*0.4)*0.7)*0.03 + (rng()-0.5)*0.04;
+    var v = 1 + Math.sin(y*0.85 + Math.sin(x*0.4)*0.7)*0.03 + (rng()-0.5)*0.018;
     if(x === 8 || y === 8) v *= 0.86;                       /* the scribed joint */
     else if(x === 9 || y === 9) v *= 1.05;                  /* and the lip past it */
     a[y*TEXN + x] = v;
@@ -2341,8 +2430,8 @@ function patSmooth(rng){
 function patOre(rng){
   var a = texNew(1), i, x, y;
   for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++)
-    a[y*TEXN + x] = 1 + Math.sin(x*0.7 + Math.cos(y*0.5)*1.7)*0.055
-                      + Math.sin(y*0.9 + 1.3)*0.04 + (rng()-0.5)*0.09;
+    a[y*TEXN + x] = 1 + Math.sin(x*0.7 + Math.cos(y*0.5)*1.7)*0.05
+                      + Math.sin(y*0.9 + 1.3)*0.035 + (rng()-0.5)*0.04;
   for(i = 0; i < 18; i++){
     var cx = (rng()*TEXN)|0, cy = (rng()*TEXN)|0, br = rng() < 0.45 ? 1.12 : 0.64;
     tmul(a, cx, cy, br); tmul(a, cx+1, cy, br);
@@ -2371,10 +2460,19 @@ var TEX_KITS = [
    every texel is clamped into the range enforceBands was promised, which is
    the last line of defence for the whole board's legibility. */
 function finishTex(a, t){
-  var lo = TEX_LO[t], hi = TEX_HI[t], i;
+  var lo = TEX_LO[t], hi = TEX_HI[t], i, j;
+  /* A MOULDED TOP-LIGHT. Every block now reads as an object lit from above
+     rather than a swatch of material: a gentle vertical ramp across the
+     whole face, brightest at the top edge. It is what separates a soft
+     plastic brick from a photograph of a brick, and it costs one multiply
+     per texel at build time. */
+  for(j = 0; j < TEXN; j++){
+    var v = 1.055 - (j/(TEXN-1)) * 0.115;
+    for(i = 0; i < TEXN; i++) tmul(a, i, j, v);
+  }
   for(i = 0; i < TEXN; i++){
-    tmul(a, i, 0, 1.07); tmul(a, i, TEXN-1, 0.89);
-    tmul(a, 0, i, 1.05); tmul(a, TEXN-1, i, 0.90);
+    tmul(a, i, 0, 1.05); tmul(a, i, TEXN-1, 0.93);
+    tmul(a, 0, i, 1.04); tmul(a, TEXN-1, i, 0.94);
   }
   for(i = 0; i < a.length; i++) a[i] = a[i] < lo ? lo : (a[i] > hi ? hi : a[i]);
   return a;
@@ -2417,12 +2515,39 @@ function texFor(t, d, lit){
   if(texCount > 2000) texReset();
   var pat = TEXPAT[mt], base = tileRGB(mt, dq/2, lq/TEX_LIT);
   c = document.createElement('canvas'); c.width = c.height = TEXN;
-  var g = c.getContext('2d'), id = g.createImageData(TEXN, TEXN), i, m, o;
+  var g = c.getContext('2d'), id = g.createImageData(TEXN, TEXN), i, m, o, px2, py2;
+  var vd = ST.vd;
   for(i = 0; i < TEXN*TEXN; i++){
     m = pat[i]; o = i*4;
-    id.data[o]   = Math.min(255, base[0]*m);
-    id.data[o+1] = Math.min(255, base[1]*m);
-    id.data[o+2] = Math.min(255, base[2]*m);
+    px2 = i % TEXN; py2 = (i / TEXN) | 0;
+    /* ROUNDED CORNERS, AND THEY ARE NOT A CLIP.
+
+       A square block is a diagram; a block with its corners taken off is an
+       object, and the whole visual language being aimed at here is built out
+       of soft-edged things. Doing it with a rounded-rect clip would mean a
+       path and a clip per tile in the flat renderer and a second, harder
+       version of the same idea for the turning one — and the two would have
+       to agree exactly or the board would pop the instant a drag began.
+
+       Instead the corner is baked into the TINT: texels outside the corner
+       radius fade toward the void colour. It costs nothing, both renderers
+       inherit it from the same pixels, and against a dark sky a corner that
+       fades to sky IS a rounded corner.
+
+       It is applied here rather than in the pattern on purpose. The pattern
+       clamps are the band guarantee's contract, and this is geometry, not
+       material — it darkens deck and bedrock identically and so cannot make
+       one look like the other. */
+    var cd = cornerFade(px2, py2);
+    var r0 = base[0]*m, g0 = base[1]*m, b0 = base[2]*m;
+    if(cd < 1){
+      r0 = r0*cd + vd[0]*(1-cd);
+      g0 = g0*cd + vd[1]*(1-cd);
+      b0 = b0*cd + vd[2]*(1-cd);
+    }
+    id.data[o]   = Math.min(255, r0);
+    id.data[o+1] = Math.min(255, g0);
+    id.data[o+2] = Math.min(255, b0);
     id.data[o+3] = 255;
   }
   g.putImageData(id, 0, 0);
@@ -2433,6 +2558,23 @@ function texFor(t, d, lit){
    flat fills had, so no hairline of void can open between two neighbours. */
 function drawBlock(t, d, x, y, w, h, lit){
   ctx.drawImage(texFor(t, d, lit), x, y, w, h);
+}
+
+/* How much of a texel survives at (x,y): 1 across the middle of the block,
+   falling to 0 outside the corner arc. Precomputed once — sixteen by sixteen
+   is 256 numbers and they never change. */
+var CORNER_R = 4.2, cornerLUT = null;
+function cornerFade(x, y){
+  if(!cornerLUT){
+    cornerLUT = new Float32Array(TEXN*TEXN);
+    for(var j = 0; j < TEXN; j++) for(var i = 0; i < TEXN; i++){
+      var dx = Math.max(0, CORNER_R - 0.5 - Math.min(i, TEXN-1-i));
+      var dy = Math.max(0, CORNER_R - 0.5 - Math.min(j, TEXN-1-j));
+      var d = Math.sqrt(dx*dx + dy*dy);
+      cornerLUT[j*TEXN + i] = Math.max(0, Math.min(1, (CORNER_R - 0.55) - d + 0.5));
+    }
+  }
+  return cornerLUT[y*TEXN + x];
 }
 
 /* THE LAMP YOU ARE CARRYING. Two cells of falloff, decks only, and it is
@@ -2489,8 +2631,8 @@ function quadArea(p){
    the hero is lit from behind and every side face is already losing most of
    its value to the shading term before the depth fade touches it. */
 var HERO_STYLE = enforceBands({name:'HERO',
-  dF:[150,126,96], dN:[250,241,222], rF:[46,39,38], rN:[116,104,100],
-  vd:[10,8,13], st:[255,198,150], at:[255,150,60]});
+  dF:[176,150,86], dN:[255,238,186], rF:[64,46,34], rN:[132,92,54],
+  vd:[22,16,32], st:[255,226,180], at:[255,158,70]});
 function setStyle(band){
   ST = demo ? HERO_STYLE : vaultStyle(band);
   buildPats(band);
@@ -3294,6 +3436,7 @@ function firePlate(bit, cx, cy){
   /* the flash is deliberately short of a white-out: the whole point of the
      flip is that the old material is SEEN leaving, and a frame that blows
      out for a quarter of a second is a frame nobody got to watch */
+  faceSet('wide', 700);
   shake(0.95); punch(0.075); flash(PLATE_COL[bit], 0.24, 560);
   /* the world turning inside out is worth a held breath: a long stop, then
      a third of speed easing back over most of a second */
@@ -3635,7 +3778,7 @@ function drawFlat(){
       if(dd <= 0) continue;                                /* only a NEARER neighbour casts */
       ctx.save();
       ctx.translate(r[0], r[1]);
-      ctx.globalAlpha = Math.min(MAX_SHADOW/0.45, 0.14 + dd*0.08);
+      ctx.globalAlpha = Math.min(MAX_SHADOW/0.45, 0.09 + dd*0.05);
       ctx.fillStyle = shGrad[SD[i][2]];
       ctx.fillRect(0, 0, S, S);
       ctx.restore();
@@ -3646,8 +3789,13 @@ function drawFlat(){
       if(u3 >= N || v3 >= N) continue;
       var s3 = SF[u3*N + v3]; if(!s3) continue;
       var ad = Math.abs(s3.d - s.d); if(!ad) continue;
-      ctx.strokeStyle = 'rgba(0,0,0,' + Math.min(0.85, 0.26 + ad*0.15).toFixed(2) + ')';
-      ctx.lineWidth = Math.min(3.4, 1 + ad*0.5);
+      /* WITH THE CORNERS ROUNDED, THE SEAM IS ALREADY DRAWN. Every block
+         now ends in sky, so a hard black rule between two of them is a
+         second, uglier answer to a question the shape has already settled.
+         It survives only as a whisper, and only where the depth actually
+         steps. */
+      ctx.strokeStyle = 'rgba(0,0,0,' + Math.min(0.34, 0.08 + ad*0.06).toFixed(2) + ')';
+      ctx.lineWidth = Math.min(2.2, 1 + ad*0.3);
       ctx.beginPath();
       if(i === 0){ ctx.moveTo(r[0]+S, r[1]); ctx.lineTo(r[0]+S, r[1]+S); }
       else       { ctx.moveTo(r[0], r[1]);   ctx.lineTo(r[0]+S, r[1]); }
@@ -3744,14 +3892,32 @@ function drawWaveExtras(){
   if(gv && wave.mode === 'out'){ var gr2 = tileRect(gv[0], gv[1]); drawGoal(gr2[0] + S/2, gr2[1] + S/2, S); }
   if(wave.mode === 'in'){ var p = playerScreen(); drawPlayer(p[0], p[1], S); }
 }
+/* YOU HOP. You do not slide.
+
+   A marker travelling in a straight line between two cells at a constant
+   speed is a cursor being moved. The same distance covered as an ARC —
+   leaving the ground, rising, and arriving with a little squash — is a
+   thing that is alive, and it costs one sine and one parabola. Everything
+   in this file that reads as charm rather than as chrome comes from this
+   kind of substitution.
+
+   The hop height is a fraction of a cell, not a leap: you are crossing a
+   block, not vaulting one, and a jump big enough to be admired is a jump
+   that is in the way by the fortieth time you see it.                     */
+var hopT = 1;
 function playerScreen(){
   var v = viewOf(N, M, pos), r = tileRect(v[0], v[1]);
   var x = r[0] + S/2, y = r[1] + S/2;
   if(walking){
     var pv = viewOf(N, M, walking.from), pr = tileRect(pv[0], pv[1]);
     var t = walking.t;
-    x = (pr[0] + S/2) + (x - pr[0] - S/2)*t;
-    y = (pr[1] + S/2) + (y - pr[1] - S/2)*t;
+    /* along the ground, ease out; through the air, a clean parabola */
+    var e = 1 - Math.pow(1 - t, 2.1);
+    x = (pr[0] + S/2) + (x - pr[0] - S/2)*e;
+    y = (pr[1] + S/2) + (y - pr[1] - S/2)*e - Math.sin(t*Math.PI) * S*0.26;
+  } else if(hopT < 1){
+    /* and the landing settles: one small bounce out of the arrival */
+    y -= Math.abs(Math.sin(hopT*Math.PI*1.6)) * Math.pow(1-hopT, 2) * S*0.10;
   }
   return [x, y];
 }
@@ -3781,6 +3947,127 @@ function playerScreen(){
    It breathes on two frequencies that do not divide into each other, so the
    pulse never looks like a loop, and it rides a slow bob — a thing that
    hovers is alive and a thing that sits is furniture.                      */
+/* ============================================================
+   THE FACE — the single most Nintendo thing in this file.
+
+   A glowing ball is an effect. A glowing ball with two eyes is a CHARACTER,
+   and the whole difference in how a player talks about the thing they are
+   moving is on the far side of that line: it stops being "the marker" and
+   becomes "him". Kirby is a circle with eyes. Boo is a circle with eyes. It
+   is the cheapest personality in the medium and nobody has ever bettered it.
+
+   The rules I gave it, which are the ones that keep it charming rather than
+   cloying:
+
+     IT LOOKS WHERE IT IS GOING. Pupils lead the movement — they shift a
+     fraction of an eye-width toward travel and drift back at rest. Eyes
+     that never move are a sticker.
+
+     IT BLINKS ON ITS OWN CLOCK, at an irregular interval, because a blink
+     on a metronome is a machine and a blink you cannot predict is alive.
+
+     IT REACTS, and only to things that happened to it: a squeeze of the
+     eyes when it lands, wide when a turn is refused, delighted arcs when a
+     key is taken or the exit is reached, worried when the cube is dead.
+     Every expression is an EVENT with a duration, not a state — it plays
+     and it returns to neutral, so the face is never stuck.
+
+     IT LOOKS AROUND WHEN YOU DO NOTHING. Four seconds of no input and it
+     glances off to one side, and later the other. The player has stopped
+     to think and the game has not stopped with them.
+
+     AND IT NEVER OBSTRUCTS. The eyes sit in the upper half of the sphere,
+     they are small, and the expression never changes the silhouette — this
+     is still the marker you find at a glance on a board of forty-nine
+     blocks, and that job outranks the performance.
+   ============================================================ */
+var face = {mood:'', t:0, dur:0, blink:0, nextBlink:1800, lookX:0, lookY:0,
+            tgtX:0, tgtY:0, idle:0, squash:0};
+function faceSet(mood, dur){ face.mood = mood; face.t = 0; face.dur = dur || 420; }
+function stepFace(dt){
+  if(face.dur > 0){
+    face.t += dt;
+    if(face.t >= face.dur){ face.mood = ''; face.dur = 0; }
+  }
+  /* the blink: closed for 90ms, then a fresh irregular wait */
+  face.blink -= dt;
+  if(face.blink < -90){ face.blink = face.nextBlink; face.nextBlink = 1500 + Math.random()*3400; }
+  /* where it is looking. While walking, ahead; otherwise back to centre —
+     unless nothing has happened for a while, in which case it wanders. */
+  if(walking){
+    var pv = viewOf(N, M, walking.from), cv2 = viewOf(N, M, pos);
+    face.tgtX = Math.max(-1, Math.min(1, cv2[0] - pv[0]));
+    face.tgtY = Math.max(-1, Math.min(1, pv[1] - cv2[1]));
+    face.idle = 0;
+  } else if(anim || drag){
+    face.tgtX = 0; face.tgtY = -0.25; face.idle = 0;
+  } else {
+    face.idle += dt;
+    if(face.idle > 4000){
+      var ph = (face.idle - 4000) / 2600;
+      face.tgtX = Math.sin(ph*1.9) * 0.85;
+      face.tgtY = Math.sin(ph*0.7) * 0.3;
+    } else { face.tgtX = 0; face.tgtY = 0; }
+  }
+  face.lookX += (face.tgtX - face.lookX) * Math.min(1, dt/90);
+  face.lookY += (face.tgtY - face.lookY) * Math.min(1, dt/90);
+  /* AND IT GETS BORED. Every five and a half seconds of a player thinking,
+     it bounces once on the spot. No sound, no particles, nothing that could
+     be mistaken for the game asking for something — just a small sign of
+     life in the corner of the eye of somebody staring at a puzzle. This is
+     the whole of "surprise and delight" in eight lines: a character that
+     does something when you do nothing. */
+  if(face.idle > 5500 && hopT >= 1 && !won){
+    face.idle = 4000;
+    hopT = 0;
+  }
+}
+/* eyes, drawn onto a sphere of radius rr centred at x,y */
+function drawFace(x, y, rr, k){
+  var m = face.mood, p = face.dur ? face.t/face.dur : 0;
+  var ex = rr*0.36, ey = -rr*0.14;                       /* eye offset from centre */
+  var w = rr*0.24, h = rr*0.30;                          /* eye size */
+  var closed = face.blink < 0 || m === 'land';
+  var happy = m === 'happy' || m === 'win';
+  var wide = m === 'wide';
+  if(wide){ w *= 1.22; h *= 1.34; }
+  if(m === 'land'){ h *= 0.5; }
+  var px = face.lookX * w*0.42, py = face.lookY * h*0.34;
+  ctx.save();
+  ctx.translate(x, y);
+  for(var i = 0; i < 2; i++){
+    var cx = (i ? ex : -ex), cy = ey;
+    if(happy){
+      /* two upward arcs, which is the entire vocabulary of delight */
+      ctx.strokeStyle = 'rgba(9,20,52,0.92)';
+      ctx.lineWidth = Math.max(1.6, rr*0.13);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(cx, cy + h*0.34, w*0.92, Math.PI*1.12, Math.PI*1.88);
+      ctx.stroke();
+      continue;
+    }
+    if(closed){
+      ctx.strokeStyle = 'rgba(9,20,52,0.92)';
+      ctx.lineWidth = Math.max(1.5, rr*0.12);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - w*0.82, cy); ctx.lineTo(cx + w*0.82, cy);
+      ctx.stroke();
+      continue;
+    }
+    /* the white, then the pupil, then the one catchlight that makes an eye
+       an eye rather than a hole */
+    ctx.fillStyle = 'rgba(252,255,255,0.97)';
+    ctx.beginPath(); ctx.ellipse(cx, cy, w, h, 0, 0, 6.284); ctx.fill();
+    ctx.fillStyle = 'rgba(9,20,52,0.95)';
+    ctx.beginPath(); ctx.ellipse(cx + px, cy + py, w*0.54, h*0.56, 0, 0, 6.284); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.arc(cx + px - w*0.22, cy + py - h*0.26, w*0.20, 0, 6.284); ctx.fill();
+  }
+  ctx.restore();
+}
+
 /* THE ORB IS ALIVE BETWEEN FRAMES TOO.
    It sheds embers while it stands and a comet's worth while it walks, and
    the trail is positions rather than a stretched sprite because the board is
@@ -3828,6 +4115,23 @@ function drawPlayer(x, y, sz, k){
   var br = 0.90 + 0.10*Math.sin(t*3.1) + 0.045*Math.sin(t*7.3);
   var rr = sz*0.325*k*br;
   y -= sz*0.022*Math.sin(t*2.2)*k;
+  /* SQUASH ON THE WAY DOWN, STRETCH ON THE WAY UP. The ball is drawn into
+     a scaled space rather than as an ellipse so the face, the rim and the
+     specular all deform with it — a squashed ball with a round face on it
+     is a sticker on a balloon. */
+  var sqy = 1, sqx = 1;
+  if(walking){
+    var vv = Math.cos(walking.t*Math.PI);              /* +1 rising, -1 falling */
+    sqy = 1 + vv*0.10; sqx = 1 - vv*0.09;
+  } else if(hopT < 1){
+    var hb = Math.sin(hopT*Math.PI*1.6) * Math.pow(1-hopT, 2.2);
+    sqy = 1 - hb*0.30; sqx = 1 + hb*0.24;
+  }
+  var pushed = (sqx !== 1 || sqy !== 1);
+  if(pushed){
+    ctx.save();
+    ctx.translate(x, y + rr*(1-sqy)); ctx.scale(sqx, sqy); ctx.translate(-x, -y);
+  }
 
   /* the pool: what the orb does to the block it is standing over. Both
      halos are quieter than they look here — they are drawn into the glow
@@ -3932,6 +4236,9 @@ function drawPlayer(x, y, sz, k){
   ctx.fillStyle = sp;
   ctx.beginPath(); ctx.arc(lx, ly, rr*0.42, 0, 6.284); ctx.fill();
   ctx.restore();
+
+  if(k > 0.55) drawFace(x, y, rr, k);
+  if(pushed) ctx.restore();
 }
 /* ============================================================
    SOLIDS — the four things in the cube that are not stone
@@ -4569,7 +4876,7 @@ function advanceWalk(dt){
        moment a key stops being a number and becomes a thing that did
        something, so it gets the whole kit: shards off the bars, a jade front
        running out across the board, and the room lit green for a beat. */
-    doors |= (1<<di); sfx.door(); buzz(24); toast('unlocked');
+    doors |= (1<<di); sfx.door(); buzz(24); toast('unlocked'); faceSet('happy', 800);
     kick(5, 0, 1); shake(0.34); punch(0.030); hitstop(46); flash('53,215,161', 0.30, 520);
     burst(cx2, cy2, 26, {spd:150, life:640, r:2.4, col:'53,215,161', g:110});
     burst(cx2, cy2, 10, {kind:'chip', spd:110, life:760, r:2.0, col:'40,150,116', g:340});
@@ -4586,7 +4893,7 @@ function advanceWalk(dt){
   }
   var ki = keyIndexAt(lv, pos);
   if(ki >= 0 && !(kmask & (1<<ki))){
-    kmask |= (1<<ki); sfx.key(); buzz(12); toast('key');
+    kmask |= (1<<ki); sfx.key(); buzz(12); toast('key'); faceSet('happy', 900);
     shake(0.20); punch(0.022); hitstop(30); flash('34,224,106', 0.26, 460);
     burst(cx2, cy2, 20, {spd:130, life:560, r:2.2, col:'34,224,106', g:20});
     burst(cx2, cy2, 8, {kind:'ember', spd:26, lift:40, life:900, r:2.0, col:'170,255,200', g:-24});
@@ -4598,6 +4905,7 @@ function advanceWalk(dt){
   walking.t = 0;
   if(!walking.queue.length){
     walking = null; sfx.land(); kick(3, 0, 1); shake(0.10);
+    hopT = 0; faceSet('land', 260);
     burst(cx2, cy2 + S*0.24, 7, {kind:'chip', spd:44, life:460, r:1.7,
                                  col:chipCol(cell.t, cell.d), g:300, fade:0.8});
     burst(cx2, cy2, 5, {kind:'ember', spd:20, lift:26, life:700, r:1.6, col:'150,250,255', g:-18});
@@ -4644,7 +4952,7 @@ function refuseTurn(t){
                                          col:chipCol('#', N-1), g:420, fade:0.8,
                                          ang: t < 2 ? (sgn > 0 ? 0 : Math.PI) : (sgn > 0 ? -1.57 : 1.57),
                                          spread:1.6});
-  sfx.deny(); buzz(18); toast('no footing that way');
+  sfx.deny(); buzz(18); toast('no footing that way'); faceSet('wide', 620);
 }
 function springBack(){
   if(!drag || !drag.axis) { drag = null; return; }
@@ -4803,7 +5111,7 @@ function runRemain(){
   remain = e.v; remainOver = e.o; remainStale = false;
   stuck = remain < 0 && !remainOver;
   if(stuck && !wasStuck){
-    toast('no way on from here — undo'); sfx.stuck(); buzz(30);
+    toast('no way on from here — undo'); sfx.stuck(); buzz(30); faceSet('wide', 1400);
     /* nothing flashes and nothing sparks: a dead end is the absence of a way
        on, so the room simply closes in */
     vig = 1; shake(0.22);
@@ -4842,6 +5150,7 @@ function paintGo(){
 }
 function finish(){
   won = true;
+  faceSet('win', 1200);
   clearTimeout(remainT); paintGo();          /* the count is over; the card takes it from here */
   var best = store.best[levelNo];
   if(best === undefined || turns < best){ store.best[levelNo] = turns; save(); }
@@ -5456,6 +5765,8 @@ function loop(ts){
     advanceWalk(dt);
     stepMotes(dt); stepParts(dt); stepWave(dt); stepFlip(dt); stepFlyers(dt); stepDemo(dt);
     stepCam(dt); stepFlashes(dt); stepPeek(dt); stepOrb(dt); stepBeam(dt); stepDoors(dt);
+    stepFace(dt);
+    if(hopT < 1) hopT = Math.min(1, hopT + dt/300);
     stepSmear(raw);
     if(revealT < 2000) revealT += dt;
     if(exitFlash > 0) exitFlash = Math.max(0, exitFlash - dt/620);
