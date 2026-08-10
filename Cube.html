@@ -22,10 +22,17 @@
      bone    walkable deck       — you may stand here
      slate   bedrock             — solid, and no footing on this face
      void    nothing at all      — the ground shows through; impassable
-     rust    you                 — and only you
+     arc     you                 — and only you
      emerald keys
      jade    the gates they open
      gold    the way out
+     rust    the interface — reach hints, ticks, buttons. Never an object.
+
+   The player used to be rust, which is also what every control in this game
+   is painted. That made the one thing you must find instantly the same
+   colour as the chrome around it. An arc-light blue-green belongs to nothing
+   else here, on the board or off it: exactly one object is cool and it is
+   you.
 
    Jade used to carry both the exit and the doors, which meant the one
    colour on the board that says "this is what you are here for" also said
@@ -83,6 +90,7 @@
      key, and the gate it opens — and two greens that agree about hue would
      be one colour with extra steps. */
   --emerald:#22e06a;
+  --arc:#38d6ff;       /* you, and nothing else in the file */
 
   --ink:#f3efe7;
   --dim:#9a92a8;
@@ -543,6 +551,7 @@ h2+.manual{margin-top:14px;}
 .mkey{flex:0 0 26px;height:24px;font-size:var(--t-xl);line-height:1;color:var(--dim);
       display:flex;align-items:center;justify-content:center;font-style:normal;}
 .mkey.rust{color:var(--rust);}
+.mkey.arc{color:var(--arc);}
 .mkey.jade{color:var(--jade);}
 .mkey.gold{color:var(--emerald);}
 .mkey.exit{color:var(--gold);}
@@ -636,7 +645,7 @@ h2+.manual{margin-top:14px;}
     <div class="mrow"><i class="mkey">◫</i><div class="mtxt"><b>DEPTH IS DISCARDED</b>A column collapses to its nearest block. Two decks that line up <span class="c">touch</span>.</div></div>
     <div class="mrow"><i class="mkey">▦</i><div class="mtxt"><b>BRIGHT IS NEAR</b>Dim is far. You may walk between them anyway.</div></div>
     <div class="meyebrow">Worth knowing</div>
-    <div class="mrow"><i class="mkey rust">◉</i><div class="mtxt"><b>YOU ARE THE LIGHT</b>The only thing in here that is not stone.</div></div>
+    <div class="mrow"><i class="mkey arc">◉</i><div class="mtxt"><b>YOU ARE THE LIGHT</b>The only thing in here that is not stone — and the only cool colour on the board.</div></div>
     <div class="mrow"><i class="mkey">◱</i><div class="mtxt"><b>HOLD TO LOOK INSIDE</b>The rock goes to glass. Keep holding and drag to turn it any way you like.</div></div>
     <div class="mrow"><i class="mkey jade">◎</i><div class="mtxt"><b>THE JADE NUMBER</b>Turns still to go. Gold means you spent one you cannot get back.</div></div>
     <div class="mrow"><i class="mkey gold">◆</i><div class="mtxt"><b>THE GREEN GEM IS A KEY</b>It opens the gate of the same colour. Buried behind bedrock? Turn.</div></div>
@@ -3790,7 +3799,7 @@ function stepOrb(dt){
   if(orbEmit <= 0){
     orbEmit = walking ? 42 : 150;
     burst(p[0] + (Math.random()-0.5)*S*0.22, p[1] + (Math.random()-0.5)*S*0.22, 1,
-          {kind:'ember', spd:8, lift:14, life:900, r:1.5, col:'255,152,74',
+          {kind:'ember', spd:8, lift:14, life:900, r:1.5, col:'56,214,255',
            g:-10, fade:0.65, drag:0.99});
   }
 }
@@ -3801,7 +3810,7 @@ function drawOrbTrail(){
   for(var i = 0; i < orbTrail.length; i++){
     var q = orbTrail[i], a = 1 - q.t/300;
     c.globalAlpha = a*a*0.34;
-    c.fillStyle = 'rgb(255,140,64)';
+    c.fillStyle = 'rgb(56,214,255)';
     c.beginPath(); c.arc(q.x, q.y, S*0.16*a, 0, 6.284); c.fill();
   }
   c.restore();
@@ -3817,14 +3826,14 @@ function drawPlayer(x, y, sz, k){
   if(k > 0.9) drawOrbTrail();
   var t = Date.now() / 1000;
   var br = 0.90 + 0.10*Math.sin(t*3.1) + 0.045*Math.sin(t*7.3);
-  var rr = sz*0.29*k*br;
+  var rr = sz*0.325*k*br;
   y -= sz*0.022*Math.sin(t*2.2)*k;
 
   /* the pool: what the orb does to the block it is standing over. Both
      halos are quieter than they look here — they are drawn into the glow
      buffer and come back through the bloom composite twice, so anything
      bright enough to read on its own ends up as a white smear. */
-  halo(x, y, sz*1.60*k, '255,150,80', 0.085*k*br);
+  halo(x, y, sz*1.60*k, '56,214,255', 0.085*k*br);
   /* the contact seat, and the only thing here that removes light */
   ctx.save();
   var sg = ctx.createRadialGradient(x, y + sz*0.06, 0, x, y + sz*0.06, sz*0.46*k);
@@ -3833,7 +3842,7 @@ function drawPlayer(x, y, sz, k){
   ctx.fillStyle = sg;
   ctx.fillRect(x - sz*0.5, y - sz*0.44, sz, sz);
   ctx.restore();
-  halo(x, y, sz*0.92*k, '255,120,55', 0.20*k*br);
+  halo(x, y, sz*0.92*k, '56,214,255', 0.20*k*br);
 
   /* AN ORB, and it went back to being one on purpose.
 
@@ -3842,43 +3851,56 @@ function drawPlayer(x, y, sz, k){
      thing you pick up, unlock or walk into. You are not an object in the
      cube, you are the light in it, and the one shape that says that without
      saying anything else is a sphere with no edges at all. The board is
-     stone and everything on it is cut; you are the only round thing in the
-     game, and that is now the whole read.
+     stone and everything on it is cut; you are the only round thing here.
 
-     Four layers, and each is a different job:
-       CORONA  a wide soft additive bloom — the light leaving
-       BODY    the sphere itself, hot at a point up and left toward the same
-               fixed light the cube is shaded by, falling to deep rust
-       TERMINATOR a thin crescent of shadow on the unlit side, which is the
-               single thing that stops a radial gradient reading as a flat
-               disc — a sphere is a gradient PLUS a dark edge
-       RIM     one bright arc on the lit limb, drawn last */
-  /* THE CORONA IS ADDITIVE AND THE BODY IS NOT, and that split is the whole
-     lesson: the deck this thing stands on is the brightest surface in the
-     game and it is lit brighter still by the orb itself, so an additive
-     sphere on top of it clips every channel and comes out as a white hole
-     in a white tile. The light around it adds; the ball itself is painted. */
+     AND YOU ARE THE ONLY COOL THING HERE. Rust was fine, and rust is also
+     the interface — the ticks, the reach hints and every button wear it, so
+     the player was the same colour as the chrome around them. An arc-light
+     blue-green belongs to nothing else on the board or off it: not the
+     emerald key, not the jade gate, not the gold ring, not one pixel of the
+     HUD. Exactly one object in this game is cyan and it is you.
+
+     SIX LAYERS, because a radial gradient is a disc and a sphere is not:
+
+       CORONA      wide, additive, cool — the light leaving
+       BODY        white core through spring green, cyan and blue to a deep
+                   navy limb. TWO hues in the ramp rather than one, which is
+                   most of what stops it reading as a coloured circle
+       TERMINATOR  the crescent of shadow on the unlit side. This alone is
+                   what turns a gradient into a ball
+       OCCLUSION   a darkening low and behind, where it meets its own shadow
+       RIM         a cool bright arc on the FAR limb — light wrapping round
+                   the back of a sphere
+       SPECULAR    one small hot spot up and left, toward the same fixed
+                   light the cube itself is shaded by, drawn last and not
+                   moving with the shading. A sphere is sold by this. */
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  var co = ctx.createRadialGradient(x, y, rr*0.2, x, y, rr*1.75);
-  co.addColorStop(0,   'rgba(255,178,104,0.30)');
-  co.addColorStop(0.5, 'rgba(255,120,52,0.15)');
-  co.addColorStop(1,   'rgba(255,74,26,0)');
+  var co = ctx.createRadialGradient(x, y, rr*0.2, x, y, rr*1.8);
+  co.addColorStop(0,   'rgba(120,240,255,0.30)');
+  co.addColorStop(0.5, 'rgba(46,190,255,0.15)');
+  co.addColorStop(1,   'rgba(20,90,220,0)');
   ctx.fillStyle = co;
-  ctx.beginPath(); ctx.arc(x, y, rr*1.75, 0, 6.284); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, rr*1.8, 0, 6.284); ctx.fill();
   ctx.restore();
 
-  /* and the mass of it stays ORANGE. Only a small core goes near-white —
-     a sphere that is white all over is a hole, and rust has meant you since
-     the first cube. */
-  var lx = x - rr*0.32, ly = y - rr*0.36;
+  /* painted, never added: the deck under the player is the brightest
+     surface in the game and is lit brighter still by the player, so an
+     additive sphere on top of it clips every channel and comes out as a
+     white hole in a white tile */
+  var lx = x - rr*0.30, ly = y - rr*0.34;
   ctx.save();
-  var g = ctx.createRadialGradient(lx, ly, rr*0.04, x, y, rr*1.05);
-  g.addColorStop(0,    'rgba(255,250,236,1)');
-  g.addColorStop(0.16, 'rgba(255,222,152,1)');
-  g.addColorStop(0.46, 'rgba(255,142,56,1)');
-  g.addColorStop(0.80, 'rgba(226,86,22,1)');
-  g.addColorStop(1,    'rgba(168,48,8,1)');
+  var g = ctx.createRadialGradient(lx, ly, rr*0.04, x, y, rr*1.06);
+  /* the GREEN has to hold a band of its own or the ramp collapses to "a
+     blue ball": white, spring green, turquoise, cyan, then blue — five
+     stops so no single hue owns it and the eye reads a charge rather than
+     a colour */
+  g.addColorStop(0,    'rgba(246,255,255,1)');
+  g.addColorStop(0.17, 'rgba(160,255,222,1)');
+  g.addColorStop(0.44, 'rgba(62,238,214,1)');
+  g.addColorStop(0.68, 'rgba(44,198,248,1)');
+  g.addColorStop(0.88, 'rgba(28,124,230,1)');
+  g.addColorStop(1,    'rgba(16,68,170,1)');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.fill();
   ctx.restore();
@@ -3887,16 +3909,28 @@ function drawPlayer(x, y, sz, k){
   ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.clip();
   var tg = ctx.createRadialGradient(lx, ly, rr*0.5, lx, ly, rr*2.1);
   tg.addColorStop(0, 'rgba(0,0,0,0)');
-  tg.addColorStop(1, 'rgba(38,6,0,0.72)');
+  tg.addColorStop(1, 'rgba(2,14,54,0.78)');
   ctx.fillStyle = tg;
   ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
+  var og = ctx.createRadialGradient(x + rr*0.30, y + rr*0.46, rr*0.1, x + rr*0.30, y + rr*0.46, rr*1.15);
+  og.addColorStop(0, 'rgba(2,10,44,0.42)');
+  og.addColorStop(1, 'rgba(2,10,44,0)');
+  ctx.fillStyle = og;
+  ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(150,250,255,' + (0.62*k).toFixed(3) + ')';
+  ctx.lineWidth = Math.max(1, rr*0.15);
+  ctx.beginPath(); ctx.arc(x, y, rr*0.90, Math.PI*0.10, Math.PI*0.86); ctx.stroke();
   ctx.restore();
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.strokeStyle = 'rgba(255,236,204,' + (0.55*k).toFixed(3) + ')';
-  ctx.lineWidth = Math.max(1, rr*0.16);
-  ctx.beginPath(); ctx.arc(x, y, rr*0.90, Math.PI*1.06, Math.PI*1.78); ctx.stroke();
+  var sp = ctx.createRadialGradient(lx, ly, 0, lx, ly, rr*0.42);
+  sp.addColorStop(0, 'rgba(255,255,255,' + (0.92*k).toFixed(3) + ')');
+  sp.addColorStop(0.45, 'rgba(210,255,255,' + (0.30*k).toFixed(3) + ')');
+  sp.addColorStop(1, 'rgba(160,240,255,0)');
+  ctx.fillStyle = sp;
+  ctx.beginPath(); ctx.arc(lx, ly, rr*0.42, 0, 6.284); ctx.fill();
   ctx.restore();
 }
 /* ============================================================
@@ -3943,9 +3977,11 @@ var sxA = [], syA = [], vxA = [], vyA = [], vzA = [], fzA = [], fiA = [];
         frame because these solids rotate every frame anyway. ---- */
 
 /* A TORUS, ring segments by tube segments, and the only closed surface in
-   the game. Twelve by six is coarse on purpose: at forty screen pixels a
-   smooth torus is a grey doughnut, and a faceted one throws a different
-   highlight off every segment as it turns. */
+   the game. Twenty-four by twelve with the seam pass on: fine enough that
+   the shading steps fall below what the eye separates at tile size, so it
+   reads as a turned metal ring rather than as a bag of triangles. Back
+   faces are culled — it is solid gold, not glass, and nothing behind its
+   own surface is anybody's business. */
 function meshTorus(seg, side, R, r){
   var v = [], f = [], i, j;
   for(i = 0; i < seg; i++){
@@ -4061,6 +4097,18 @@ function drawSolid(m, x, y, s, ry, rx, col, o){
     for(j = 1; j < fc.length; j++) ctx.lineTo(sxA[fc[j]], syA[fc[j]]);
     ctx.closePath();
     ctx.fill();
+    /* THE SEAM PASS, and it is what "smooth" means for a painter's-algorithm
+       renderer. Two filled paths sharing an edge do not meet: canvas
+       antialiases each one independently, so half a pixel of background
+       shows through along every join and a finely tesselated solid comes out
+       looking cracked — worse than a coarse one. Stroking each face with its
+       OWN fill colour closes the gap with the colour that should be there.
+       No edge is drawn; the facet simply reaches its neighbour. */
+    if(o.seam){
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineWidth = o.seam;
+      ctx.stroke();
+    }
     /* the edge is where a crystal actually lives: one hairline per facet,
        brightest on the facets turned toward the light */
     if(front && o.edge){
@@ -4109,14 +4157,20 @@ function drawPlate(r, bit, depth){
   var lit = 0.35 + 0.65 * (depth / Math.max(1, N-1));
   var dir = bit === 1 ? 1 : -1;
   var spin = (Date.now() % 5200) / 5200 * 6.28318 * dir;
-  var rad = S*0.26, lw = Math.max(1.7, S*0.062), head = Math.max(3, S*0.105);
+  /* SIZED FOR A TILE, not for a screenshot. At S*0.26 with a 6% stroke and
+     a 10% head this came out on a real phone as two thin brackets with
+     specks on the ends — the symbol was right and the weight was not.
+     Bigger radius, half again the stroke, a head you could not mistake for
+     a serif, and the arcs closed up so the two gaps read as a rotation
+     rather than as a pair of parentheses. */
+  var rad = S*0.29, lw = Math.max(2.2, S*0.085), head = Math.max(5, S*0.155);
   halo(x, y, S*0.95, col, 0.30*br*lit);
   ctx.save();
   ctx.strokeStyle = ctx.fillStyle = 'rgba(' + col + ',' + (0.60 + 0.36*br*lit).toFixed(3) + ')';
   ctx.lineWidth = lw; ctx.lineCap = 'butt';
   var headArc = (head*1.5) / rad;                 /* what the head costs in angle */
   for(var i = 0; i < 2; i++){
-    var a0 = spin + i*Math.PI, a1 = a0 + 2.30*dir, aEnd = a1 - dir*headArc;
+    var a0 = spin + i*Math.PI, a1 = a0 + 2.62*dir, aEnd = a1 - dir*headArc;
     /* THE ARC STOPS WHERE THE HEAD BEGINS. Drawn to a1 and then a triangle
        dropped on top of the end, the head straddles the stroke and leaves a
        notch on the inside of the curve — the arrow reads as a shape stuck
@@ -4140,7 +4194,7 @@ function drawPlate(r, bit, depth){
    Cheap enough to build at boot and never think about again: the largest is
    the gate at thirty-six faces, and the whole set is under a hundred. */
 var GEM_KEY = meshOcta(1);
-var GEM_EXIT = meshTorus(12, 6, 0.74, 0.26);
+var GEM_EXIT = meshTorus(24, 12, 0.74, 0.26);
 var GATE = meshMerge([
   meshBox(0.10, 0.62, 0.10, -0.62, 0.02, 0),        /* posts */
   meshBox(0.10, 0.62, 0.10,  0.62, 0.02, 0),
@@ -4203,7 +4257,7 @@ function drawGoal(cx, cy, sz){
   ctx.beginPath(); ctx.ellipse(cx, cy + sz*0.32, sz*(0.20 + 0.30*p), sz*(0.09 + 0.13*p), 0, 0, 6.284);
   ctx.stroke(); ctx.restore();
   drawSolid(GEM_EXIT, cx, y, sz*0.40, t*0.75, 1.31 + 0.08*Math.sin(t*0.8), C_EXIT,
-            {glow:0.34, glowR:2.2, edge:0.55, edgeCol:'#fff4d4', amb:0.36, face:0.98});
+            {glow:0.34, glowR:2.2, amb:0.30, face:1, cull:1, seam:1.1});
 }
 
 /* THE GATE — posts, a lintel, a threshold and three bars, and the bars sink
@@ -4404,7 +4458,7 @@ function draw3d(){
          thing being revealed has to be the thing you notice */
       if(xr > 0.02){
         flushWire();
-        var mc = e.k === 2 ? S_KEY : e.k === 1 ? '255,140,70' : e.k === 4 ? S_EXIT : '53,215,161';
+        var mc = e.k === 2 ? S_KEY : e.k === 1 ? '56,214,255' : e.k === 4 ? S_EXIT : '53,215,161';
         halo(e.x, e.y, sz*(1.0 + xr*0.8), mc, (e.k === 1 ? 0.52 : 0.32)*xr);
       }
       /* and YOU grow under a peek. Every other marker is a place; you are
@@ -4527,7 +4581,7 @@ function advanceWalk(dt){
        a marker moving and a thing landing on stone */
     burst(cx2, cy2 + S*0.20, 4, {kind:'chip', spd:34, life:420, r:1.5,
                                  col:chipCol(cell.t, cell.d), g:260, fade:0.9});
-    ring(cx2, cy2, {r0:S*0.30, r1:S*0.62, dur:260, col:'255,150,80', a:0.30, w:2, sq:true});
+    ring(cx2, cy2, {r0:S*0.30, r1:S*0.62, dur:260, col:'56,214,255', a:0.30, w:2, sq:true});
     shake(0.045);
   }
   var ki = keyIndexAt(lv, pos);
@@ -4546,7 +4600,7 @@ function advanceWalk(dt){
     walking = null; sfx.land(); kick(3, 0, 1); shake(0.10);
     burst(cx2, cy2 + S*0.24, 7, {kind:'chip', spd:44, life:460, r:1.7,
                                  col:chipCol(cell.t, cell.d), g:300, fade:0.8});
-    burst(cx2, cy2, 5, {kind:'ember', spd:20, lift:26, life:700, r:1.6, col:'255,170,90', g:-18});
+    burst(cx2, cy2, 5, {kind:'ember', spd:20, lift:26, life:700, r:1.6, col:'150,250,255', g:-18});
     settle(); afterAction();
   }
   else { computeReach(); refreshHud(); }
@@ -4650,7 +4704,7 @@ function advanceAnim(dt){
           {kind:'chip', spd:30, life:760, r:1.6, g:300, fade:0.65,
            col: gs ? chipCol(gs.t, gs.d) : '190,180,160'});
   }
-  burst(pr[0]+S/2, pr[1]+S/2, 10, {spd:78, life:440, r:2.1, col:'255,150,90', g:60});
+  burst(pr[0]+S/2, pr[1]+S/2, 10, {spd:78, life:440, r:2.1, col:'150,250,255', g:60});
   revealT = 0;
   sfx.turn(); buzz(11);
   settle(); afterAction();
