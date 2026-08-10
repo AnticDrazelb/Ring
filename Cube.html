@@ -1,0 +1,3794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0910">
+<meta name="description" content="TURNKEY — a dungeon that is a cube. You read one flat face at a time, and turning it rewrites what connects to what.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>TURNKEY</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230a0910'/%3E%3Cpath d='M12 20h18v18H12z' fill='%23e8e0d0'/%3E%3Cpath d='M34 20h18v18H34z' fill='%233a3f52'/%3E%3Cpath d='M12 42h18v10H12z' fill='%233a3f52'/%3E%3Ccircle cx='43' cy='47' r='5' fill='%23ff6a3d'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   TURNKEY — DESIGN SYSTEM
+   "the cube is the map, and the map is the only readout"
+
+   There is no minimap, no compass rose and no depth gauge, because
+   every one of those would be a second copy of information the cube
+   is already showing. Colour carries exactly one meaning each:
+
+     bone   walkable deck        — you may stand here
+     slate  bedrock              — solid, and no footing on this face
+     void   nothing at all       — the ground shows through; impassable
+     rust   you                  — and only you
+     jade   the way out, and the doors that gate it
+     gold   keys
+
+   Brightness is depth, always, everywhere. A pale tile is near the
+   camera and a dim one is far, and two tiles of wildly different
+   brightness sitting side by side is not a rendering artefact — it is
+   the entire game saying "these are neighbours anyway".
+
+   MATERIAL IS THE SECOND CHANNEL, and it says the same thing twice on
+   purpose. Every block is painted from a 16x16 texture, and a deck is
+   always something LAID — brick, board, cut slab — while bedrock is
+   always something RAW: rubble, gravel, shot rock. So "may I stand
+   here" is answered by brightness and answered again by whether the
+   block looks like anybody built it, and the answer survives a dim
+   screen, a bright room and a colour-blind eye. What a vault changes is
+   which stone it is cut from, never what the stone means.
+
+   AND YOU ARE NOT MADE OF STONE. Every other thing on this board is
+   matter drawn at block resolution; the player is a lit orb, smooth and
+   hovering, because the one marker that must be found instantly should
+   be the one thing the world cannot produce.
+   ============================================================ */
+:root{
+  /* ---- SAFE AREA ---------------------------------------------------
+     AN ANDROID WEBVIEW DOES NOT KNOW WHERE THE NOTCH IS.
+     env(safe-area-inset-*) is plumbed through Chromium's own display-cutout
+     handling, and a WebView is a View inside somebody else's Activity —
+     not Chromium's window. So in a packaged Android app every one of these
+     reads ZERO however correctly the host sets viewport-fit.
+     Every read below therefore goes through a variable that env() only
+     supplies the DEFAULT for. In a browser nothing changes. In the app the
+     host measures the real insets and writes --sa-top and friends onto
+     :root, and this is the seam that lets it. */
+  --sa-top:env(safe-area-inset-top);
+  --sa-right:env(safe-area-inset-right);
+  --sa-bottom:env(safe-area-inset-bottom);
+  --sa-left:env(safe-area-inset-left);
+
+  --void:#0a0910;
+  --void-2:#12101a;
+  --void-3:#1b1826;
+  --glass:rgba(23,20,34,.82);
+  --glass-2:rgba(255,255,255,.055);
+
+  --bone:#e9e1d1;      --bone-lo:#b6ac97;
+  --slate:#454b60;     --slate-lo:#272c3c;
+  --rust:#ff6a3d;      --rust-hi:#ff9a70;
+  --jade:#35d7a1;      --jade-lo:#1c8f6b;
+  --gold:#ffc44d;
+
+  --ink:#f3efe7;
+  --dim:#9a92a8;
+  --dim-2:#6c6580;
+
+  --edge:rgba(230,220,255,.14);
+  --edge-2:rgba(230,220,255,.075);
+  --edge-on:rgba(255,106,61,.42);
+
+  /* ---- SHAPE ---- */
+  --r-chip:12px; --r-ctl:15px; --r-btn:18px; --r-card:22px; --r-sheet:26px; --r-pill:999px;
+
+  /* ---- CONTROL HEIGHTS --------------------------------------------
+     These scale with the viewport rather than stepping at hand-written
+     breakpoints, so a 320dp phone and a 430dp phone get the same layout
+     at two sizes instead of two different layouts.
+     ANYTHING TAPPABLE HAS A HARD 44px FLOOR. A control does not get to
+     shrink below a thumb because the screen is small; the chrome around
+     it is the part that gives. */
+  /* Readouts are not buttons and do not need a thumb's worth of height, so
+     they get their own smaller rung and give the board back the difference.
+     Anything TAPPABLE still has the hard 44px floor. */
+  --h-read:clamp(38px,9.6vw,42px);
+  --h-ctl:clamp(46px,12vw,52px);
+  --h-btn:clamp(52px,14.5vw,62px);
+  --h-row:clamp(54px,15vw,64px);
+
+  /* ---- TYPE -------------------------------------------------------
+     Nine rungs that scale together. The vw term is calibrated so each
+     rung hits its intended value at 400dp and shrinks smoothly from
+     there rather than jumping. */
+  --t-micro:clamp(8.5px,2.2vw,10px);
+  --t-tiny:clamp(9.5px,2.5vw,11px);
+  --t-fine:clamp(10.5px,2.8vw,12px);
+  --t-sm:clamp(12px,3.1vw,13.5px);
+  --t-md:clamp(13px,3.6vw,15.5px);
+  --t-lg:clamp(15px,4.1vw,17.5px);
+  --t-xl:clamp(18px,5.1vw,22px);
+  --t-2xl:clamp(22px,6.3vw,28px);
+  --t-3xl:clamp(30px,9.2vw,42px);
+
+  /* ---- MOTION ------------------------------------------------------
+     Three curves and no others. --seat overshoots and settles, and is for
+     anything arriving that should feel like it has mass. --snap is for
+     things leaving, which should not linger. --ease is for opacity, which
+     has no mass and should never bounce. */
+  --seat:cubic-bezier(.2,1.5,.42,1);
+  --snap:cubic-bezier(.4,0,.2,1);
+  --ease:cubic-bezier(.33,0,.2,1);
+
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+*{scrollbar-width:none;-ms-overflow-style:none;}
+*::-webkit-scrollbar{width:0;height:0;display:none;}
+
+html,body{
+  margin:0;padding:0;width:100%;height:100%;height:100dvh;overflow:hidden;
+  overscroll-behavior:none;
+  background:var(--void);color:var(--ink);
+  font-family:var(--ui);
+  user-select:none;-webkit-user-select:none;
+  touch-action:manipulation;
+}
+/* The play surface owns its gestures completely — a drag on the cube is a
+   rotation, never a scroll, never a pull-to-refresh, never a text selection. */
+#stage{position:fixed;top:0;left:0;width:100%;height:100%;display:block;touch-action:none;z-index:1;}
+
+button{font-family:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;}
+
+/* ---------- LAYERS ---------- */
+.layer{
+  position:fixed;top:0;right:0;bottom:0;left:0;z-index:10;
+  display:flex;flex-direction:column;align-items:center;
+  padding:calc(var(--sa-top) + 22px) calc(var(--sa-right) + 20px)
+          calc(var(--sa-bottom) + 22px) calc(var(--sa-left) + 20px);
+  background:radial-gradient(ellipse 120% 70% at 50% 0%, var(--void-3), var(--void-2) 46%, var(--void) 82%);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  opacity:1;transform:scale(1);
+  transition:opacity .24s var(--ease), transform .34s var(--seat);
+}
+.layer.hide{opacity:0;pointer-events:none;transform:scale(1.035);}
+/* the menus float over the live board, so they need their own ground */
+.layer{backdrop-filter:blur(7px) saturate(.85);-webkit-backdrop-filter:blur(7px) saturate(.85);}
+/* The title sits ON the engine, so the scrim has to be thin enough to see a
+   cube through and heavy enough to read white type against. Barely any blur
+   — enough to push the cube behind the glass, not enough to erase it — and
+   the type carries its own shadow instead of asking the whole plate to get
+   darker. */
+/* THE TITLE SCREEN IS A STAGE, NOT A PANE OF GLASS.
+   It used to blur the whole plate, which meant the cube — the one thing the
+   screen is actually about — came out as mush behind the type. The chrome now
+   occupies a band at each end and the middle is left completely alone: no
+   blur, no scrim, nothing between the player and the object. The gradient
+   only darkens where words have to sit on top of it. */
+#scTitle{
+  justify-content:space-between;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+  background:linear-gradient(180deg,
+    rgba(4,3,7,.94) 0%, rgba(4,3,7,.74) 13%, rgba(4,3,7,.10) 27%,
+    rgba(4,3,7,0) 42%, rgba(4,3,7,0) 52%,
+    rgba(4,3,7,.30) 62%, rgba(4,3,7,.86) 74%, rgba(4,3,7,.97) 100%);
+}
+#scTitle::before,#scTitle::after{display:none;}
+.titleTop,.titleBottom{width:100%;display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+.titleTop{padding-top:2px;}
+.titleBottom{padding-bottom:2px;}
+#scManual{
+  backdrop-filter:blur(2.5px) saturate(.92);-webkit-backdrop-filter:blur(2.5px) saturate(.92);
+  background:
+    radial-gradient(ellipse 90% 46% at 50% 52%, rgba(4,3,7,.62), rgba(4,3,7,.42) 62%, rgba(4,3,7,.30)),
+    linear-gradient(180deg, rgba(4,3,7,.46), rgba(4,3,7,.24) 34%, rgba(4,3,7,.62));
+}
+/* the play chip on the primary action, so the button has somewhere to point */
+.btn .chip{
+  position:absolute;right:9px;top:50%;transform:translateY(-50%);
+  width:calc(var(--h-btn) - 20px);height:calc(var(--h-btn) - 20px);
+  border-radius:calc(var(--r-btn) - 6px);
+  background:rgba(255,255,255,.20);box-shadow:inset 0 0 0 1px rgba(255,255,255,.26);
+  display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:var(--t-sm);color:#3a1000;
+}
+#scTitle h1{text-shadow:0 2px 24px rgba(0,0,0,.95),0 0 60px rgba(0,0,0,.8);}
+#scTitle .sub,#scManual .sub,#scTitle .foot{text-shadow:0 1px 12px rgba(0,0,0,.95);}
+#scTitle .sub{margin-bottom:0;}
+#scTitle .foot{margin-top:10px;}
+#scTitle .btn,#scManual .btn{backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);}
+#scTitle .btn{position:relative;}
+#scTitle .btn:not(.primary){background:rgba(16,13,24,.72);}
+#scManual .mkey,#scManual .mtxt{text-shadow:0 1px 10px rgba(0,0,0,.9);}
+.layer::before,.layer::after{content:'';flex:1 1 auto;min-height:0;}
+.layer>*{flex-shrink:0;}
+
+/* ---------- TYPE ---------- */
+h1{
+  font-size:var(--t-3xl);font-weight:800;letter-spacing:.26em;
+  margin:0 0 6px;text-align:center;text-indent:.26em;
+  color:var(--bone);
+}
+/* the wordmark is a rendered image, so it gets sized by the layout rather
+   than by a font stack that may or may not exist on the device */
+#wordmark{
+  display:block;width:min(86vw,420px);height:auto;margin:0 auto 14px;
+  image-rendering:auto;
+  filter:drop-shadow(0 10px 26px rgba(0,0,0,.75)) drop-shadow(0 0 42px rgba(255,150,60,.18));
+}
+h2{font-size:var(--t-xl);font-weight:800;letter-spacing:.13em;margin:0 0 4px;text-align:center;}
+.sub{color:var(--dim);font-size:var(--t-sm);text-align:center;line-height:1.5;max-width:31ch;margin:0 auto 26px;}
+.eyebrow{font-size:var(--t-tiny);letter-spacing:.24em;color:var(--dim-2);text-transform:uppercase;font-weight:700;}
+
+/* ---------- BUTTONS ---------- */
+.btn{
+  min-height:var(--h-btn);width:100%;max-width:340px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  border-radius:var(--r-btn);margin:0 auto 11px;padding:0 20px;
+  font-size:var(--t-md);font-weight:800;letter-spacing:.14em;
+  background:var(--glass-2);box-shadow:inset 0 0 0 1px var(--edge);
+  color:var(--ink);
+  transition:transform .16s var(--seat), background .16s var(--ease), box-shadow .16s var(--ease), filter .16s var(--ease);
+}
+/* press DEPTH, not just a size change — it reads as the button going down
+   into the panel rather than shrinking on the spot */
+.btn:active{transform:scale(.965) translateY(2px);background:rgba(255,255,255,.1);filter:brightness(1.12);}
+.btn.primary{
+  background:linear-gradient(180deg,var(--rust-hi),var(--rust));
+  color:#2a0d02;box-shadow:0 6px 22px -8px rgba(255,106,61,.8);
+}
+.btn.ghost{background:transparent;box-shadow:inset 0 0 0 1px var(--edge-2);color:var(--dim);}
+
+/* ---------- THE HUD ----------------------------------------------
+   Two bars and nothing between them, so the middle of the screen — the
+   cube — is never covered by anything. The top bar states the level and
+   the turn count; the bottom bar is the three things a hand needs. */
+#hud{position:fixed;top:0;right:0;bottom:0;left:0;pointer-events:none;z-index:5;
+     opacity:0;transition:opacity .3s ease;}
+#hud.on{opacity:1;}
+#hud>*{pointer-events:auto;}
+
+.bar{
+  position:absolute;left:0;right:0;display:flex;align-items:center;gap:9px;
+  padding:0 calc(var(--sa-left) + 14px) 0 calc(var(--sa-right) + 14px);
+}
+#barTop{top:calc(var(--sa-top) + 8px);}
+#barBot{bottom:calc(var(--sa-bottom) + 12px);justify-content:center;gap:12px;}
+/* the readouts shrink; the three things a thumb actually presses grow */
+#barTop .pill{height:var(--h-read);min-width:var(--h-read);padding:0 13px;}
+#barBot .pill{height:var(--h-ctl);min-width:var(--h-ctl);}
+#barBot .pill.icon{width:var(--h-ctl);}
+#barBot #btnUndo{padding:0 24px;}
+
+.pill{
+  height:var(--h-ctl);min-width:var(--h-ctl);padding:0 15px;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  border-radius:var(--r-pill);background:var(--glass);
+  box-shadow:inset 0 0 0 1px var(--edge);
+  font-size:var(--t-sm);font-weight:800;letter-spacing:.1em;
+  transition:transform .16s var(--seat),opacity .18s var(--ease),box-shadow .18s var(--ease);
+}
+.pill:active{transform:scale(.9) translateY(1px);}
+/* the counter flinches when a key lands in it, so the number changing is
+   something you SEE rather than something you have to have been watching */
+@keyframes keyPop{
+  0%{transform:scale(1);}
+  38%{transform:scale(1.26);box-shadow:inset 0 0 0 1px rgba(255,196,77,.95),0 0 26px -4px rgba(255,196,77,.85);}
+  100%{transform:scale(1);}
+}
+#keyPill.pop{animation:keyPop .46s var(--seat);}
+@keyframes turnBump{0%{transform:scale(1);}40%{transform:scale(1.18);}100%{transform:scale(1);}}
+#turnPill.bump .n{display:inline-block;animation:turnBump .34s var(--seat);}
+.pill[disabled]{opacity:.32;pointer-events:none;}
+.pill.icon{padding:0;width:var(--h-ctl);}
+.pill .n{font-family:var(--mono);font-size:var(--t-md);font-weight:700;}
+#lvName{flex:1;justify-content:flex-start;letter-spacing:.2em;overflow:hidden;white-space:nowrap;}
+#turnPill .n{color:var(--rust);}
+#turnPill.over .n{color:var(--gold);}
+#keyPill{color:var(--gold);box-shadow:inset 0 0 0 1px rgba(255,196,77,.3);}
+
+/* the drag affordance — four ticks that light when a turn is available and
+   go hollow when the far side of it has no footing. It is the only thing on
+   screen that answers "may I turn?", so it is never hidden. */
+#dpad{position:absolute;left:50%;bottom:calc(var(--sa-bottom) + 12px + var(--h-ctl) + 14px);
+      transform:translateX(-50%);display:flex;gap:7px;align-items:center;}
+.tick{width:26px;height:5px;border-radius:3px;background:var(--edge);transition:background .2s ease,opacity .2s ease;}
+.tick.ok{background:var(--rust);opacity:.95;box-shadow:0 0 12px -2px rgba(255,106,61,.9);}
+.tick{transition:background .2s var(--ease),opacity .2s var(--ease),transform .18s var(--seat),box-shadow .2s var(--ease);}
+.tick.armed{transform:scaleX(1.55) scaleY(1.7);}
+.tick.no{background:var(--edge-2);}
+
+/* A MODE YOU CANNOT SEE YOU ARE IN IS A MODE YOU FILE AS A BUG.
+   The board looks different after a plate fires, but "different" is not the
+   same as "named" — and on cube two hundred, coming back to it after a day,
+   the player needs to know which world this is without re-deriving it. It is
+   deliberately quiet and deliberately not shaped like the turn counter: this
+   is a condition being lived in, not a score. */
+#worldTag{
+  position:absolute;left:50%;top:calc(var(--sa-top) + 8px + var(--h-read) + 10px);
+  transform:translateX(-50%) scale(.9);
+  padding:5px 14px;border-radius:var(--r-pill);
+  font-size:var(--t-micro);font-weight:900;letter-spacing:.22em;
+  opacity:0;transition:opacity .3s var(--ease),transform .3s var(--seat);
+  pointer-events:none;white-space:nowrap;
+}
+#worldTag.on{opacity:1;transform:translateX(-50%) scale(1);animation:wtBreath 3s ease-in-out infinite;}
+@keyframes wtBreath{0%,100%{opacity:.72}50%{opacity:1}}
+
+#toast{
+  position:absolute;left:50%;bottom:calc(var(--sa-bottom) + 120px);
+  transform:translate(-50%,12px);
+  padding:11px 18px;border-radius:var(--r-pill);
+  background:var(--glass);box-shadow:inset 0 0 0 1px var(--edge);
+  font-size:var(--t-sm);font-weight:700;letter-spacing:.05em;white-space:nowrap;
+  opacity:0;transition:opacity .22s ease,transform .22s ease;pointer-events:none;
+}
+#toast.on{opacity:1;transform:translate(-50%,0);}
+
+/* ---------- LEVEL SELECT ---------- */
+.grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));
+  gap:11px;width:100%;max-width:440px;margin:0 auto 18px;
+}
+.cube{
+  aspect-ratio:1;border-radius:var(--r-card);position:relative;
+  transition:transform .16s var(--seat),box-shadow .18s var(--ease);
+  background:var(--glass-2);box-shadow:inset 0 0 0 1px var(--edge);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  min-height:88px;transition:transform .12s ease,box-shadow .18s ease;
+}
+.cube:active{transform:scale(.94) translateY(2px);}
+.cube .idx{font-family:var(--mono);font-size:var(--t-2xl);font-weight:700;color:var(--dim-2);line-height:1;}
+.cube .nm{font-size:var(--t-micro);letter-spacing:.13em;color:var(--dim);font-weight:800;
+          text-align:center;padding:0 6px;line-height:1.25;}
+.cube.done{box-shadow:inset 0 0 0 1px rgba(53,215,161,.34);}
+.cube.done .idx{color:var(--jade);}
+.cube.perfect{background:rgba(53,215,161,.1);}
+.cube.locked{opacity:.34;}
+.cube .marks{display:flex;gap:3px;height:6px;}
+.cube .marks i{width:6px;height:6px;border-radius:50%;background:var(--edge);}
+.cube .marks i.on{background:var(--jade);}
+
+/* the vault pager — the only chrome an endless shelf needs */
+  .vaultBar{display:flex;align-items:center;gap:10px;width:100%;max-width:440px;margin:0 auto 16px;}
+  .vaultId{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;
+           font-size:var(--t-fine);letter-spacing:.2em;font-weight:800;color:var(--dim);}
+  .vaultId i{width:15px;height:15px;border-radius:5px;box-shadow:inset 0 0 0 1px var(--edge);flex:0 0 auto;}
+
+/* ---------- CARDS ---------- */
+.card{
+  width:100%;max-width:360px;margin:0 auto;padding:26px 22px 20px;
+  border-radius:var(--r-sheet);background:var(--glass);
+  box-shadow:inset 0 0 0 1px var(--edge), 0 22px 60px -20px rgba(0,0,0,.85);
+}
+.stat{display:flex;align-items:baseline;justify-content:space-between;padding:11px 0;}
+.stat+.stat{box-shadow:inset 0 1px 0 var(--edge-2);}
+.stat .k{font-size:var(--t-fine);letter-spacing:.17em;color:var(--dim-2);text-transform:uppercase;font-weight:700;}
+.stat .v{font-family:var(--mono);font-size:var(--t-lg);font-weight:700;}
+.verdict{text-align:center;font-size:var(--t-2xl);font-weight:800;letter-spacing:.2em;margin:0 0 3px;
+  animation:verdictIn .5s var(--seat) both;}
+@keyframes verdictIn{0%{opacity:0;transform:scale(.78) translateY(9px);letter-spacing:.42em;}100%{opacity:1;transform:none;letter-spacing:.2em;}}
+.card{animation:cardIn .42s var(--seat) both .06s;}
+@keyframes cardIn{0%{opacity:0;transform:translateY(16px) scale(.97);}100%{opacity:1;transform:none;}}
+.verdict.par{color:var(--jade);}
+.verdict.over{color:var(--gold);}
+
+/* ---------- SETTINGS ROWS ---------- */
+.row{
+  min-height:var(--h-row);display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:12px 16px;border-radius:var(--r-ctl);background:var(--glass-2);
+  box-shadow:inset 0 0 0 1px var(--edge-2);margin-bottom:9px;
+  width:100%;max-width:360px;
+}
+.row .lbl{font-size:var(--t-sm);font-weight:700;letter-spacing:.06em;text-align:left;}
+.row .hint{font-size:var(--t-micro);color:var(--dim-2);letter-spacing:.04em;margin-top:3px;line-height:1.4;}
+.sw{width:52px;height:31px;border-radius:var(--r-pill);background:var(--edge);position:relative;flex:0 0 auto;transition:background .2s ease;}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;
+           background:var(--dim);transition:transform .2s cubic-bezier(.3,1.4,.5,1),background .2s ease;}
+.sw.on{background:rgba(255,106,61,.34);}
+.sw.on::after{transform:translateX(21px);background:var(--rust);}
+
+/* ---------- THE MANUAL ----------------------------------------------
+   Ten lines, once, and never shown again unless asked for. A rule you
+   have to read twice is a rule that should have been taught by a level. */
+.manual{width:100%;max-width:370px;margin:0 auto;}
+.mrow{display:flex;gap:14px;align-items:flex-start;padding:13px 0;}
+.mrow+.mrow{box-shadow:inset 0 1px 0 var(--edge-2);}
+.mkey{flex:0 0 46px;height:46px;border-radius:var(--r-chip);background:var(--glass-2);
+      box-shadow:inset 0 0 0 1px var(--edge);display:flex;align-items:center;justify-content:center;}
+.mtxt{flex:1;font-size:var(--t-sm);line-height:1.55;color:var(--dim);padding-top:2px;}
+.mtxt b{color:var(--ink);font-weight:700;}
+.mtxt .c{color:var(--rust);font-weight:700;}
+
+.foot{font-size:var(--t-micro);color:var(--dim-2);letter-spacing:.16em;text-align:center;margin-top:16px;}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <div class="bar" id="barTop">
+    <div class="pill" id="lvName">—</div>
+    <div class="pill" id="keyPill" style="display:none">◈ <span class="n" id="keyN">0</span></div>
+    <div class="pill" id="turnPill">TURNS <span class="n" id="turnN">0</span><span class="n" id="parN" style="color:var(--dim-2)">/0</span></div>
+  </div>
+  <div id="worldTag"></div>
+  <div id="dpad">
+    <div class="tick" id="tkL"></div><div class="tick" id="tkD"></div>
+    <div class="tick" id="tkU"></div><div class="tick" id="tkR"></div>
+  </div>
+  <div class="bar" id="barBot">
+    <button class="pill icon" id="btnMenu" aria-label="Menu">☰</button>
+    <button class="pill" id="btnUndo">UNDO</button>
+    <button class="pill icon" id="btnHint" aria-label="Hint">?</button>
+  </div>
+  <div id="toast"></div>
+</div>
+
+<!-- ============ TITLE ============ -->
+<div class="layer" id="scTitle">
+  <div class="titleTop">
+    <img id="wordmark" alt="TURNKEY">
+    <p class="sub">A dungeon that is a cube. You read one flat face at a time — and everything that lines up, touches.</p>
+  </div>
+  <div class="titleBottom">
+    <button class="btn primary" id="btnPlay"><span id="playLabel">CONTINUE</span><i class="chip">▶</i></button>
+    <button class="btn" id="btnCubes">CUBES</button>
+    <button class="btn ghost" id="btnManual">HOW IT WORKS</button>
+    <div class="foot">NO DEAD PIXELS</div>
+  </div>
+</div>
+
+<!-- ============ LEVEL SELECT ============ -->
+<div class="layer hide" id="scCubes">
+  <div class="vaultBar">
+    <button class="pill icon" id="vaultPrev" aria-label="Previous vault">‹</button>
+    <div class="vaultId"><i id="vaultSwatch"></i><span id="vaultName">VAULT I</span></div>
+    <button class="pill icon" id="vaultNext" aria-label="Next vault">›</button>
+  </div>
+  <div class="grid" id="cubeGrid"></div>
+  <button class="btn ghost" id="btnCubesBack">BACK</button>
+</div>
+
+<!-- ============ MANUAL ============ -->
+<div class="layer hide" id="scManual">
+  <h2>HOW IT WORKS</h2>
+  <p class="sub">Four rules. There is no fifth.</p>
+  <div class="manual">
+    <div class="mrow"><div class="mkey">👆</div><div class="mtxt"><b>Tap a block to walk there.</b> Decks are pale and <span class="c">laid</span> — brick, board or cut slab, made by somebody. Bedrock is dark and raw, and gaps are nothing at all.</div></div>
+    <div class="mrow"><div class="mkey">◉</div><div class="mtxt"><b>You are the light.</b> Everything in this cube is stone; you are the one thing that is not. If you lose yourself on a face, look for the glow.</div></div>
+    <div class="mrow"><div class="mkey">↔</div><div class="mtxt"><b>Drag to turn the cube.</b> Past halfway it commits, short of it springs back. The four ticks above your thumb say which turns have footing on the far side.</div></div>
+    <div class="mrow"><div class="mkey">◫</div><div class="mtxt"><b>Depth is discarded.</b> Everything in a column collapses to the nearest solid thing. Two decks far apart in the cube are <span class="c">neighbours on screen</span>, and you may walk between them.</div></div>
+    <div class="mrow"><div class="mkey">▦</div><div class="mtxt"><b>Brightness is distance.</b> A pale tile is near, a dim one is far. The hairlines between them mark a drop you are allowed to ignore.</div></div>
+    <div class="mrow"><div class="mkey">◈</div><div class="mtxt">Keys and doors can be <b>buried</b> behind bedrock. If something is missing, it is behind you in an axis you are not looking down. Turn.</div></div>
+    <div class="mrow"><div class="mkey" style="color:#a86bff">⊘</div><div class="mtxt"><b>Plates rewrite the cube.</b> Step on one and every deck becomes stone and every wall becomes floor — the same cube, a different place. Step on it again to put it back. They appear from cube 20.</div></div>
+    <div class="mrow"><div class="mkey" style="color:#a86bff">⟲</div><div class="mtxt">A plate is cut clean through the rock, so you can see it from <b>every face</b> — and it always gives you footing, which means <span class="c">every turn is legal while you stand on one</span>. Plates are pivots.</div></div>
+  </div>
+  <button class="btn" id="btnManualBack" style="margin-top:20px">GOT IT</button>
+</div>
+
+<!-- ============ THE PLATE, TAUGHT ONCE ============
+     Shown the first time a cube carries one, and never again. A mechanic
+     this large should not arrive as a toast, and it should not arrive as a
+     manual page either — it arrives when the thing is on screen. -->
+<div class="layer hide" id="scPlate">
+  <div class="eyebrow" style="text-align:center;color:#a86bff">A NEW THING IN THE ROCK</div>
+  <h2 style="margin-top:8px">PLATES</h2>
+  <p class="sub">Everything you know how to do is about to be worth less.</p>
+  <div class="manual">
+    <div class="mrow"><div class="mkey" style="color:#a86bff">⊘</div><div class="mtxt"><b>Step on a plate and the cube turns inside out.</b> Every deck becomes stone. Every wall you have been walking around becomes floor. The geometry does not move — only what you may stand on.</div></div>
+    <div class="mrow"><div class="mkey" style="color:#a86bff">⟲</div><div class="mtxt">Step on it again and it goes back. <b>The plate is a door between two versions of the same cube</b>, and the way out is usually only reachable from one of them.</div></div>
+    <div class="mrow"><div class="mkey" style="color:#a86bff">◎</div><div class="mtxt">A plate is cut clean through the rock, so it is visible from every face however deep it sits — and it always gives footing. <span class="c">While you stand on a plate, every turn is legal.</span></div></div>
+  </div>
+  <button class="btn primary" id="btnPlateGo" style="margin-top:20px">STEP ON IT</button>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div class="layer hide" id="scPause">
+  <h2 id="pauseName">PAUSED</h2>
+  <p class="sub" id="pauseSub">—</p>
+  <button class="btn primary" id="btnResume">RESUME</button>
+  <button class="btn" id="btnRestart">RESTART CUBE</button>
+  <button class="btn" id="btnToCubes">ALL CUBES</button>
+  <div class="row" id="rowSound"><div><div class="lbl">Sound</div><div class="hint">Clicks, latches, and the detent</div></div><div class="sw on" id="swSound"></div></div>
+  <div class="row" id="rowHaptic"><div><div class="lbl">Haptics</div><div class="hint">A tick on every committed turn</div></div><div class="sw on" id="swHaptic"></div></div>
+  <div class="row" id="rowDepth"><div><div class="lbl">Depth numbers</div><div class="hint">Prints each tile's distance from the camera. A crutch, and a good one while the collapse is still new.</div></div><div class="sw" id="swDepth"></div></div>
+  <button class="btn ghost" id="btnManual2">HOW IT WORKS</button>
+</div>
+
+<!-- ============ CLEARED ============ -->
+<div class="layer hide" id="scWin">
+  <div class="eyebrow" style="text-align:center">CUBE CLEARED</div>
+  <div class="eyebrow" id="winVault" style="text-align:center;color:var(--jade);margin-top:6px"></div>
+  <div class="verdict" id="winVerdict">AT PAR</div>
+  <div class="card" style="margin-top:16px">
+    <div class="stat"><span class="k">Turns used</span><span class="v" id="winTurns">0</span></div>
+    <div class="stat"><span class="k">Fewest possible</span><span class="v" id="winPar">0</span></div>
+    <div class="stat"><span class="k">Your best</span><span class="v" id="winBest">0</span></div>
+  </div>
+  <button class="btn primary" id="btnNext" style="margin-top:20px">NEXT CUBE</button>
+  <button class="btn ghost" id="btnRetry">TRY FOR PAR</button>
+  <button class="btn ghost" id="btnWinCubes">ALL CUBES</button>
+</div>
+
+<script>
+/* ============================================================
+   TURNKEY — CORE
+   Byte-identical to the module the level generator and the test
+   suite run against. The solver that verified these cubes and the
+   game that serves them are the same code.
+   ============================================================ */
+/* ============================================================
+   TURNKEY — CORE
+   The projection model, the solver, and the generator. Written as plain
+   functions with no module syntax so this exact text is inlined into the
+   game; the shim at the bottom is the only Node-only line.
+   ============================================================ */
+
+/* ---------- rng ----------
+   NEVER SHUFFLE WITH sort(). `[0,1,2,3].sort(function(){ return rng()-0.5; })`
+   is an INCONSISTENT comparator, so how many times the comparator is called —
+   and therefore how many numbers it pulls off the stream — is a property of
+   the engine's sort implementation, not of the seed. Node's V8 and
+   Chromium's V8 disagree, which meant the same level number generated a
+   different cube in the browser than in the test suite, and would have
+   differed between two Android WebView versions on two phones.
+   Fisher-Yates consumes exactly one number per element, everywhere, forever. */
+function shuffle4(rng, a){
+  for(var i = a.length - 1; i > 0; i--){
+    var j = Math.floor(rng() * (i + 1)), t = a[i];
+    a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- ORIENTATION -------------------------------------------------
+   An orientation is a world->view basis: R is the world direction that
+   points screen-right, U points screen-up, F points TOWARD THE CAMERA.
+   All three are signed unit axes, so every orientation is an integer
+   signed permutation and nothing ever drifts. There are 24 of them.     */
+var ORI_ID = {R:[1,0,0], U:[0,1,0], F:[0,0,1]};
+function vneg(v){ return [-v[0], -v[1], -v[2]]; }
+function vdot(a,b){ return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+
+/* Dragging RIGHT pushes the near face right, so the world's LEFT side swings
+   toward the camera. Dragging UP tips the top away and brings the bottom
+   forward. Both derived once here rather than at each call site. */
+var TURNS = [
+  {id:'left',  dx:-1, dy: 0, f:function(m){ return {R:vneg(m.F), U:m.U,      F:m.R      }; }},
+  {id:'right', dx: 1, dy: 0, f:function(m){ return {R:m.F,       U:m.U,      F:vneg(m.R)}; }},
+  {id:'up',    dx: 0, dy: 1, f:function(m){ return {R:m.R,       U:m.F,      F:vneg(m.U)}; }},
+  {id:'down',  dx: 0, dy:-1, f:function(m){ return {R:m.R,       U:vneg(m.F),F:m.U      }; }}
+];
+function oriKey(m){ return m.R.join() + ';' + m.U.join() + ';' + m.F.join(); }
+
+/* The 24 orientations, indexed, so solver states can be integers. */
+var ORIS = (function(){
+  var list = [ORI_ID], seen = {}; seen[oriKey(ORI_ID)] = 0;
+  for(var i = 0; i < list.length; i++){
+    for(var t = 0; t < 4; t++){
+      var m = TURNS[t].f(list[i]), k = oriKey(m);
+      if(seen[k] === undefined){ seen[k] = list.length; list.push(m); }
+    }
+  }
+  list.index = seen;
+  return list;
+})();
+function oriIndex(m){ return ORIS.index[oriKey(m)]; }
+
+/* ============================================================
+   THE PLATES — a second transform, and the reason par can climb again
+
+   Turn-par is bounded by the diameter of the cube's orientation graph: any
+   face is a handful of quarter-turns from any other, so no amount of size or
+   locks pushes it past four or five. Rotation was the only verb, and the
+   ceiling was rotation's ceiling.
+
+   A PLATE is the second verb. Step on one and the cube's MATERIAL inverts —
+   every deck becomes bedrock and every wall becomes floor, or every wall
+   becomes air and every gap fills with stone. The geometry is untouched.
+   What changes is which of it you may stand on, which means the projection
+   you spent four turns learning is now its own negative and the route you
+   were walking is a wall.
+
+   Two plates, two bits, FOUR material states — and because the second is
+   applied after the first, the pair composes into a third layout neither
+   makes alone:
+
+     world 0   deck +      bedrock #     void .        as carved
+     world 1   deck #      bedrock +     void .        INVERT: the negative
+     world 2   deck +      bedrock .     void #        DRAIN: stone becomes
+                                                       air, air becomes stone
+     world 3   deck .      bedrock +     void #        both: a third world
+
+   The state space is now position x orientation x keys x doors x WORLD, and
+   that is what lets a cube ask for eight turns and get them.
+
+   A PLATE IS ALWAYS THE SURFACE OF ITS COLUMN. It is carved clean through
+   the rock, so it is legible from every face in every world — you can always
+   see where the plates are, which is what makes planning with them possible
+   at all. It has a second consequence worth stating plainly, because it is
+   the best thing about them: since a plate always gives footing, EVERY TURN
+   IS LEGAL WHILE YOU STAND ON ONE. Plates are pivots. In a game where where
+   you stand decides which turns you have, a square that gives you all four
+   is worth walking a long way for.
+   ============================================================ */
+var GLYPH_BIT = {A:1, B:2};                 /* A inverts, B drains */
+function isGlyph(c){ return c === 'A' || c === 'B'; }
+
+/* The effective kind of a cell in a given world. Glyphs are exempt: a plate
+   is a plate in every world, which is what makes it safe to stand on while
+   everything around it changes. */
+function effType(c, world){
+  if(c === 'A' || c === 'B') return c;
+  var t = c;
+  if(world & 1){ if(t === '+') t = '#'; else if(t === '#') t = '+'; }
+  if(world & 2){ if(t === '#') t = '.'; else if(t === '.') t = '#'; }
+  return t;
+}
+/* Which base char yields footing in this world — the inverse of the above,
+   and the only thing the carve needs to know about worlds. */
+function baseForWalk(world){ return (world & 1) ? '#' : '+'; }
+function isWalkType(t){ return t === '+' || t === 'A' || t === 'B'; }
+
+/* Effective arrays are derived, cached per world, and never mutated. */
+function effVox(lv, world){
+  if(!lv._eff) lv._eff = {};
+  if(lv._eff[world]) return lv._eff[world];
+  var out = new Array(lv.vox.length);
+  for(var i = 0; i < out.length; i++) out[i] = effType(lv.vox[i], world);
+  return (lv._eff[world] = out);
+}
+function clearEff(lv){ lv._eff = null; }
+function glyphAt(lv, w){
+  var c = lv.vox[vidx(lv.n, w[0], w[1], w[2])];
+  return GLYPH_BIT[c] || 0;
+}
+
+/* ---------- THE CUBE ----------------------------------------------------
+   A level is n^3 cells of five kinds:
+     '.'  empty      — nothing there
+     '#'  bedrock    — solid, but you cannot stand on its face
+     '+'  deck       — solid, and walkable when it is the nearest thing
+     'A'  invert plate, 'B' drain plate — always walkable, always the
+          surface of their column, and they change the world when stepped on
+   Index order is [y][z][x] so a level literal reads as a stack of slabs
+   from the bottom up, which is the only way authoring one by hand is
+   survivable.                                                            */
+function vidx(n,x,y,z){ return (y*n + z)*n + x; }
+
+/* World <-> view. Both are integer round-trips: c is the cube's centre and
+   cancels out, so viewOf(worldOf(v)) === v exactly. */
+function viewOf(n,m,p){
+  var c = (n-1)/2, q = [p[0]-c, p[1]-c, p[2]-c];
+  return [Math.round(vdot(m.R,q)+c), Math.round(vdot(m.U,q)+c), Math.round(vdot(m.F,q)+c)];
+}
+function worldOf(n,m,v){
+  var c = (n-1)/2, a = v[0]-c, b = v[1]-c, d = v[2]-c;
+  return [Math.round(a*m.R[0]+b*m.U[0]+d*m.F[0]+c),
+          Math.round(a*m.R[1]+b*m.U[1]+d*m.F[1]+c),
+          Math.round(a*m.R[2]+b*m.U[2]+d*m.F[2]+c)];
+}
+
+/* ---------- THE COLLAPSE ------------------------------------------------
+   THIS FUNCTION IS THE WHOLE GAME.
+
+   Every cell sharing a screen column projects to the same square, and the
+   same square is ONE PLACE. So a column is represented by exactly one cell:
+   the nearest solid one to the camera. Everything behind it is discarded —
+   not hidden, discarded. Two decks a hundred cells apart in the world are
+   neighbours on screen if their columns are neighbours, and you may walk
+   between them as if they touched, because on screen they do.
+
+   surf[u*n+v] = {d, t, w} — depth, kind, and the world cell it came from,
+   or null for a column with nothing in it at all (a void: impassable).   */
+/* An orientation is a signed permutation, so where a cell lands on screen is
+   fixed the moment the orientation is — it does not depend on the cube's
+   contents at all. Recomputing it per cell per projection was most of the
+   solver's cost: a search over 24 orientations x 4 worlds fills 96
+   projections, each of which was running viewOf on every cell. The mapping
+   is built once per (size, orientation) and reused for the life of the tab. */
+var VIEWMAP = {};
+function viewMap(n, m){
+  var key = n + '|' + oriIndex(m), cached = VIEWMAP[key];
+  if(cached) return cached;
+  var map = new Int32Array(n*n*n);
+  for(var y = 0; y < n; y++) for(var z = 0; z < n; z++) for(var x = 0; x < n; x++){
+    var v = viewOf(n, m, [x,y,z]);
+    map[vidx(n,x,y,z)] = (v[0]*n + v[1])*n + v[2];
+  }
+  return (VIEWMAP[key] = map);
+}
+function project(n, vox, m){
+  var surf = new Array(n*n), i, nn = n*n, map = viewMap(n, m);
+  for(i = 0; i < nn; i++) surf[i] = null;
+  for(i = 0; i < vox.length; i++){
+    var t = vox[i];
+    if(t === '.') continue;
+    var e = map[i], d = e % n, k = (e - d) / n, cur = surf[k];
+    var g = isGlyph(t);
+    /* a plate is carved clean through, so it wins its column outright; among
+       equals the nearer one wins as always */
+    if(!cur || (g && !isGlyph(cur.t)) || ((g === isGlyph(cur.t)) && d > cur.d)){
+      var yy = (i / nn) | 0, rr = i - yy*nn, zz = (rr / n) | 0;
+      surf[k] = {d:d, t:t, w:[rr - zz*n, yy, zz]};
+    }
+  }
+  return surf;
+}
+
+/* An object (key, door, goal, and the player's own footing) is attached to a
+   cell, and exists in a projection only while that cell IS the surface of
+   its column. Bury it behind bedrock and it is gone until you turn. */
+function surfaceAt(n, surf, m, w){
+  var v = viewOf(n, m, w), s = surf[v[0]*n + v[1]];
+  return (s && s.w[0] === w[0] && s.w[1] === w[1] && s.w[2] === w[2]) ? v : null;
+}
+
+/* ---------- THE RULES ---------------------------------------------------
+   A level: {n, vox, start, goal, keys[], doors[]} — every position a world
+   cell. A play state: {pos (the cell underfoot), ori, keys, doors bitmask}.  */
+function walkable(lv, surf, u, v, doorsOpen){
+  if(u < 0 || v < 0 || u >= lv.n || v >= lv.n) return null;
+  var s = surf[u*lv.n + v];
+  if(!s || !isWalkType(s.t)) return null;
+  for(var i = 0; i < lv.doors.length; i++){
+    if(doorsOpen & (1<<i)) continue;
+    var d = lv.doors[i];
+    if(s.w[0] === d[0] && s.w[1] === d[1] && s.w[2] === d[2]) return null;   // shut, and standing on the surface
+  }
+  return s;
+}
+function keyIndexAt(lv, w){
+  for(var i = 0; i < lv.keys.length; i++){
+    var k = lv.keys[i];
+    if(k[0] === w[0] && k[1] === w[1] && k[2] === w[2]) return i;
+  }
+  return -1;
+}
+function doorIndexAt(lv, w){
+  for(var i = 0; i < lv.doors.length; i++){
+    var d = lv.doors[i];
+    if(d[0] === w[0] && d[1] === w[1] && d[2] === w[2]) return i;
+  }
+  return -1;
+}
+function samePos(a,b){ return a[0]===b[0] && a[1]===b[1] && a[2]===b[2]; }
+
+/* Turning is legal only when the column you are standing in still has
+   footing after the turn. That single rule is what makes WHERE you stand
+   gate WHICH turns you have — position gating rotation, rotation gating
+   position. It is the lock and the key, falling out of the geometry. */
+function landing(lv, m2, pos, doorsOpen, world){
+  var surf2 = project(lv.n, effVox(lv, world || 0), m2);
+  var v = viewOf(lv.n, m2, pos);
+  return walkable(lv, surf2, v[0], v[1], doorsOpen);
+}
+
+/* ---------- SOLVER ------------------------------------------------------
+   0-1 BFS: a step costs nothing, a turn costs one. So the first time the
+   goal is reached is the FEWEST TURNS it can possibly be done in, which is
+   the number a level is graded and filtered on. Buckets rather than a deque
+   because the cost never exceeds a couple of dozen.
+   Returns {ok, turns, steps} — or {ok:false} if the cube is a lie.       */
+function popcount(x){ var c = 0; while(x){ x &= x-1; c++; } return c; }
+
+function solve(lv, budget, from){
+  budget = budget || 40;
+  var n = lv.n;
+  /* Keys are tracked as a bitmask of WHICH ones are taken, never a count —
+     a count lets the search step off a key cell and back on to mint another. */
+  var start = from ? {pos:from.pos, ori:from.ori, kmask:from.kmask, doors:from.doors, world:from.world|0}
+                   : {pos: lv.start, ori: 0, kmask: 0, doors: 0, world: 0};
+  if(!from){
+    var s0 = keyIndexAt(lv, lv.start);
+    if(s0 >= 0) start.kmask = 1 << s0;
+    /* opening on a plate would fire it before the first frame; generation
+       never does that, but a hand-written cube might */
+    start.world = glyphAt(lv, lv.start);
+  }
+  var buckets = [], seen = {}, projCache = {}, parent = {};
+  function P(oi, wd){
+    var k = oi + '|' + wd;
+    if(!projCache[k]) projCache[k] = project(n, effVox(lv, wd), ORIS[oi]);
+    return projCache[k];
+  }
+  function skey(s){ return vidx(n,s.pos[0],s.pos[1],s.pos[2]) + ':' + s.ori + ':' + s.kmask + ':' + s.doors + ':' + s.world; }
+  function spare(s){ return popcount(s.kmask) - popcount(s.doors); }
+  function push(c, s){ (buckets[c] || (buckets[c] = [])).push(s); }
+  function relax(cost, s, fromKey, act){
+    var k = skey(s);
+    if(seen[k] === undefined || seen[k] > cost){
+      seen[k] = cost; parent[k] = fromKey === undefined ? null : [fromKey, act]; push(cost, s);
+    }
+  }
+  relax(0, start);
+
+  /* Walk the parent chain back from the goal. A hint needs only the very
+     first action — the rest is the player's to find — but the LENGTH of the
+     chain is the second difficulty axis the vault curve scales on, so it is
+     measured here where the answer is already in hand. */
+  function chainOf(endKey){
+    var chain = [], k = endKey, guard = 0;
+    while(parent[k] && guard++ < 8000){ chain.push(parent[k][1]); k = parent[k][0]; }
+    return chain.reverse();
+  }
+  function report(cost, endKey){
+    var ch = chainOf(endKey), steps = 0;
+    for(var i = 0; i < ch.length; i++) if(ch[i].kind === 'step') steps++;
+    return {ok:true, turns:cost, steps:steps, first: ch.length ? ch[0] : null};
+  }
+
+  for(var cost = 0; cost <= budget; cost++){
+    var q = buckets[cost];
+    if(!q) continue;
+    for(var qi = 0; qi < q.length; qi++){       /* q grows while we walk it — intended, free steps land here */
+      var s = q[qi];
+      if(seen[skey(s)] < cost) continue;
+      if(samePos(s.pos, lv.goal)) return report(cost, skey(s));
+      var m = ORIS[s.ori], surf = P(s.ori, s.world), v = viewOf(n, m, s.pos);
+
+      /* steps — free */
+      for(var t = 0; t < 4; t++){
+        var u2 = v[0] + TURNS[t].dx, v2 = v[1] + TURNS[t].dy;
+        if(u2 < 0 || v2 < 0 || u2 >= n || v2 >= n) continue;
+        var raw = surf[u2*n + v2];
+        if(!raw || !isWalkType(raw.t)) continue;
+        var nd = s.doors, di = doorIndexAt(lv, raw.w);
+        if(di >= 0 && !(s.doors & (1<<di))){
+          if(spare(s) < 1) continue;            /* shut, and nothing to open it with */
+          nd = s.doors | (1<<di);               /* a door you can open is a step, not a wall */
+        }
+        var nk = s.kmask, ki = keyIndexAt(lv, raw.w);
+        if(ki >= 0) nk |= (1<<ki);
+        /* a plate fires under the foot that lands on it */
+        var nw = s.world ^ (GLYPH_BIT[raw.t] || 0);
+        relax(cost, {pos: raw.w, ori: s.ori, kmask: nk, doors: nd, world: nw}, skey(s), {kind:'step', dir:t});
+      }
+      /* turns — one each. A plate you turn onto does NOT fire: you press it
+         with a foot, and rotating the world is not pressing it. That also
+         keeps the landing you just checked from being invalidated by the
+         world changing underneath it. */
+      for(var t2 = 0; t2 < 4; t2++){
+        var m2 = TURNS[t2].f(m), land = landing(lv, m2, s.pos, s.doors, s.world);
+        if(!land) continue;
+        var nk2 = s.kmask, ki2 = keyIndexAt(lv, land.w);
+        if(ki2 >= 0) nk2 |= (1<<ki2);
+        relax(cost + 1, {pos: land.w, ori: oriIndex(m2), kmask: nk2, doors: s.doors, world: s.world}, skey(s), {kind:'turn', dir:t2});
+      }
+    }
+  }
+  return {ok:false};
+}
+
+/* ---------- GENERATOR ---------------------------------------------------
+   Carving the SOLUTION first, then filling in around it, is the only way
+   this is tractable: a random cube is a random cube, but a cube built by
+   walking and turning is guaranteed to contain at least the route that
+   built it. The solver then reports the true optimum, which is usually
+   shorter than the route that was carved — and that difference is where
+   the good levels live.
+
+   Carving only ever turns bedrock into deck. That is monotone: it can add
+   footing, never remove it, so carving for the fifth turn can never break
+   the path carved for the first. Only a genuinely empty column forces a new
+   cell to be placed, and that is the one move that can hide something from
+   another face — which is what the verify pass is for.                    */
+/* Carving in world W means writing the BASE char that comes out walkable
+   under W — which is the whole of what the plates cost the generator.
+   A locked cell is one an earlier leg is relying on in a different world;
+   it is never overwritten, so a route carved for world 0 cannot be
+   demolished by a later leg carving for world 1. */
+function carve(n, vox, m, u, v, hintDepth, world, lock){
+  world = world | 0;
+  var ev = new Array(vox.length), i;
+  for(i = 0; i < vox.length; i++) ev[i] = effType(vox[i], world);
+  var best = -1, bw = null;
+  for(var y = 0; y < n; y++) for(var z = 0; z < n; z++) for(var x = 0; x < n; x++){
+    var id = vidx(n,x,y,z);
+    if(ev[id] === '.') continue;
+    var vw = viewOf(n, m, [x,y,z]);
+    if(vw[0] !== u || vw[1] !== v) continue;
+    if(isGlyph(ev[id])){ bw = [x,y,z]; best = 1e9; }          /* a plate is already footing */
+    else if(vw[2] > best){ best = vw[2]; bw = [x,y,z]; }
+  }
+  var want = baseForWalk(world);
+  if(bw){
+    var bi = vidx(n,bw[0],bw[1],bw[2]);
+    if(isGlyph(vox[bi])) return bw;
+    if(lock && lock[bi] !== undefined && lock[bi] !== want) return null;
+    vox[bi] = want; if(lock) lock[bi] = want;
+    return bw;
+  }
+  var d = Math.max(0, Math.min(n-1, hintDepth === undefined ? (n>>1) : hintDepth));
+  var w = worldOf(n, m, [u,v,d]), wi = vidx(n,w[0],w[1],w[2]);
+  if(lock && lock[wi] !== undefined && lock[wi] !== want) return null;
+  vox[wi] = want; if(lock) lock[wi] = want;
+  return w;
+}
+
+function generate(seed, opt){
+  var rng = mulberry32(seed), n = opt.n, i;
+  var vox = new Array(n*n*n);
+  for(i = 0; i < n*n*n; i++) vox[i] = rng() < opt.density ? '#' : '.';
+
+  var m = ORI_ID, path = [], world = 0, lock = {};
+  var nGlyph = opt.glyphs || 0, kinds = opt.glyphKinds || 1, placed = [];
+  /* the legs a plate is dropped on, spread through the route so the world
+     changes in the MIDDLE of solving rather than at one end of it */
+  var legCount = opt.turns + 1, glyphLegs = {};
+  for(i = 0; i < nGlyph; i++) glyphLegs[Math.max(1, Math.round(legCount * (i+1)/(nGlyph+1)))] = i;
+
+  var u = 1 + Math.floor(rng()*(n-2)), v = 1 + Math.floor(rng()*(n-2));
+  var pos = carve(n, vox, m, u, v, undefined, world, lock);
+  if(!pos) return null;
+  path.push(pos);
+
+  for(var leg = 0; leg <= opt.turns; leg++){
+    var steps = opt.legMin + Math.floor(rng()*(opt.legMax - opt.legMin + 1));
+    for(var st = 0; st < steps; st++){
+      var order = shuffle4(rng, [0,1,2,3]), moved = false;
+      var vv = viewOf(n, m, pos);
+      for(var t = 0; t < 4 && !moved; t++){
+        var u2 = vv[0] + TURNS[order[t]].dx, v2 = vv[1] + TURNS[order[t]].dy;
+        if(u2 < 0 || v2 < 0 || u2 >= n || v2 >= n) continue;
+        var nx = carve(n, vox, m, u2, v2, vv[2], world, lock);
+        if(!nx) continue;                       /* that cell belongs to another world */
+        pos = nx; path.push(pos); moved = true;
+      }
+      if(!moved) break;
+    }
+    /* drop a plate under the foot that is standing here, and carry on
+       carving in the world it opens */
+    if(glyphLegs[leg] !== undefined && placed.length < nGlyph && path.length > 2){
+      var gi = vidx(n, pos[0], pos[1], pos[2]);
+      var kind = (kinds > 1 && (rng() < 0.45)) ? 'B' : 'A';
+      vox[gi] = kind; lock[gi] = kind;
+      placed.push({w:pos.slice(), kind:kind});
+      world ^= GLYPH_BIT[kind];
+      /* the cell you stand on after the flip is the plate itself, so nothing
+         needs re-seating — that is exactly why plates are exempt.
+
+         THEN KEEP WALKING, in the world the plate just opened. Without this
+         the plate lands on the final leg and the goal ends up ON it, which
+         is rejected — so every candidate died and vault II fell through to
+         the fallback cube. The route has to go somewhere after the flip;
+         that is the entire point of the flip. */
+      var after = 2 + Math.floor(rng()*3);
+      for(var ea = 0; ea < after; ea++){
+        var ord2 = shuffle4(rng, [0,1,2,3]), mv2 = false;
+        var vw2 = viewOf(n, m, pos);
+        for(var t2 = 0; t2 < 4 && !mv2; t2++){
+          var a2 = vw2[0] + TURNS[ord2[t2]].dx, b2 = vw2[1] + TURNS[ord2[t2]].dy;
+          if(a2 < 0 || b2 < 0 || a2 >= n || b2 >= n) continue;
+          var nx2 = carve(n, vox, m, a2, b2, vw2[2], world, lock);
+          if(!nx2) continue;
+          pos = nx2; path.push(pos); mv2 = true;
+        }
+        if(!mv2) break;
+      }
+    }
+    if(leg === opt.turns) break;
+    /* turn, then guarantee footing on the far side of it */
+    var pick = Math.floor(rng()*4), m2 = TURNS[pick].f(m);
+    var lv2 = viewOf(n, m2, pos);
+    var lnd = carve(n, vox, m2, lv2[0], lv2[1], undefined, world, lock);
+    if(!lnd) continue;
+    m = m2; pos = lnd; path.push(pos);
+  }
+
+  /* the goal is the far end of the carve; keys and doors are pinched onto
+     the route at fractions of its length so they gate rather than decorate */
+  var goal = path[path.length-1];
+  var lv = {n:n, vox:vox, start:path[0], goal:goal, keys:[], doors:[], glyphs:placed, _lock:lock};
+  if(samePos(lv.start, goal)) return null;
+  /* neither end may be a plate: one would fire before the first frame, the
+     other would change the world at the moment the level ends */
+  if(isGlyph(vox[vidx(n, lv.start[0], lv.start[1], lv.start[2])])) return null;
+  if(isGlyph(vox[vidx(n, goal[0], goal[1], goal[2])])) return null;
+  if(placed.length !== nGlyph) return null;
+
+  /* Keys and doors go on the route, but NEVER on a plate. A shut door
+     sitting on a plate blocks the plate's own column, which quietly destroys
+     the one property plates are built around — that you can always turn from
+     one — and reads as nonsense besides. Walk outward from the intended spot
+     until a cell turns up that is nobody else's. */
+  function slotNear(idx){
+    for(var off = 0; off < path.length; off++){
+      for(var sgn = -1; sgn <= 1; sgn += 2){
+        var j = idx + off*sgn;
+        if(j < 1 || j > path.length - 2) continue;
+        var c = path[j];
+        if(isGlyph(vox[vidx(n, c[0], c[1], c[2])])) continue;
+        if(samePos(c, lv.start) || samePos(c, goal)) continue;
+        if(keyIndexAt(lv, c) >= 0 || doorIndexAt(lv, c) >= 0) continue;
+        return c;
+      }
+      if(off === 0) continue;
+    }
+    return null;
+  }
+  if(opt.locks){
+    for(i = 0; i < opt.locks; i++){
+      var kw = slotNear(Math.floor(path.length * (0.18 + 0.22*i)));
+      var dw = slotNear(Math.floor(path.length * (0.55 + 0.2*i)));
+      if(!kw || !dw || samePos(kw, dw)) continue;
+      lv.keys.push(kw); lv.doors.push(dw);
+    }
+  }
+  return lv;
+}
+
+/* WIDENING. The carve leaves a single thread: from any face you see the one
+   route and walk it. Dead ends are what make a face worth reading, so a few
+   extra surface cells are promoted to deck at random across random faces —
+   then the level is re-solved and kept only if the answer did not get any
+   cheaper. Difficulty from plausible wrong turns, never from hidden ones. */
+function widen(rng, lv, count, lock){
+  var n = lv.n;
+  for(var c = 0; c < count; c++){
+    var m = ORIS[Math.floor(rng()*24)], surf = project(n, effVox(lv, 0), m), pool = [];
+    for(var i = 0; i < surf.length; i++) if(surf[i] && surf[i].t === '#') pool.push(surf[i].w);
+    if(!pool.length) continue;
+    var w = pool[Math.floor(rng()*pool.length)], wi = vidx(n,w[0],w[1],w[2]);
+    if(isGlyph(lv.vox[wi])) continue;
+    if(lock && lock[wi] !== undefined) continue;      /* a route in some world needs this */
+    lv.vox[wi] = '+'; clearEff(lv);
+  }
+  return lv;
+}
+
+/* A level is worth keeping only if the collapse is load-bearing: if it can
+   be walked without ever turning, it is a maze with a gimmick painted on.
+   The start check is not a formality — the carve places cells to guarantee
+   footing on later legs, and one of those can land in front of the opening
+   cell and bury the player inside the rock before the first frame. */
+function assess(lv, wantTurns){
+  clearEff(lv);
+  var s0 = project(lv.n, effVox(lv, 0), ORI_ID);
+  if(!surfaceAt(lv.n, s0, ORI_ID, lv.start)) return null;
+  if(!walkable(lv, s0, viewOf(lv.n, ORI_ID, lv.start)[0], viewOf(lv.n, ORI_ID, lv.start)[1], 0)) return null;
+  if(doorIndexAt(lv, lv.start) >= 0 || doorIndexAt(lv, lv.goal) >= 0) return null;
+  var r = solve(lv);
+  if(!r.ok) return null;
+  if(r.turns < wantTurns) return null;
+  var solid = 0;
+  for(var i = 0; i < lv.vox.length; i++) if(lv.vox[i] !== '.') solid++;
+  return {turns:r.turns, fill: solid / lv.vox.length};
+}
+
+
+
+/* ============================================================
+   THE DIFFICULTY CONTRACT — ten cubes to a vault, forever.
+
+   A vault is a block of ten levels and owns one difficulty step and one
+   look. Inside a vault the demand still creeps, so the tenth cube of a
+   vault is harder than the first and easier than the next vault's first —
+   the curve is a staircase with a slope on every tread, not a cliff every
+   ten.
+
+   Everything here is CAPPED. Size stops at 7 because an 8-cube costs four
+   times the search and reads worse on a phone; turns stop at 9 because the
+   generator's acceptance falls off a cliff past that and a level nobody can
+   hold in their head is not harder, it is just longer. Past the caps the
+   difficulty keeps arriving through lock count and density, which cost
+   nothing to search.
+   ============================================================ */
+var CAP_LOCKS = 3;
+
+/* WHAT THE SHAPE CAN ACTUALLY DELIVER.
+
+   The first curve here asked for nine-turn cubes at vault ten and got
+   threes, every time, at every budget. That is not a tuning miss — it is
+   the mechanic's ceiling, and it is worth writing down.
+
+   Turn-par is bounded by the diameter of the cube's orientation graph. Any
+   orientation is a handful of quarter-turns from any other, so once a deck
+   set is well connected you can get anywhere in three or four turns no
+   matter how big the cube or how many locks are on it. Measured over
+   thousands of candidates:
+
+       n=5  par tops out at 2        locks barely move par at all:
+       n=6  par tops out at 3          n=7, 0 locks -> max 4
+       n=7  par tops out at 4          n=7, 3 locks -> max 4
+       n=7 at density .60 -> 5       density is the real lever, not locks
+
+   So difficulty scales on the three axes that DO respond, and turn-par is
+   allowed to be the small elegant number it is rather than being flogged
+   toward a figure it cannot reach:
+
+     SIZE      more cube to read
+     DENSITY   more bedrock, so fewer decks are exposed per face and routes
+               are tighter — the one thing that genuinely forces more turns
+     LOCKS     sequencing. Locks do not raise the turn count; they raise
+               how much has to be true at once for a route to work.
+     LENGTH    the minimum route, in steps. A four-turn solution that runs
+               forty steps is a different animal to one that runs eight, and
+               it is the axis with no ceiling in sight.                     */
+/* WHEN THE PLATES ARRIVE.
+
+   Level 20 is the last cube of vault II and the first with a plate on it —
+   deliberately at the END of a vault, so the mechanic lands as a door into
+   the next one rather than as a footnote in the middle of a set.
+
+   INVERT alone for two vaults, because one transform is enough to relearn.
+   DRAIN joins at vault V, and from there the two compose into worlds neither
+   makes alone. A second plate appears at vault VII, which is roughly where
+   the old curve had run out of things to ask for. */
+var GLYPH_FROM = 20;
+function glyphPlan(level){
+  if(level < GLYPH_FROM) return {glyphs:0, glyphKinds:0};
+  var band = Math.floor((level-1)/10);
+  /* ONE plate, always. A second lowers par (more worlds to shortcut through)
+     and costs a chunk of search time for the privilege. Variety past vault V
+     comes from WHICH plate it is, not how many. */
+  return {glyphs: 1, glyphKinds: band >= 4 ? 2 : 1};
+}
+
+function specFor(level){
+  var band = Math.floor((level-1)/10), w = (level-1) % 10;
+  var b = Math.min(band, 11);                  /* the shape curve saturates; the length curve does not */
+  var n = b < 1 ? 5 : b < 3 ? 6 : 7;
+  var gp = glyphPlan(level);
+  /* A plate is a second transform, so a cube carrying one can be asked for
+     more than the rotation ceiling alone would ever give up. Measured over
+     thousands of candidates, one plate moves the ceiling by two:
+
+         n=6  max par 3 -> 5        n=7  max par 4 -> 6
+         and roughly 2.5x as many cubes land at par 3 or better
+
+     TWO plates is WORSE, which is not what you would guess: max par falls
+     back to 5. It is the same trap as the decoy pass and the leg length —
+     more freedom to reach any world is more ways to shortcut, and the search
+     finds them. So the second plate is carried for VARIETY, not difficulty.
+
+     The DEMAND is deliberately not raised for carrying a plate either. Asking
+     for the new ceiling put two thirds of mints outside their own band,
+     because the tail of the distribution is thin and a 240ms search cannot
+     be relied on to find it. The band stays where it is reliably met and the
+     scorer reaches for the top of it — so plates show up as fours where the
+     old curve gave threes, rather than as a promise the generator misses. */
+  /* The band is deliberately wide and set to what is RELIABLY delivered, not
+     to what the ceiling allows. Its job is to catch the curve collapsing, not
+     to express ambition — the scorer expresses that by reaching for the top
+     of the band, and "par rises across vaults" is asserted separately against
+     the running game. */
+  var parLo = (n === 5 ? 1 : 2);
+  /* TWO DIFFERENT NUMBERS THAT WERE ONE NUMBER, AND THAT WAS THE BUG.
+
+     `turns` is the CARVE's ambition — how many times the generator's own
+     route turns while it is cutting the cube. `parLo/parHi` is the
+     ACCEPTANCE band the solver's answer has to land in. They started life as
+     the same field, and when the band was widened down to 2 the carve went
+     with it: the generator spent three vaults cutting two-turn routes, and a
+     four-turn optimum cannot exist in a cube whose route never needed one.
+     The candidate histogram made it obvious the moment it was printed —
+     {0:7, 1:11, 2:16} where the probe had shown a fifth of cubes at par 3+.
+
+     The carve reaches HIGH and the band stays WIDE. The carve costs nothing
+     to raise; the band is what has to be honest. */
+  var carveTurns = Math.min(9, 3 + b + (gp.glyphs ? 1 : 0));
+  return {
+    n: n,
+    glyphs: gp.glyphs, glyphKinds: gp.glyphKinds,
+    turns: carveTurns,
+    /* doors multiply the search by 2^locks and worlds already multiply it by
+       four; a cube carrying a plate keeps its lock count down so a mint stays
+       inside a couple of hundred milliseconds on a phone */
+    locks: Math.min(gp.glyphs ? 2 : CAP_LOCKS, Math.floor(b/2) + (w >= 6 ? 1 : 0)),
+    density: Math.min(0.62, 0.42 + 0.021*b + 0.004*w),
+    /* Leg length is deliberately NOT scaled with the vault. It was, and it
+       backfired: a longer carve lays down more deck, more deck means more
+       shortcuts, and par fell from 4 to 1 at vault 21 while route length
+       barely moved. The two axes fight, and turn-par is the one worth
+       keeping. */
+    legMin: 2 + Math.floor(n/3), legMax: 4 + Math.floor(n/2),
+    parLo: parLo, parHi: parLo + 4,
+    minSteps: 5 + band*2 + w,                  /* band, not b — this one keeps climbing */
+    /* HOW MANY CANDIDATES TO LOOK AT, AS A COUNT AND NEVER AS A CLOCK.
+       This used to be a millisecond budget, and that quietly broke the one
+       promise the whole no-server design rests on: a faster machine got
+       through more candidates before the budget expired and therefore chose
+       a DIFFERENT winner, so cube 41 was a five-turn puzzle in one browser
+       and a three-turn puzzle in another. The determinism test could not see
+       it because it only ever re-ran in the same environment.
+       Work is now counted, not timed. Every device does exactly this many
+       passes and lands on exactly the same cube — a slow phone takes longer,
+       which is what the background prebuild is for.
+
+       It counts candidates that reach the SOLVER, not loop passes. Most
+       passes bail long before that — the carve fails, the lock count comes
+       out wrong, the opening cell ends up buried — and counting those made
+       the effective sample size swing by a factor of three between specs,
+       which showed up as the difficulty curve going flat. */
+    tries: gp.glyphs ? 24 : 40,
+    decoys: gp.glyphs ? 3 : 4,
+    band: band, level: level
+  };
+}
+
+/* The floor under everything: a cube that cannot fail to be solvable,
+   because it is a straight line of decks in open space and nothing else.
+   It is deliberately boring. It exists so that the promise "every level
+   the player is handed has been proved winnable" has no exceptions —
+   not "almost none", none. The tests assert it never actually fires. */
+function fallbackLevel(level){
+  var n = 5, vox = [], i;
+  for(i = 0; i < n*n*n; i++) vox[i] = '.';
+  for(i = 0; i < n; i++) vox[vidx(n, i, 2, 2)] = '+';
+  return {n:n, vox:vox, start:[0,2,2], goal:[n-1,2,2], keys:[], doors:[],
+          par:0, level:level, band:Math.floor((level-1)/10), fallback:true};
+}
+
+function hashSeed(level){
+  var h = (level * 2654435761) ^ 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 15), 2246822507);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+/* How well a candidate answers the demand. Being too EASY is a much smaller
+   sin than being too hard or malformed, because a cube below par still
+   plays — it just under-delivers — whereas one the search could not finish
+   inside the budget may be a slog nobody can see the end of. */
+function score(turns, steps, fill, spec){
+  if(fill < 0.24 || fill > 0.80) return 50;
+  if(turns > spec.parHi)  return 200;                       /* overshoot: usable, not wanted */
+  if(turns < spec.parLo)  return 100 + turns*10 + Math.min(60, steps);
+  /* In band. TURNS DOMINATE, and by a wide margin — this used to read
+     `turns*20 + min(120,steps) + 200 if long enough`, which meant a rambling
+     two-turn cube outscored a tight four-turn one and the whole difficulty
+     curve sat flat at par 2.7 no matter how many candidates were sampled.
+     Par is the number on the HUD and the number the player is playing
+     against; route length only breaks ties between cubes of equal par. */
+  return 1000 + turns*300 + Math.min(90, steps) + (steps >= spec.minSteps ? 40 : 0);
+}
+
+/* ---------- MINT — the only way a level ever reaches a player ------------
+   Solvability is not filtered for, it is CONSTRUCTED: the generator carves
+   a route by walking and turning, so the route that built the cube is
+   always in it. The solver's job is the other half — proving that route
+   survived the decoy pass, that the opening cell is not buried, that the
+   keys really do open the doors in some order, and reporting the true
+   minimum, which is usually shorter than the carve and is what par becomes.
+
+   Then the gate: whatever wins, the level is solved one final time before
+   it is handed over, and anything that fails falls back. So there is no
+   path through this function that returns an unwinnable cube — not on a
+   bad seed, not when the budget expires, not at level nine million.
+
+   The budget bounds the search for QUALITY only. Running out means the
+   player gets an easier cube than the vault asked for, never a broken one.
+   ------------------------------------------------------------------- */
+function mint(level, budgetMs, now){
+  now = now || function(){ return Date.now(); };
+  var spec = specFor(level), seed = hashSeed(level), t0 = now();
+  var best = null, bestScore = -1, tries = 0;
+
+  /* budgetMs is accepted for call-site compatibility and deliberately does
+     NOT bound the search — see the note on spec.tries. The outer cap only
+     stops a pathological spec spinning; the real bound is `tries`, which
+     counts candidates actually put to the solver. */
+  for(var i = 0; i < spec.tries * 14 && tries < spec.tries; i++){
+    var lv = generate(seed + i * 7919, spec);
+    if(!lv) continue;
+    if(lv.keys.length !== spec.locks) continue;
+    /* DECOYS. This used to read `spec.n + 2 - spec.turns`, which was tuned
+       when `turns` meant the ambition of the vault. It now means the bottom
+       of a deliberately wide band — always 2 — so the formula silently
+       pinned itself at seven decoys and spent three vaults quietly handing
+       the solver shortcuts. A formula whose input changed meaning is the
+       hardest kind of regression to see, because nothing about it looks
+       wrong. It is a small constant now, and it is measured against par. */
+    widen(mulberry32(seed + i * 104729), lv, spec.decoys, lv._lock);
+
+    clearEff(lv);
+    var s0 = project(lv.n, effVox(lv, 0), ORI_ID);
+    if(!surfaceAt(lv.n, s0, ORI_ID, lv.start)) continue;      /* opened buried */
+    if(doorIndexAt(lv, lv.start) >= 0 || doorIndexAt(lv, lv.goal) >= 0) continue;
+
+    /* One bounded solve does all the work: past parHi it stops looking, so
+       a cube that is too hard costs no more than one that is just right. */
+    tries++;
+    var r = solve(lv, spec.parHi);
+    if(!r.ok) continue;
+
+    var solid = 0;
+    for(var k = 0; k < lv.vox.length; k++) if(lv.vox[k] !== '.') solid++;
+    var sc = score(r.turns, r.steps, solid / lv.vox.length, spec);
+    if(sc > bestScore){
+      bestScore = sc; best = lv; best.par = r.turns; best.steps = r.steps;
+    }
+    /* Stop only on a cube that maxes the band on BOTH axes. Anything less
+       and the remaining budget is better spent looking, because the first
+       in-band candidate is usually the weakest one that qualifies. */
+    if(r.turns >= spec.parHi && r.steps >= spec.minSteps) break;
+  }
+
+  if(!best) best = fallbackLevel(level);
+  var gate = solve(best, 60);                                  /* THE GATE */
+  if(!gate.ok) { best = fallbackLevel(level); gate = solve(best, 60); }
+  best.par = gate.turns; best.steps = gate.steps;
+  best.level = level; best.band = spec.band; best.tries = tries;
+  best.ms = now() - t0;
+  return best;
+}
+
+/* Node-only. Everything above this line is what the browser gets, so this
+   MUST stay last: the build truncates the file here. */
+
+/* ---------- THE CUBES — every one solver-verified at the par it claims ---------- */
+var BAKED = [
+{n:5,name:"FOOTING",par:1,vox:"......#..#..+..+##+#.#..#...#.##..##.#...#..##+...#..#.#+..#.##.#.+.#.#+..###...#..##.#.###+...#........#....#+..#.#+.#+...+.",start:[1,1,4],goal:[4,4,3],keys:[],doors:[]},
+{n:5,name:"THE TURN",par:1,vox:".#.#.#..#.###.+#.#++#+#....##.#+.+##........###..+#........#.##...........+.###+...##.#.+#..#..+#...#.#.#.#.#.#.###.#.+..#.#.",start:[3,1,1],goal:[3,3,2],keys:[],doors:[]},
+{n:5,name:"BURIED",par:2,vox:"#####..##.##.##.#..###.##.....####.##...#....++##.#.##..+###..#.#..###+...+##+.+##.+#..##.+#....##.+.#..#..+.+#..#.+......#.#",start:[1,1,4],goal:[2,3,0],keys:[],doors:[]},
+{n:5,name:"TWO FACES",par:2,vox:"..#++.#.##.###+..##++#.+..##+...#.....+..#.+.+..++###.#.####+#......##.##.#.####++......+...#....+..#....#...###...#.#..+.#..",start:[1,3,1],goal:[3,1,0],keys:[],doors:[]},
+{n:6,name:"THE LONG WAY",par:2,vox:"#...###..+...+.#.#..+#...+.#.###.##....++.+.#..#.##.###..###..+....#.+.#..#.+.....##...#.#...#.+.#.+#...#...#....######.+.####...#..#...###..##......#.##....###..#.##.....##.#..#.#...##..#.#...##..##.#...#+#.....##.#",start:[2,1,4],goal:[3,0,1],keys:[[3,2,4]],doors:[[2,0,3]]},
+{n:6,name:"TUMBLER",par:3,vox:".#.##.##.##..####...##.#.#....#.##.........##.##...#.#..#.####.....++..+.....##+.##.#.##.#..##.##....##.++#++#..#####..#.....#.##..+#....####....+.....+...#.+..#..+.....+..+#..#.#..###.#.#.#....####+.###.##.#.+.+....",start:[3,2,5],goal:[1,4,1],keys:[],doors:[]},
+{n:6,name:"WARDEN",par:3,vox:"###...##.....##.+.##..##....#.#.##.###..#+###..##.#.#+.#...##+.#....#..##.###...#..#.#..#.+......##..#.+.#####.##.#..#.#....####.#..#..##.+#..#.+#....#.###...##...#..+.##..+..##.#+...#+.....##..#.++++#..+.##.++####.+",start:[1,1,4],goal:[4,5,4],keys:[[0,2,3]],doors:[[4,4,3]]},
+{n:6,name:"OUBLIETTE",par:3,vox:"##+.......#.+#..#.+.....#.##+..##....#..+#+#.###+##.##++..+.####..###.##.#.####..#+...#..###+.#.##.#...#..#...#..#.+...#####.####+..##...###.+.....###........#####...#+.++#.+...+####.#.#...#...##.#.#.#.+.....+....#..",start:[3,3,5],goal:[0,1,3],keys:[[1,4,4]],doors:[[4,1,3]]},
+{n:6,name:"THE CANT",par:3,vox:"##+.#.#....+...+###..+.#+..#....#....##+.+...#.+#.##.+....##.#...#.#.###...+##+.+###.#..#...#.##.#.......#####..#.##....#.#.##..#.#....+#++..+.....#...#####+.#.##.##.#..+.++.......#..#.#..#.#.##.###..#..#.....++..+..",start:[1,4,4],goal:[5,0,1],keys:[[0,5,5]],doors:[[3,1,0]]},
+{n:7,name:"SIX WAYS",par:4,vox:"......+##..+.+...#+..#.#.......##..#+....#...#..#..#.#.+....#+.#...+..###.####..#.#####..#..##.#..##...###..#.##.#.#.++.###.#..#####..+###..##.....###.##..#.###.#.####..##..##..#....#.#..#...######...##..##..#..#.#.#....###.###....+...#...##.#+...+..+..#...#..##++.+..+.###.+....#++#...#..+.##.+.##.#..#..#..#...#...####..##.##...+##.#.+..#..#",start:[1,5,5],goal:[4,1,2],keys:[[0,6,6]],doors:[[6,2,2]]}
+];
+
+/* ============================================================
+   VAULTS — ten cubes to a block, and a block owns a look.
+
+   COLOUR THAT MEANS SOMETHING NEVER CHANGES. You are always rust, the way
+   out is always jade, keys are always gold — a player who learns those on
+   cube three must still be able to read cube nine hundred at a glance. What
+   changes with the vault is the MATERIAL: what the deck is made of, what
+   the bedrock is made of, and what colour the nothing behind it is.
+
+   Eight are authored. Past those the palette keeps going by rotating the
+   authored hues, so vault ninety has a look nobody chose but nobody has
+   seen either — which is the honest deal for a game with no last level.
+   ============================================================ */
+var VAULTS = [
+  {name:'THE SHALLOWS',  dF:[96,80,62],  dN:[246,238,222], rF:[15,14,21], rN:[56,61,82],  vd:[10,9,16],  st:[190,200,235], at:[90,110,190]},
+  {name:'THE IRONWORKS', dF:[92,74,52],  dN:[240,222,196], rF:[22,14,11], rN:[86,52,38],  vd:[14,9,7],   st:[255,200,150], at:[200,110,50]},
+  {name:'GLASSWORKS',    dF:[58,92,96],  dN:[220,248,250], rF:[8,18,22],  rN:[36,72,84],  vd:[5,12,16],  st:[160,235,245], at:[60,180,200]},
+  {name:'THE ORCHARD',   dF:[80,92,50],  dN:[232,246,200], rF:[12,18,12], rN:[48,74,46],  vd:[8,13,9],   st:[190,240,180], at:[90,180,90]},
+  {name:'CINDERS',       dF:[104,66,48], dN:[250,226,206], rF:[20,10,10], rN:[74,40,36],  vd:[13,7,7],   st:[255,170,130], at:[220,90,50]},
+  {name:'THE SALT',      dF:[82,92,104], dN:[240,248,255], rF:[12,15,20], rN:[62,74,92],  vd:[8,10,14],  st:[220,235,255], at:[120,160,220]},
+  {name:'THE VEIN',      dF:[96,78,44],  dN:[250,232,182], rF:[16,10,22], rN:[62,44,86],  vd:[11,7,16],  st:[210,180,255], at:[150,90,220]},
+  {name:'THE DEEP',      dF:[72,72,78],  dN:[236,236,242], rF:[8,8,10],   rN:[42,44,52],  vd:[5,5,7],    st:[180,185,200], at:[80,90,120]}
+];
+var VAULT_A = ['IRON','SALT','GLASS','ASH','BONE','SLATE','AMBER','TIDE','EMBER','FROST','COPPER','SHALE'];
+var VAULT_B = ['REACH','WELL','SPINE','GATE','HOLLOW','WORKS','MARCH','VAULT','TERRACE','CANT'];
+var NAME_A  = ['THE','LOW','HIGH','OLD','DEEP','LONG','BLIND','CLOSE','FAR','LOST'];
+var NAME_B  = ['CANT','HINGE','LATCH','WARD','DROP','SPINE','SEAM','FOLD','TURN','GATE','WELL','STEP','CROSS','MOUTH','KEEP'];
+
+/* The standard hue-rotation matrix, so a rotated palette keeps its
+   luminance relationships and therefore keeps the deck/bedrock bands from
+   colliding — the one property the whole board's legibility rests on. */
+function hueRot(c, deg){
+  var a = deg*Math.PI/180, co = Math.cos(a), si = Math.sin(a);
+  var r = c[0], g = c[1], b = c[2];
+  return [
+    Math.max(0, Math.min(255, r*(0.213+co*0.787-si*0.213) + g*(0.715-co*0.715-si*0.715) + b*(0.072-co*0.072+si*0.928))),
+    Math.max(0, Math.min(255, r*(0.213-co*0.213+si*0.143) + g*(0.715+co*0.285+si*0.140) + b*(0.072-co*0.072-si*0.283))),
+    Math.max(0, Math.min(255, r*(0.213-co*0.213-si*0.787) + g*(0.715-co*0.715+si*0.715) + b*(0.072+co*0.928+si*0.072)))
+  ];
+}
+function vaultOf(level){ return Math.floor((level-1)/10); }
+function lumOf(c){ return 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]; }
+
+/* THE BAND GUARANTEE.
+
+   Everything the player reads off this board rests on one property: the
+   DARKEST deck is brighter than the BRIGHTEST bedrock, so a tile's material
+   can never be mistaken however far away it is. A hand-picked palette can
+   be checked by eye. A palette produced by rotating hues for vault ninety
+   cannot, and one of them did break — vault 22's darkest deck, under the
+   deepest cast shadow the renderer draws, came out below its brightest
+   bedrock and the two materials became confusable.
+
+   So the property is not trusted, it is ENFORCED. Every style, authored or
+   generated, has its bedrock ramp walked down until the gap clears the
+   worst shadow the renderer can put on a deck, with a margin. It costs the
+   authored palettes a shade of contrast they will not miss, and it means
+   there is no vault number at which the board stops being readable.       */
+var MAX_SHADOW = 0.40 * 0.45;                 /* peak per-tile alpha x peak gradient alpha */
+var DECK_FLOOR = 108;                         /* the dimmest a deck may ever be */
+
+/* THE TEXTURE'S SHARE OF THE SAME BUDGET.
+
+   Every block is painted from a 16x16 texture now, and a texture here is
+   nothing but a set of per-texel MULTIPLIERS on the palette colour the
+   material already has. Which means a texture can darken a deck texel and
+   lighten a bedrock texel — precisely the thing the band guarantee exists
+   to forbid. So the guarantee is told about it rather than being quietly
+   undermined by it.
+
+   These four numbers are the entire contract. No generator may emit a texel
+   outside its material's range (finishTex clamps every one, unconditionally),
+   and the walk below is run against the WORST pair the ranges permit: the
+   far end of the deck ramp, at its darkest texel, under the deepest drop
+   shadow the renderer can cast — against the near end of the bedrock ramp at
+   its brightest texel. Widen a range and the bedrock ramp simply darkens to
+   pay for it. The two materials cannot collide whatever a generator does.
+
+   The two floors are not the same number, and the asymmetry is the whole
+   trick: only the BRIGHT end of bedrock and the DARK end of deck can ever
+   make two materials confusable, so bedrock is allowed to go very dark
+   indeed. That is what buys rubble its contrast — a mortar line at 0.55 of
+   an already-dark rock is visible, where the same line at 0.74 was a rumour. */
+var TEX_LO = {'+':0.80, '#':0.55};            /* darkest texel each material may paint */
+var TEX_HI = {'+':1.12, '#':1.10};            /* brightest */
+function bandGap(st){
+  return lumOf(st.dF) * TEX_LO['+'] * (1 - MAX_SHADOW) - lumOf(st.rN) * TEX_HI['#'];
+}
+function enforceBands(st){
+  /* A deck at the far end of the cube was coming out near-black-brown and
+     reading as bedrock on a real phone in real light — which is the one
+     mistake this game cannot afford, because "may I stand there" is the
+     question every frame is asked. The far end of the deck ramp now has a
+     floor, and the bedrock ramp is walked down from wherever that lands. */
+  var g0 = 0;
+  while(lumOf(st.dF) < DECK_FLOOR && g0++ < 60)
+    st.dF = [Math.min(255, st.dF[0]*1.05 + 3), Math.min(255, st.dF[1]*1.05 + 3), Math.min(255, st.dF[2]*1.05 + 3)];
+  var margin = lumOf(st.dF) * 0.06, guard = 0;
+  while(bandGap(st) < margin && guard++ < 60){
+    st.rN = [st.rN[0]*0.94, st.rN[1]*0.94, st.rN[2]*0.94];
+    st.rF = [st.rF[0]*0.94, st.rF[1]*0.94, st.rF[2]*0.94];
+  }
+  return st;
+}
+var styleCache = {};
+function vaultStyle(band){
+  if(styleCache[band]) return styleCache[band];
+  var base = VAULTS[band % VAULTS.length], lap = Math.floor(band / VAULTS.length), st;
+  if(!lap){
+    st = {name:base.name, dF:base.dF.slice(), dN:base.dN.slice(), rF:base.rF.slice(),
+          rN:base.rN.slice(), vd:base.vd.slice(), st:base.st.slice(), at:base.at.slice()};
+  } else {
+    var deg = lap * 37 % 360;
+    st = {name: VAULT_A[(band*7) % VAULT_A.length] + ' ' + VAULT_B[(band*5) % VAULT_B.length],
+          dF:hueRot(base.dF,deg), dN:hueRot(base.dN,deg), rF:hueRot(base.rF,deg),
+          rN:hueRot(base.rN,deg), vd:hueRot(base.vd,deg), st:hueRot(base.st,deg), at:hueRot(base.at,deg)};
+  }
+  return (styleCache[band] = enforceBands(st));
+}
+function vaultName(band){ return vaultStyle(band).name; }
+function levelName(level){
+  if(level <= BAKED.length) return BAKED[level-1].name;
+  /* hashSeed is unsigned 32-bit, and `>>` would coerce it back to a SIGNED
+     int32 — every hash above 2^31 then indexed negatively and named half the
+     cubes past level 40 "undef". Unsigned shift throughout. */
+  var h = hashSeed(level) >>> 0;
+  return NAME_A[h % NAME_A.length] + ' ' + NAME_B[(h >>> 5) % NAME_B.length];
+}
+
+/* ============================================================
+   THE SUPPLY — where a level comes from, and the promise attached to it
+
+   Vault I is authored: ten cubes, verified offline, carrying the teaching
+   beats (the first two show you a way out you cannot walk to, which is the
+   entire lesson and is not something a generator can be trusted to stage).
+
+   Everything from level eleven is cut on demand by mint(), and mint()
+   cannot return an unwinnable cube — solvability is constructed by the
+   carve and then proved by the solver before the level is handed over.
+   A level is minted from its NUMBER, so cube 4,127 is the same cube on
+   every phone on earth with no server involved.
+
+   The cost is real — a couple of hundred milliseconds — so the next level
+   is always cut in the background while the current one is being played,
+   and the player never waits for the common case.
+   ============================================================ */
+var MINT_BUDGET = 240, mintCache = {}, prebuildT = 0;
+function levelData(level){
+  if(level <= BAKED.length){
+    var s = BAKED[level-1];
+    return {n:s.n, vox:s.vox.split(''), start:s.start, goal:s.goal, keys:s.keys,
+            doors:s.doors, par:s.par, level:level, band:vaultOf(level), authored:true};
+  }
+  if(mintCache[level]) return mintCache[level];
+  var lv = mint(level, MINT_BUDGET);
+  mintCache[level] = lv;
+  var ks = Object.keys(mintCache);
+  if(ks.length > 24) delete mintCache[ks[0]];
+  return lv;
+}
+function prebuild(level){
+  clearTimeout(prebuildT);
+  if(level <= BAKED.length || mintCache[level]) return;
+  prebuildT = setTimeout(function(){
+    if(!mintCache[level]) mintCache[level] = mint(level, MINT_BUDGET * 2);
+  }, 900);
+}
+
+/* ============================================================
+   PERSISTENCE — one key, and it is allowed to fail.
+   A WebView with storage disabled should still play; it just forgets.
+   ============================================================ */
+var store = {best:{}, reached:1, sound:1, haptic:1, depth:0, taught:0, sawPlate:0};
+try{ var raw = localStorage.getItem('turnkey-v2'); if(raw) store = Object.assign(store, JSON.parse(raw)); }catch(e){}
+var saveT = 0;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(function(){
+    try{ localStorage.setItem('turnkey-v2', JSON.stringify(store)); }catch(e){}
+  }, 220);
+}
+
+/* ============================================================
+   AUDIO — a lock-and-stone bus, built from nothing.
+   No files: a packaged app should not pay a download for six sounds it
+   could synthesise, and an offline WebView should not go quiet.
+   The context is created on the first touch because every mobile browser
+   refuses one made any earlier.
+   ============================================================ */
+/* A real bus, not six loose oscillators.
+
+   Everything lands on master -> compressor -> out, with a send to a cheap
+   feedback-delay reverb, because the single biggest difference between "a
+   game with sounds in it" and "a game that feels like a place" is that the
+   sounds share a room. A dry click in silence reads as a UI beep; the same
+   click with 180ms of dark tail reads as stone.                            */
+var AC = null, BUS = null, WET = null, AMB = null, ambBand = -1;
+function audio(){
+  if(AC || !store.sound) return AC;
+  try{ AC = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ return (AC = null); }
+  BUS = AC.createGain(); BUS.gain.value = 0.9;
+  var comp = AC.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 22; comp.ratio.value = 5;
+  comp.attack.value = 0.004; comp.release.value = 0.16;
+  BUS.connect(comp); comp.connect(AC.destination);
+  /* the room: two delays at prime-ish spacings, damped, fed back a little */
+  WET = AC.createGain(); WET.gain.value = 0.30;
+  var d1 = AC.createDelay(1), d2 = AC.createDelay(1), fb = AC.createGain(), lp = AC.createBiquadFilter();
+  d1.delayTime.value = 0.083; d2.delayTime.value = 0.127;
+  fb.gain.value = 0.34; lp.type = 'lowpass'; lp.frequency.value = 1900;
+  WET.connect(d1); d1.connect(lp); lp.connect(d2); d2.connect(fb); fb.connect(d1);
+  d2.connect(BUS); lp.connect(BUS);
+  return AC;
+}
+function out(node, send){
+  node.connect(BUS);
+  if(send && WET){ var g = AC.createGain(); g.gain.value = send; node.connect(g); g.connect(WET); }
+}
+function tone(f, dur, type, gain, slideTo, send){
+  var a = audio(); if(!a || !store.sound) return;
+  var o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+  if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain || 0.12, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); out(g, send === undefined ? 0.18 : send);
+  o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur, cut, gain, send, sweepTo){
+  var a = audio(); if(!a || !store.sound) return;
+  var n = Math.max(1, Math.floor(a.sampleRate * dur)), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+  for(var i = 0; i < n; i++) d[i] = (Math.random()*2 - 1) * (1 - i/n);
+  var s = a.createBufferSource(); s.buffer = b;
+  var f = a.createBiquadFilter(); f.type = 'lowpass';
+  f.frequency.setValueAtTime(cut || 1400, a.currentTime);
+  if(sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, a.currentTime + dur);
+  var g = a.createGain(); g.gain.value = gain || 0.16;
+  s.connect(f); f.connect(g); out(g, send === undefined ? 0.22 : send);
+  s.start();
+}
+
+/* THE AMBIENT BED. Two detuned saws through a heavy lowpass, pitched off the
+   vault number, at a level you notice only when it stops. It is the cheapest
+   atmosphere in the building and the reason a vault feels like somewhere
+   rather than a recoloured grid. */
+var VAULT_ROOT = [55, 49, 61.7, 46.2, 58.3, 65.4, 51.9, 43.7];
+function ambience(band){
+  var a = audio(); if(!a || !store.sound || band === ambBand) return;
+  ambBand = band;
+  if(AMB){ try{ AMB.g.gain.setTargetAtTime(0.0001, a.currentTime, 0.4); var old = AMB;
+    setTimeout(function(){ try{ old.o1.stop(); old.o2.stop(); }catch(e){} }, 2200); }catch(e){} }
+  var root = VAULT_ROOT[band % VAULT_ROOT.length] * (band > 15 ? 1.5 : 1);
+  var o1 = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), f = a.createBiquadFilter();
+  o1.type = o2.type = 'sawtooth';
+  o1.frequency.value = root; o2.frequency.value = root * 1.005;
+  f.type = 'lowpass'; f.frequency.value = 210; f.Q.value = 0.7;
+  g.gain.setValueAtTime(0.0001, a.currentTime);
+  g.gain.setTargetAtTime(0.055, a.currentTime, 1.2);
+  o1.connect(f); o2.connect(f); f.connect(g); out(g, 0.5);
+  o1.start(); o2.start();
+  AMB = {o1:o1, o2:o2, g:g};
+}
+
+/* Steps drift in pitch so a run of them sounds like walking rather than a
+   stuck record — the cheapest possible fix for the most repeated sound. */
+var stepN = 0;
+var sfx = {
+  step:  function(){
+    stepN++;
+    noise(0.05, 700 + (stepN % 3) * 190, 0.07, 0.10);
+    tone(150 + (stepN % 4) * 11, 0.06, 'sine', 0.045, 0, 0.08);
+  },
+  land:  function(){ noise(0.09, 520, 0.10, 0.3); tone(78, 0.14, 'sine', 0.07, 58, 0.25); },
+  /* the detent, in three layers: the latch, the stone it is set in, and the
+     mass arriving underneath a beat late */
+  turn:  function(){
+    noise(0.035, 5200, 0.16, 0.12);
+    noise(0.30, 2400, 0.10, 0.42, 380);
+    tone(104, 0.30, 'triangle', 0.13, 52, 0.34);
+    tone(41, 0.42, 'sine', 0.16, 33, 0.10);
+  },
+  creak: function(v){ noise(0.10, 320 + v*900, 0.020 + v*0.03, 0.3); },
+  deny:  function(){ noise(0.08, 420, 0.16, 0.2); tone(68, 0.16, 'square', 0.07, 50, 0.1); },
+  key:   function(){
+    tone(1046, 0.10, 'triangle', 0.10, 0, 0.4);
+    setTimeout(function(){ tone(1568, 0.20, 'triangle', 0.085, 0, 0.5); }, 62);
+  },
+  keyIn: function(){ tone(2093, 0.13, 'sine', 0.07, 0, 0.4); },
+  door:  function(){
+    noise(0.24, 900, 0.20, 0.4, 260); tone(126, 0.30, 'sawtooth', 0.07, 84, 0.3);
+    setTimeout(function(){ noise(0.05, 3800, 0.11, 0.3); }, 190);
+  },
+  win:   function(){
+    [523,659,784,1047,1319].forEach(function(f,i){
+      setTimeout(function(){ tone(f, 0.65, 'triangle', 0.10, 0, 0.55); }, i*88);
+    });
+    tone(65, 0.9, 'sine', 0.15, 44, 0.3);
+    noise(0.5, 2600, 0.09, 0.6, 300);
+  },
+  vault: function(){
+    [196,262,330,392].forEach(function(f,i){ setTimeout(function(){ tone(f,1.5,'sine',0.09,0,0.7); }, i*130); });
+    noise(1.1, 1500, 0.07, 0.8, 200);
+  },
+  /* the world turning over: a long filtered sweep in the direction of the
+     change, a bell for the plate, and a sub under both */
+  plate: function(bit){
+    noise(0.85, 240, 0.20, 0.75, bit === 1 ? 3200 : 160);
+    tone(bit === 1 ? 174 : 330, 0.8, 'sawtooth', 0.10, bit === 1 ? 520 : 116, 0.6);
+    tone(55, 1.0, 'sine', 0.17, 40, 0.25);
+    setTimeout(function(){ tone(bit === 1 ? 1046 : 784, 0.5, 'triangle', 0.09, 0, 0.7); }, 120);
+  },
+  undo:  function(){ tone(420, 0.16, 'sine', 0.06, 700, 0.3); noise(0.07, 1800, 0.05, 0.2); },
+  stuck: function(){ tone(200, 0.34, 'sine', 0.07, 118, 0.4); }
+};
+function buzz(ms){ if(store.haptic && navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){} }
+
+/* ============================================================
+   BOARD STATE
+   The integer basis M is the ONLY thing the rules ever read. The float
+   basis the renderer uses during a drag is a picture of a turn that has
+   not happened yet, and no rule is allowed to consult it.
+   ============================================================ */
+var cv = document.getElementById('stage'), ctx = cv.getContext('2d');
+var W = 0, H = 0, DPR = 1;
+var lv = null, N = 0, M = ORI_ID, pos = [0,0,0], kmask = 0, doors = 0, turns = 0, world = 0;
+var surf = null, reach = null, faces = [], undoStack = [], levelNo = 1, curBand = 0, viewBand = 0;
+var walking = null, anim = null, drag = null, won = false, stuck = false;
+var probe = document.createElement('div');
+probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;visibility:hidden;pointer-events:none;'
+  + 'padding:var(--sa-top) var(--sa-right) var(--sa-bottom) var(--sa-left);';
+document.body.appendChild(probe);
+function insets(){
+  var s = getComputedStyle(probe);
+  return {t:parseFloat(s.paddingTop)||0, r:parseFloat(s.paddingRight)||0,
+          b:parseFloat(s.paddingBottom)||0, l:parseFloat(s.paddingLeft)||0};
+}
+
+/* visualViewport is the honest number on a phone. window.innerHeight on iOS
+   Safari includes the strip the URL bar is sitting on, so the board was being
+   sized against space the player cannot actually see or touch. */
+function vpSize(){
+  var vv = window.visualViewport;
+  if(vv && vv.width > 0) return {w:Math.round(vv.width), h:Math.round(vv.height)};
+  return {w:window.innerWidth, h:window.innerHeight};
+}
+function fit(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  var vp = vpSize(); W = vp.w; H = vp.h;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  /* SETTING THE CANVAS SIZE RESETS EVERY BIT OF CONTEXT STATE, so this lives
+     here and nowhere else: without it a 16px block scaled up to a 40px tile
+     comes back through a bilinear filter as a smear, which is the one thing
+     a texture drawn at block resolution must never be. Rotate the phone and
+     it would silently come back on. */
+  ctx.imageSmoothingEnabled = false;
+  layout(); buildSky(); buildMotes(); shS = -1;
+}
+var S = 40, CX = 0, CY = 0;
+/* LAYOUT — MOBILE FIRST, AND THE BOARD ALWAYS FITS.
+
+   The board is square. A phone is not. So the width always binds and the
+   height always has slack, and the job of this function is to spend the
+   width completely and put the slack where a thumb wants it.
+
+   The previous version sized the attract cube at 1.12x of the smaller side,
+   which put 23-26 PIXELS OF BOARD OFF BOTH SCREEN EDGES on every phone
+   tested — and a tile you cannot see is a tile you cannot tap. Whatever else
+   changes here, `side` is clamped to both axes and that cannot regress
+   without the viewport suite failing.
+
+   The slack is then biased upward, so the gap under the board is larger than
+   the gap over it. That is not symmetry for its own sake: the bottom of a
+   phone is where the thumb lives and where the controls are, and a board
+   sitting dead-centre crowds them. */
+function layout(){
+  if(!N) return;
+  var ins = insets();
+  /* On the title screen the chrome owns a band at each end and the cube owns
+     the middle, so it is sized and centred against THAT band rather than the
+     whole plate — which is what stops the hero sitting under the buttons. */
+  var topBar = ins.t + (demo ? Math.round(H*0.26) : 54);
+  var botBar = ins.b + (demo ? Math.round(H*0.34) : 112);
+  var availW = W - ins.l - ins.r - (demo ? 8 : 12);
+  var availH = H - topBar - botBar;
+  var side = Math.max(60, Math.min(availW, demo ? availH*1.45 : availH));
+  S = side / N;
+  CX = ins.l + (W - ins.l - ins.r)/2;
+  CY = topBar + availH/2 - (demo ? 0 : Math.min(30, (availH - side)*0.14));
+}
+
+/* ---------- the render basis: M, bent by whatever turn is in progress ---- */
+function yawBasis(m, th){
+  var c = Math.cos(th), s = Math.sin(th);
+  return {R:[c*m.R[0]+s*m.F[0], c*m.R[1]+s*m.F[1], c*m.R[2]+s*m.F[2]],
+          U:m.U,
+          F:[c*m.F[0]-s*m.R[0], c*m.F[1]-s*m.R[1], c*m.F[2]-s*m.R[2]]};
+}
+function pitchBasis(m, th){
+  var c = Math.cos(th), s = Math.sin(th);
+  return {R:m.R,
+          U:[c*m.U[0]+s*m.F[0], c*m.U[1]+s*m.F[1], c*m.U[2]+s*m.F[2]],
+          F:[c*m.F[0]-s*m.U[0], c*m.F[1]-s*m.U[1], c*m.F[2]-s*m.U[2]]};
+}
+function liveAngle(){
+  if(anim) return {axis:anim.axis, ang:anim.ang};
+  if(drag && drag.axis) return {axis:drag.axis, ang:drag.ang};
+  if(demo && Math.abs(demoAng) > 1e-4) return {axis:demoAxis, ang:demoAng};
+  return null;
+}
+/* THE HERO POSE.
+
+   In play the camera is square to a face, because that is the surface the
+   puzzle is read on and it must not keystone. The attract screen has no such
+   duty: it should show the thing as an OBJECT, so it gets a real
+   three-quarter view — yaw turning forever, pitch parked where the top face
+   reads — and a fitted zoom rather than the play view's fixed one, because a
+   cube rotated about two axes at once sweeps a much bigger silhouette than
+   one rotated about a single axis.                                          */
+var HERO_PITCH = 0.50;
+function heroBasis(){
+  return pitchBasis(yawBasis(demoM, demoAng), HERO_PITCH);
+}
+/* Fit by measuring, not by trigonometry: project the eight corners and scale
+   to whatever box they actually came out as. Works for any pose, and cannot
+   drift out of step with the projection the way a closed form would. */
+function fitScale(m, boxW, boxH){
+  var h = N/2, mx = 0, my = 0;
+  for(var i = 0; i < 8; i++){
+    var x = (i&1?h:-h), y = (i&2?h:-h), z = (i&4?h:-h);
+    mx = Math.max(mx, Math.abs(m.R[0]*x + m.R[1]*y + m.R[2]*z));
+    my = Math.max(my, Math.abs(m.U[0]*x + m.U[1]*y + m.U[2]*z));
+  }
+  return Math.min(boxW / (2*mx*S), boxH / (2*my*S));
+}
+function baseBasis(){ return demo ? demoM : M; }
+function curSurf(){ return demo ? (demoSurf || surf) : surf; }
+function liveBasis(){
+  if(demo) return heroBasis();
+  var a = liveAngle(), B = baseBasis();
+  if(!a || Math.abs(a.ang) < 1e-4) return B;
+  return a.axis === 'x' ? yawBasis(B, a.ang) : pitchBasis(B, a.ang);
+}
+/* A square rotating about a screen axis projects (cos+sin) times as wide, so
+   pulling the camera back by exactly that keeps the cube inside the frame
+   through the whole turn instead of clipping at 45 degrees. */
+function liveZoom(){
+  /* the plinth sticks out past the cube and perspective enlarges whatever is
+     nearest, so the fit box is the cube's footprint less a margin for both */
+  if(demo) return fitScale(heroBasis(), N*S*0.74, N*S*0.74);
+  var a = liveAngle(); if(!a) return 1;
+  var t = Math.abs(a.ang);
+  return 1 / (Math.cos(t) + Math.sin(t));
+}
+
+/* ============================================================
+   LEVEL LOAD
+   ============================================================ */
+function loadLevel(level){
+  levelNo = Math.max(1, level|0);
+  var src = levelData(levelNo);
+  lv = {n:src.n, vox:src.vox.slice(), start:src.start, goal:src.goal,
+        keys:src.keys, doors:src.doors, par:src.par, name:levelName(levelNo)};
+  N = lv.n;
+  /* the tinted blocks are keyed on depth, and depth is read against N — a
+     cube of a different size means every one of them is the wrong colour */
+  texReset();
+  M = ORI_ID; pos = lv.start.slice(); kmask = 0; doors = 0; turns = 0; world = 0;
+  clearEff(lv); flip = null;
+  var k0 = keyIndexAt(lv, pos); if(k0 >= 0) kmask |= (1<<k0);
+  undoStack = []; walking = null; anim = null; drag = null; won = false; stuck = false;
+  var band = vaultOf(levelNo);
+  if(band !== curBand || !skyCv){ curBand = band; setStyle(band); }
+  buildFaces();
+  layout(); settle();
+  parts = []; flyers = []; exitFlash = 0; exitPull = -1; kickV.t = 1;
+  var sv = viewOf(N, M, pos);
+  startWave('in', sv[0], sv[1], 380);
+  revealT = -120;
+  ambience(band);
+  if(levelNo > store.reached){ store.reached = levelNo; save(); }
+  /* TEACH IT WHEN IT SHOWS UP, ONCE. Not in the manual four screens earlier,
+     not as a toast that has gone before it is read — on the cube that has one,
+     with the thing itself waiting behind the card. */
+  if(!store.sawPlate && (lv.vox.indexOf('A') >= 0 || lv.vox.indexOf('B') >= 0)){
+    store.sawPlate = 1; save();
+    setTimeout(function(){ if(!won && !walking && !anim) show('scPlate'); }, 260);
+  }
+  prebuild(levelNo + 1);            /* cut the next one while this one is played */
+}
+
+/* Jumping somewhere far from the cache costs a real mint, so say so rather
+   than dropping a frame and hoping. One paint, then the work. */
+function goLevel(level, thenShow){
+  if(level > BAKED.length && !mintCache[level]){
+    toast('cutting cube ' + level + '…');
+    show(null);
+    setTimeout(function(){ loadLevel(level); if(thenShow) thenShow(); }, 30);
+  } else { loadLevel(level); show(null); if(thenShow) thenShow(); }
+}
+
+/* Only faces with nothing next to them are ever drawn — the inside of the
+   cube is not visible from anywhere, and meshing it away is the difference
+   between 1300 quads a frame and 300 on the levels that need it. */
+var FACE_D = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+var FACE_Q = FACE_D.map(function(d){
+  var a = Math.abs(d[0]) === 1 ? [0,1,0] : [1,0,0];
+  var b = [d[1]*a[2]-d[2]*a[1], d[2]*a[0]-d[0]*a[2], d[0]*a[1]-d[1]*a[0]];
+  a = [b[1]*d[2]-b[2]*d[1], b[2]*d[0]-b[0]*d[2], b[0]*d[1]-b[1]*d[0]];
+  var q = [], sg = [[1,1],[-1,1],[-1,-1],[1,-1]];
+  for(var i = 0; i < 4; i++)
+    q.push([d[0]*0.5 + (a[0]*sg[i][0] + b[0]*sg[i][1])*0.5,
+            d[1]*0.5 + (a[1]*sg[i][0] + b[1]*sg[i][1])*0.5,
+            d[2]*0.5 + (a[2]*sg[i][0] + b[2]*sg[i][1])*0.5]);
+  return q;
+});
+function buildFaces(){
+  faces = [];
+  for(var y = 0; y < N; y++) for(var z = 0; z < N; z++) for(var x = 0; x < N; x++){
+    var t = lv.vox[vidx(N,x,y,z)];
+    if(t === '.') continue;
+    for(var f = 0; f < 6; f++){
+      var d = FACE_D[f], nx = x+d[0], ny = y+d[1], nz = z+d[2];
+      var out = nx < 0 || ny < 0 || nz < 0 || nx >= N || ny >= N || nz >= N;
+      if(out || lv.vox[vidx(N,nx,ny,nz)] === '.') faces.push({x:x, y:y, z:z, f:f, t:t});
+    }
+  }
+}
+
+/* recompute everything the projection decides, after any settled change */
+function settle(){
+  surf = project(N, effVox(lv, world), M);
+  computeReach();
+  refreshHud();
+}
+function computeReach(){
+  reach = new Uint8Array(N*N);
+  reachDist = new Uint8Array(N*N);
+  var v = viewOf(N, M, pos), q = [v[0]*N + v[1]];
+  reach[q[0]] = 1;
+  for(var i = 0; i < q.length; i++){
+    var u = (q[i]/N)|0, w = q[i] % N;
+    for(var t = 0; t < 4; t++){
+      var u2 = u + TURNS[t].dx, w2 = w + TURNS[t].dy;
+      if(u2 < 0 || w2 < 0 || u2 >= N || w2 >= N) continue;
+      var k = u2*N + w2;
+      if(reach[k]) continue;
+      if(!walkable(lv, surf, u2, w2, doors)) continue;
+      reach[k] = 1; reachDist[k] = Math.min(255, reachDist[q[i]] + 1); q.push(k);
+    }
+  }
+}
+function keysHeld(){ return popcnt(kmask) - popcnt(doors); }
+function popcnt(x){ var c = 0; while(x){ x &= x-1; c++; } return c; }
+
+/* ============================================================
+   RENDER
+   Two paths that agree exactly at rest.
+
+   SETTLED — the cube is square to the camera, so every side face has zero
+   projected area and the image IS a flat grid. Drawn as rects: crisper,
+   cheaper, and the state the player actually reads a puzzle in.
+
+   TURNING — the honest 3D solid, so a turn shows you what you are turning.
+   The moment it lands, the first path takes over mid-frame and nothing
+   moves, because both draw the same front faces from the same numbers.
+   ============================================================ */
+/* TWO RAMPS THAT MUST NEVER MEET.
+
+   Depth is drawn as brightness, and material is drawn as brightness too, and
+   the first build let those two jobs share a range: a near lump of bedrock
+   came out the same value as a far deck, so the board read as one grey mass
+   with the play surface hiding inside it. That is fatal here, because the
+   one question the player asks every frame is "may I stand there".
+
+   So each material gets its own band and the bands do not overlap. The
+   DARKEST deck is still brighter than the BRIGHTEST bedrock, and the two
+   ramps run in opposite temperatures. Depth then modulates freely inside a
+   band without ever being able to change what a tile IS. Every vault
+   repaints all four endpoints and this invariant is what they are chosen
+   against.                                                                */
+var ST = VAULTS[0];
+function rgbs(c){ return 'rgb(' + (c[0]|0) + ',' + (c[1]|0) + ',' + (c[2]|0) + ')'; }
+function mixc(a, b, t){
+  return 'rgb(' + Math.round(a[0]+(b[0]-a[0])*t) + ',' + Math.round(a[1]+(b[1]-a[1])*t) + ',' + Math.round(a[2]+(b[2]-a[2])*t) + ')';
+}
+function tileRGB(t, d, lightMul){
+  var near = Math.max(0, Math.min(1, d / Math.max(1, N-1)));
+  var lm = lightMul === undefined ? 1 : lightMul;
+  var a = t === '+' ? ST.dF : ST.rF, b = t === '+' ? ST.dN : ST.rN;
+  return [(a[0] + (b[0]-a[0])*near) * lm,
+          (a[1] + (b[1]-a[1])*near) * lm,
+          (a[2] + (b[2]-a[2])*near) * lm];
+}
+function tileFill(t, d, lightMul){ return rgbs(tileRGB(t, d, lightMul)); }
+
+/* ============================================================
+   THE MATERIAL — every block is a 16x16 texture, and every texture is a
+   set of MULTIPLIERS rather than colours.
+
+   A texture carrying its own colours would be a second palette, and this
+   board is read off exactly one: deck brighter than bedrock, near brighter
+   than far, and nothing else. So a texture never says what colour a block
+   is. It says how much lighter or darker each of its 256 texels is than the
+   colour the palette already chose for that material at that depth. Change
+   vault and every block in the cube restyles itself for free, the depth
+   ramp still runs, and the bands cannot drift — because TEX_LO/TEX_HI are
+   hard clamps and enforceBands was built against them.
+
+   16x16 is not nostalgia. It is the resolution at which a stone reads as a
+   stone and a plank reads as a plank at forty screen pixels, and it is the
+   grid the eye already reads as "block".
+
+   THE FLAT BOARD IS A VOXEL FIELD SEEN DOWN ITS OWN AXIS. That was always
+   true — project() collapses a cube of cells to one square of surfaces —
+   but flat fills let it read as a chart of coloured squares. A block face
+   with mortar in it, a bevel at its edge and a neighbour that does not
+   match reads as what it is: the front of a cube, with more cube behind it.
+   ============================================================ */
+var TEXN = 16;
+function texNew(v){
+  var a = new Float32Array(TEXN*TEXN);
+  if(v) for(var i = 0; i < a.length; i++) a[i] = v;
+  return a;
+}
+function tmul(a, x, y, v){ a[(y & 15)*TEXN + (x & 15)] *= v; }
+/* a stable per-cell shade, so brick 3 of a wall is always brick 3 */
+function cellShade(k){ return 0.94 + (((k * 2654435761) >>> 24) % 100) / 100 * 0.15; }
+
+/* COURSED BLOCKS — stone brick. Four 8x8 blocks to a face, one texel of
+   mortar between them, each block lit along its top-left and shaded along
+   its bottom-right. The regularity is the point: a laid floor is a made
+   thing, and a made thing is a thing you are meant to walk on. */
+function patBricks(rng, bw, bh, stagger){
+  var a = texNew(1), x, y;
+  for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++){
+    var row = Math.floor(y / bh), off = stagger ? row * (bw >> 1) : 0;
+    var lx = (x + off) % bw, ly = y % bh, col = Math.floor((x + off) / bw);
+    var v = cellShade(row*7 + col*13 + 3) + (rng()-0.5)*0.05;
+    if(lx === 0 || ly === 0) v *= 0.80;                     /* the mortar course */
+    else if(lx === 1 || ly === 1) v *= 1.06;                /* the block's lit lip */
+    else if(lx === bw-1 || ly === bh-1) v *= 0.92;
+    a[y*TEXN + x] = v;
+  }
+  return a;
+}
+
+/* RUBBLE — cobblestone, and the honest way to draw it is to grow it. Sites
+   scattered on a torus, every texel taking the shade of the nearest, and the
+   seam between two stones darkened by how close the contest was. Wrapping
+   the distance means the texture tiles, which matters the moment two blocks
+   of it sit edge to edge. */
+function patCobble(rng, sites, rough){
+  var pts = [], i, x, y;
+  for(i = 0; i < sites; i++) pts.push([rng()*TEXN, rng()*TEXN, 0.86 + rng()*0.26]);
+  var a = texNew(1);
+  for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++){
+    var b1 = 1e9, b2 = 1e9, bi = 0;
+    for(i = 0; i < sites; i++){
+      var dx = Math.abs(x + 0.5 - pts[i][0]); if(dx > TEXN/2) dx = TEXN - dx;
+      var dy = Math.abs(y + 0.5 - pts[i][1]); if(dy > TEXN/2) dy = TEXN - dy;
+      var d = dx*dx + dy*dy;
+      if(d < b1){ b2 = b1; b1 = d; bi = i; } else if(d < b2) b2 = d;
+    }
+    var edge = Math.sqrt(b2) - Math.sqrt(b1), v = pts[bi][2];
+    if(edge < 1.2) v *= 0.58 + 0.35*edge;                   /* the gap between stones */
+    else if(edge < 2.0) v *= 1.05;                          /* and the stone's own shoulder */
+    a[y*TEXN + x] = v + (rng()-0.5)*rough;
+  }
+  return a;
+}
+
+/* BOARDS — four planks to a face, sawn ends staggered so the grain never
+   lines up across the seam. */
+function patPlanks(rng){
+  var a = texNew(1), x, y, ph = 4;
+  for(y = 0; y < TEXN; y++){
+    var row = Math.floor(y / ph), ly = y % ph, base = cellShade(row*29 + 11);
+    var grain = 1 + (((row * 2654435761) >>> 27) % 3);      /* which line in this board has the grain */
+    for(x = 0; x < TEXN; x++){
+      var v = base + (rng()-0.5)*0.035;
+      if(ly === 0) v *= 0.70;                               /* the seam between boards */
+      else if(ly === 1) v *= 1.07;                          /* the next board's lit top */
+      else if(ly === grain) v *= 0.93 + 0.05*Math.sin(x*1.3 + row*2.1);
+      if(ly > 0){
+        var end = (x + row*5) % 8;
+        if(end === 0) v *= 0.74;                            /* the sawn end */
+        else if(end === 1) v *= 1.05;
+      }
+      a[y*TEXN + x] = v;
+    }
+  }
+  return a;
+}
+
+/* CUT STONE — four polished slabs to a face, scribed rather than mortared,
+   close-grained and the quietest of the three, so a vault built out of it
+   reads as a smooth place rather than a rough one. */
+function patSmooth(rng){
+  var a = texNew(1), x, y;
+  for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++){
+    var v = 1 + Math.sin(y*0.85 + Math.sin(x*0.4)*0.7)*0.03 + (rng()-0.5)*0.04;
+    if(x === 8 || y === 8) v *= 0.86;                       /* the scribed joint */
+    else if(x === 9 || y === 9) v *= 1.05;                  /* and the lip past it */
+    a[y*TEXN + x] = v;
+  }
+  return a;
+}
+
+/* SHOT ROCK — unworked stone with something in it. Speckle, not structure:
+   the material you cannot stand on should never look laid. */
+function patOre(rng){
+  var a = texNew(1), i, x, y;
+  for(y = 0; y < TEXN; y++) for(x = 0; x < TEXN; x++)
+    a[y*TEXN + x] = 1 + Math.sin(x*0.7 + Math.cos(y*0.5)*1.7)*0.055
+                      + Math.sin(y*0.9 + 1.3)*0.04 + (rng()-0.5)*0.09;
+  for(i = 0; i < 18; i++){
+    var cx = (rng()*TEXN)|0, cy = (rng()*TEXN)|0, br = rng() < 0.45 ? 1.12 : 0.64;
+    tmul(a, cx, cy, br); tmul(a, cx+1, cy, br);
+    tmul(a, cx, cy+1, (br + 1)/2); tmul(a, cx+1, cy+1, (br + 1)/2);
+  }
+  return a;
+}
+
+/* A VAULT OWNS A MATERIAL, the same way it already owns a palette. Ten
+   cubes of stone brick over cobble, then ten of boards over gravel, then
+   ten of cut slab over shot rock — and past the authored vaults it keeps
+   cycling, so vault ninety is built out of something nobody chose and
+   nobody has seen either. Deck and bedrock are never drawn from the same
+   generator, because "is this laid or is this raw" is the second channel
+   the material read runs on after brightness. */
+var TEX_KITS = [
+  {deck:function(r){ return patBricks(r, 8, 4, 1); }, rock:function(r){ return patCobble(r, 8, 0.06); }},
+  {deck:patPlanks,                                    rock:function(r){ return patCobble(r, 15, 0.11); }},
+  {deck:patSmooth,                                    rock:patOre}
+];
+
+/* THE EDGE, AND THE CLAMP.
+   The bevel is what makes a grid of these read as a field of cubes rather
+   than as wallpaper: light along the top and left, shade along the bottom
+   and right, one texel each, on every block whatever it is made of. Then
+   every texel is clamped into the range enforceBands was promised, which is
+   the last line of defence for the whole board's legibility. */
+function finishTex(a, t){
+  var lo = TEX_LO[t], hi = TEX_HI[t], i;
+  for(i = 0; i < TEXN; i++){
+    tmul(a, i, 0, 1.07); tmul(a, i, TEXN-1, 0.89);
+    tmul(a, 0, i, 1.05); tmul(a, TEXN-1, i, 0.90);
+  }
+  for(i = 0; i < a.length; i++) a[i] = a[i] < lo ? lo : (a[i] > hi ? hi : a[i]);
+  return a;
+}
+
+/* THE TINTED CACHE.
+   A texture is a shape; a block on screen is that shape times a colour, and
+   the colour is (material, depth, how the light hits it). Depth is quantised
+   to half a cell and light to twentieths — fine enough that a turning cube
+   shades smoothly, coarse enough that the whole cube costs a few dozen
+   16x16 canvases. They are built on demand and thrown away whenever the
+   palette, the material or the cube's size changes underneath them. */
+var TEXPAT = {'+':null, '#':null}, texCache = {}, texCount = 0, TEX_LIT = 20;
+function texReset(){ texCache = {}; texCount = 0; }
+function buildPats(band){
+  var kit = TEX_KITS[((band % TEX_KITS.length) + TEX_KITS.length) % TEX_KITS.length];
+  TEXPAT['+'] = finishTex(kit.deck(mulberry32(0xB10C ^ (band*2654435761))), '+');
+  TEXPAT['#'] = finishTex(kit.rock(mulberry32(0xC0BB ^ (band*40503))), '#');
+  texReset();
+}
+function texFor(t, d, lit){
+  var mt = isWalkType(t) ? '+' : '#';
+  var dq = Math.max(0, Math.min((N-1)*2, Math.round(d*2)));
+  var lq = lit === undefined ? TEX_LIT : Math.max(0, Math.min(TEX_LIT, Math.round(lit*TEX_LIT)));
+  var key = mt + dq + '_' + lq, c = texCache[key];
+  if(c) return c;
+  /* One cube's worth is a few hundred of these, and the cache is thrown away
+     on every level and every vault anyway — this is only the backstop, set
+     well clear of what a single cube can ask for so it never fires in the
+     middle of a turn. */
+  if(texCount > 2000) texReset();
+  var pat = TEXPAT[mt], base = tileRGB(mt, dq/2, lq/TEX_LIT);
+  c = document.createElement('canvas'); c.width = c.height = TEXN;
+  var g = c.getContext('2d'), id = g.createImageData(TEXN, TEXN), i, m, o;
+  for(i = 0; i < TEXN*TEXN; i++){
+    m = pat[i]; o = i*4;
+    id.data[o]   = Math.min(255, base[0]*m);
+    id.data[o+1] = Math.min(255, base[1]*m);
+    id.data[o+2] = Math.min(255, base[2]*m);
+    id.data[o+3] = 255;
+  }
+  g.putImageData(id, 0, 0);
+  texCount++;
+  return (texCache[key] = c);
+}
+/* One block, face on. Half a pixel of overdraw on each side, exactly as the
+   flat fills had, so no hairline of void can open between two neighbours. */
+function drawBlock(t, d, x, y, w, h, lit){
+  ctx.drawImage(texFor(t, d, lit), x, y, w, h);
+}
+
+/* One block, turning. Under this projection a face is a parallelogram, so
+   the texture goes on with a plain affine map built from three of its four
+   corners — no per-texel work, no mesh, one drawImage. The clip is what
+   pays for the perspective term: with it on, the quad's fourth corner is
+   allowed to disagree with the parallelogram by a fraction of a pixel and
+   nothing bleeds onto the block next door. */
+function texQuad(pts, tex){
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(pts[0], pts[1]); ctx.lineTo(pts[2], pts[3]);
+  ctx.lineTo(pts[4], pts[5]); ctx.lineTo(pts[6], pts[7]);
+  ctx.closePath(); ctx.clip();
+  ctx.transform((pts[2]-pts[0])/TEXN, (pts[3]-pts[1])/TEXN,
+                (pts[6]-pts[0])/TEXN, (pts[7]-pts[1])/TEXN, pts[0], pts[1]);
+  ctx.drawImage(tex, 0, 0);
+  ctx.restore();
+}
+/* WHAT A SLOW DEVICE IS ALLOWED TO DROP.
+
+   Texturing the turning solid costs a clip and a transform per face, and a
+   seven-cube can put six hundred faces on screen. On this machine that is
+   about a millisecond; on a five-year-old WebView it is not, and a turn that
+   stutters is worse than a turn drawn in flat colour — the turn is the verb.
+
+   So the gate is not a constant. Faces smaller than it keep the flat fill
+   they were always drawn with, and the gate walks up whenever the solid path
+   overruns its share of the frame and back down when it stops. A slow phone
+   loses the texture on the smallest, most oblique faces first, which are the
+   ones carrying the least information, and keeps its frame rate. Nothing
+   about it is visible on a device that can afford the detail.              */
+var TEX_GATE_MIN = 130, texGate = TEX_GATE_MIN;
+function nowMs(){ return (window.performance && performance.now) ? performance.now() : 0; }
+/* twice the triangle area, unsigned — the gate that stops a face which is
+   three pixels across from paying for a clip nobody can see */
+function quadArea(p){
+  return Math.abs((p[2]-p[0])*(p[7]-p[1]) - (p[6]-p[0])*(p[3]-p[1]))
+       + Math.abs((p[4]-p[2])*(p[7]-p[3]) - (p[6]-p[2])*(p[5]-p[3]));
+}
+
+/* A SPRITE IS DRAWN THE SAME WAY THE WORLD IS: one character per texel, on
+   the same 16 grid a block is cut on. An object lying on the deck that was
+   drawn with curves would announce itself as belonging to a different game
+   than the deck it is lying on. */
+function pixSprite(rows, map){
+  var c = document.createElement('canvas');
+  c.width = rows[0].length; c.height = rows.length;
+  var g = c.getContext('2d');
+  for(var y = 0; y < rows.length; y++) for(var x = 0; x < rows[y].length; x++){
+    var col = map[rows[y].charAt(x)];
+    if(col){ g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+  }
+  return c;
+}
+/* Quarried stone, not slate — and lighter than any vault plays in, because
+   the hero is lit from behind and every side face is already losing most of
+   its value to the shading term before the depth fade touches it. */
+var HERO_STYLE = enforceBands({name:'HERO',
+  dF:[150,126,96], dN:[250,241,222], rF:[46,39,38], rN:[116,104,100],
+  vd:[10,8,13], st:[255,198,150], at:[255,150,60]});
+function setStyle(band){
+  ST = demo ? HERO_STYLE : vaultStyle(band);
+  buildPats(band);
+  var r = document.documentElement.style;
+  r.setProperty('--void', rgbs(ST.vd));
+  r.setProperty('--void-2', rgbs([ST.vd[0]+8, ST.vd[1]+7, ST.vd[2]+10]));
+  r.setProperty('--void-3', rgbs([ST.vd[0]+17, ST.vd[1]+15, ST.vd[2]+22]));
+  buildSky();
+}
+
+/* ---------- THE SKY -------------------------------------------------------
+   The void columns are not decoration and they are not black by accident:
+   they are the one place you are looking THROUGH the cube, and they should
+   read as distance rather than as a hole in the picture. So there is a real
+   starfield behind everything, painted once per vault and parallaxed off the
+   view basis — turn the cube and the stars slide, which is the cheapest
+   possible way of saying "the thing that moved was the world".              */
+var skyCv = null, PAD = 26;
+function buildSky(){
+  if(!W || !H) return;
+  skyCv = document.createElement('canvas');
+  skyCv.width = Math.round((W + PAD*2) * DPR); skyCv.height = Math.round((H + PAD*2) * DPR);
+  var c = skyCv.getContext('2d');
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  var rng = mulberry32(0x5EED ^ (curBand * 2654435761));
+  var g = c.createRadialGradient(W/2+PAD, H*0.42+PAD, 0, W/2+PAD, H*0.42+PAD, Math.max(W,H)*0.72);
+  g.addColorStop(0, 'rgba(' + (ST.at[0]|0) + ',' + (ST.at[1]|0) + ',' + (ST.at[2]|0) + ',0.13)');
+  g.addColorStop(1, 'rgba(' + (ST.at[0]|0) + ',' + (ST.at[1]|0) + ',' + (ST.at[2]|0) + ',0)');
+  c.fillStyle = g; c.fillRect(0, 0, W+PAD*2, H+PAD*2);
+  for(var i = 0; i < 190; i++){
+    var x = rng()*(W+PAD*2), y = rng()*(H+PAD*2);
+    var r = rng()*rng()*1.7 + 0.32, a = 0.12 + rng()*rng()*0.7;
+    c.globalAlpha = a;
+    c.fillStyle = rgbs(ST.st);
+    c.beginPath(); c.arc(x, y, r, 0, 6.284); c.fill();
+    if(r > 1.3){ c.globalAlpha = a*0.28; c.beginPath(); c.arc(x, y, r*3.2, 0, 6.284); c.fill(); }
+  }
+}
+
+/* ---------- GRAIN, AND WHY IT IS GONE ------------------------------------
+   There was a 64px noise tile overlaid on every tile here, because a flat
+   fill reads as plastic and the same fill with a whisper of grain reads as
+   stone. The blocks carry their own grain now, at their own resolution and
+   inside the clamps the band guarantee is built on — and a 64px noise
+   pattern sitting on top of a 16px block texture is just a filter smearing
+   the pixels the material is made of. One overlay pass per tile, deleted.
+                                                                            */
+
+/* ---------- THE DROPS -----------------------------------------------------
+   Where two neighbouring columns sit at different depths, the nearer one
+   casts onto the farther one. This is the single most useful thing added to
+   the resting board: it is honest (the light is at the camera, so that
+   shadow is real), it turns a flat grid into a relief you can read at a
+   glance, and it puts a visible price on exactly the adjacencies that are
+   lying to you about distance.                                              */
+var shGrad = null, shS = -1;
+function buildDrops(){
+  if(shS === S) return;
+  shS = S; shGrad = [];
+  var reach = S*0.42, defs = [[0,0,reach,0],[S,0,S-reach,0],[0,0,0,reach],[0,S,0,S-reach]];
+  for(var i = 0; i < 4; i++){
+    var d = defs[i], g = ctx.createLinearGradient(d[0], d[1], d[2], d[3]);
+    /* Reaches 42% of the tile and no further, so the CENTRE of every tile
+       always shows its true material undarkened. That is not a nicety: the
+       whole board is read off "is this brighter than bedrock can be", and a
+       shadow deep enough to push a deck under that line would be the
+       renderer lying about the rules. */
+    g.addColorStop(0, 'rgba(0,0,0,0.45)'); g.addColorStop(0.55, 'rgba(0,0,0,0.13)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    shGrad.push(g);
+  }
+}
+
+/* ============================================================
+   JUICE — what each moment is supposed to feel like
+
+   Every beat in this game is one of five things, and each gets built toward
+   a specific sensation rather than "add particles":
+
+     a STEP    purposeful, weighted. Not a cursor moving.
+     a DRAG    heavy. You are turning a stone vault, and it resists.
+     a LANDING a mechanism seating. The single most important feel in the
+               game, because it is the verb — so it overshoots, kicks the
+               camera along its own axis, shakes dust off the whole cube, and
+               sweeps the newly-reachable set alight.
+     a REFUSAL immediate and physical. The cube tries and slams back.
+     the EXIT  earned. The board comes apart toward you.
+
+   Nothing here is allowed to make the player wait. Every transition is
+   under 420ms and none of them gate input that could have been taken.
+   ============================================================ */
+
+/* ============================================================
+   THE WORDMARK — built out of the same thing the game is built out of
+
+   The title was type in a system font with letter-spacing on it, which is a
+   fine way to label a screen and a poor way to open a game about stone
+   cubes. It is now cut from blocks: a 5x7 bitmap per letter, every lit cell
+   extruded toward the viewer with a lit top face, a shaded right face and a
+   bevel, so the word is made of the same material as the thing behind it.
+
+   Drawn once into an offscreen canvas at boot and handed to an <img>, so it
+   costs one canvas and zero frames — and it lives in the DOM, which means it
+   scales with the layout and sits above the glass instead of behind it.
+   ============================================================ */
+var GLYPH6 = {
+  T:['111111','111111','001100','001100','001100','001100','001100'],
+  U:['110011','110011','110011','110011','110011','111111','011110'],
+  R:['111110','110011','110011','111110','110110','110011','110011'],
+  N:['110011','111011','111011','110111','110111','110011','110011'],
+  K:['110011','110110','111100','111000','111100','110110','110011'],
+  E:['111111','110000','110000','111110','110000','110000','111111'],
+  Y:['110011','110011','011110','001100','001100','001100','001100']
+};
+function buildWordmark(word, cell){
+  var cols = [], i, j;
+  for(i = 0; i < word.length; i++){
+    var g = GLYPH6[word[i]];
+    for(j = 0; j < 6; j++){
+      var col = [];
+      for(var r = 0; r < 7; r++) col.push(g[r][j] === '1');
+      cols.push(col);
+    }
+    if(i < word.length-1) cols.push(null);
+  }
+  var W0 = cols.length, H0 = 7;
+  var dep = Math.round(cell*0.55), pad = Math.round(cell*1.2);
+  var cv = document.createElement('canvas');
+  cv.width  = W0*cell + dep + pad*2;
+  cv.height = H0*cell + dep + pad*2;
+  var c = cv.getContext('2d');
+  function on(x,y){ return x>=0 && y>=0 && x<W0 && y<H0 && cols[x] && cols[x][y]; }
+  function eachCell(fn){
+    for(var y=0;y<H0;y++) for(var x=0;x<W0;x++) if(on(x,y)) fn(x,y, pad + x*cell, pad + y*cell);
+  }
+  /* THE EXTRUSION, the blunt way and therefore the right way: stamp the whole
+     silhouette once per pixel of depth, back to front. Building it face by
+     face needs the neighbour logic to be perfect on every edge and diagonal,
+     and when it is not the letters come out looking smeared rather than
+     solid. Nine stamps of a flat shape cannot have a seam. */
+  for(var d = dep; d >= 1; d--){
+    var k = d/dep;
+    c.fillStyle = 'rgb(' + Math.round(52+34*(1-k)) + ',' + Math.round(46+30*(1-k)) + ',' + Math.round(38+26*(1-k)) + ')';
+    eachCell(function(x,y,px,py){ c.fillRect(px+d, py+d, cell, cell); });
+  }
+  /* the front plate, one block at a time, each with its own bevel so the
+     wordmark is made of the same masonry as the cube */
+  eachCell(function(x,y,px,py){
+    var g2 = c.createLinearGradient(px, py, px, py+cell);
+    g2.addColorStop(0, '#fdf9ef'); g2.addColorStop(1, '#d9cfb8');
+    c.fillStyle = g2; c.fillRect(px, py, cell, cell);
+    var lw = Math.max(1.5, cell*0.09);
+    c.lineWidth = lw;
+    c.strokeStyle = 'rgba(255,255,255,.75)';
+    c.beginPath(); c.moveTo(px+lw/2, py+cell); c.lineTo(px+lw/2, py+lw/2); c.lineTo(px+cell, py+lw/2); c.stroke();
+    c.strokeStyle = 'rgba(70,56,38,.34)';
+    c.beginPath(); c.moveTo(px+cell-lw/2, py); c.lineTo(px+cell-lw/2, py+cell-lw/2); c.lineTo(px, py+cell-lw/2); c.stroke();
+    /* mortar: a hairline around every block, so 5000 of them still read as
+       individual stones at thumbnail size */
+    c.strokeStyle = 'rgba(40,32,22,.22)'; c.lineWidth = 1;
+    c.strokeRect(px+.5, py+.5, cell-1, cell-1);
+  });
+  /* one lit stone, in the U, because a wordmark cut from rock should have
+     something alive in it — the same amber as the light inside the vault */
+  var lx = pad + 7*cell + cell*0.5, ly = pad + 1*cell + cell*0.5;
+  var lg = c.createRadialGradient(lx, ly, 0, lx, ly, cell*1.25);
+  lg.addColorStop(0, 'rgba(255,178,80,.95)'); lg.addColorStop(1, 'rgba(255,150,60,0)');
+  c.fillStyle = lg; c.fillRect(lx-cell*1.25, ly-cell*1.25, cell*2.5, cell*2.5);
+  var ig = c.createLinearGradient(lx-cell*0.5, ly-cell*0.5, lx+cell*0.5, ly+cell*0.5);
+  ig.addColorStop(0, '#ffd79a'); ig.addColorStop(1, '#ff9a2e');
+  c.fillStyle = ig; c.fillRect(lx-cell*0.5, ly-cell*0.5, cell, cell);
+  return cv;
+}
+
+/* ---------- THE ATTRACT CUBE ----------------------------------------------
+   The title screen used to be type on a gradient. It is now type over the
+   actual game engine, tumbling a real cube slowly and forever behind the
+   glass. It costs nothing — the renderer already exists and the menus were
+   drawing nothing at all — and it means the first thing anyone sees is the
+   one idea the game has. */
+/* IT GETS ITS OWN BASIS, AND THAT IS NOT A STYLE CHOICE.
+
+   The attract cube used to tumble by rotating M — the real game basis — while
+   `pos` stayed put at the level's opening cell. Leaving the title screen then
+   dropped you into a live level standing INSIDE THE ROCK: your cell was no
+   longer the surface of its column, so the lit reachable set was stale, turn
+   legality was computed from a position that did not exist, and the cube was
+   unwinnable. Every first-time player hit it, because BEGIN -> GOT IT was the
+   only way in.
+
+   So the demo now owns demoM and demoSurf and cannot reach the rules at all.
+   The renderer reads whichever is live; nothing else ever sees demoM.        */
+var demo = false, demoM = ORI_ID, demoSurf = null;
+var demoAxis = 'x', demoAng = 0, demoDir = 1, demoWait = 0, demoT = 0;
+function demoStart(){
+  demoM = ORI_ID; demoAng = 0; demoWait = 260; demoT = 0;
+  demoAxis = 'x'; demoDir = 1;
+  if(lv) demoSurf = project(N, lv.vox, demoM);
+}
+function stepDemo(dt){
+  if(!demo || !lv) return;
+  demoT += dt;
+  /* it never rests square to the camera. A cube parked flat is a grid, and
+     the one thing the title screen has to say is "this is a solid". */
+  /* one direction, forever, slowly — an object on a turntable rather than a
+     puzzle being solved */
+  demoAng += dt / 9000 * Math.PI/2;
+  if(Math.abs(demoAng) >= Math.PI/2){
+    demoM = TURNS[demoAxis === 'x' ? (demoDir > 0 ? 1 : 0) : (demoDir > 0 ? 2 : 3)].f(demoM);
+    demoAng = 0; demoWait = 420;
+    demoAxis = Math.random() < 0.62 ? 'x' : 'y';
+    demoDir = Math.random() < 0.5 ? 1 : -1;
+    demoSurf = project(N, lv.vox, demoM);
+  }
+}
+
+/* ---------- CAMERA KICK ---------------------------------------------------
+   Directional, not random: a turn about the screen-up axis kicks sideways,
+   a turn about screen-right kicks vertically, so the shake tells you which
+   way the mass went. Decays as a damped sine, which reads as a mechanism
+   settling rather than an earthquake. Only the BOARD moves — the HUD is DOM
+   and stays nailed down, which is what keeps it legible mid-impact. */
+var kickV = {x:0, y:0, t:1, dur:1, mag:0};
+function kick(mag, dx, dy){
+  kickV.mag = mag; kickV.x = dx; kickV.y = dy; kickV.t = 0; kickV.dur = 380;
+}
+function kickOffset(){
+  if(kickV.t >= 1) return null;
+  var p = kickV.t, damp = Math.pow(1 - p, 2.2), w = Math.sin(p * Math.PI * 5.5) * damp;
+  return [kickV.x * kickV.mag * w, kickV.y * kickV.mag * w];
+}
+
+/* ---------- PARTICLES -----------------------------------------------------
+   One pool, additive, capped. Dust off a footfall, grit shaken loose by a
+   turn, sparks off a latch. They exist to make the board feel like it has
+   mass and dirt on it, so they are always small, always short, and never
+   drawn over the play surface densely enough to hide a tile. */
+var parts = [], PART_CAP = 220;
+function burst(x, y, n, o){
+  o = o || {};
+  for(var i = 0; i < n && parts.length < PART_CAP; i++){
+    var a = o.ang === undefined ? Math.random()*6.284 : o.ang + (Math.random()-0.5)*(o.spread||6.284);
+    var sp = (o.spd || 40) * (0.35 + Math.random()*0.9);
+    parts.push({x:x, y:y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - (o.lift||0),
+                life:0, max:(o.life||500)*(0.6+Math.random()*0.7),
+                r:(o.r||2)*(0.5+Math.random()), col:o.col || '233,225,209',
+                g:(o.g === undefined ? 42 : o.g), fade:o.fade||1});
+  }
+}
+function stepParts(dt){
+  var k = dt/1000;
+  for(var i = parts.length-1; i >= 0; i--){
+    var p = parts[i];
+    p.life += dt;
+    if(p.life >= p.max){ parts.splice(i,1); continue; }
+    p.x += p.vx*k; p.y += p.vy*k; p.vy += p.g*k; p.vx *= 0.985; p.vy *= 0.985;
+  }
+}
+function drawParts(){
+  if(!parts.length) return;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for(var i = 0; i < parts.length; i++){
+    var p = parts[i], t = 1 - p.life/p.max;
+    ctx.globalAlpha = Math.max(0, t*t*p.fade);
+    ctx.fillStyle = 'rgb(' + p.col + ')';
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*(0.4+t*0.6), 0, 6.284); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------- THE TILE WAVE -------------------------------------------------
+   One mechanism serving both ends of a level. Entering, the board assembles
+   outward from where you are standing; clearing it, the board comes apart
+   outward from the door you just walked through. Same code, sign flipped —
+   which is why arriving and leaving feel like the same place doing the same
+   thing in opposite directions. */
+var wave = null;
+function startWave(mode, fu, fv, dur){
+  wave = {mode:mode, fu:fu, fv:fv, t:0, dur:dur || 430, stagger:34, rise:170};
+}
+function tilePhase(u, v){
+  if(!wave) return 1;
+  var d = Math.sqrt((u-wave.fu)*(u-wave.fu) + (v-wave.fv)*(v-wave.fv));
+  var t = (wave.t - d*wave.stagger) / wave.rise;
+  t = Math.max(0, Math.min(1, t));
+  t = t*t*(3-2*t);
+  return wave.mode === 'in' ? t : 1 - t;
+}
+function stepWave(dt){
+  if(!wave) return;
+  wave.t += dt;
+  if(wave.t > wave.dur + N*wave.stagger + wave.rise) wave = null;
+}
+
+/* ---------- THE KEY GOES SOMEWHERE ----------------------------------------
+   A key that vanishes on pickup is a number changing. A key that flies to
+   the counter and makes it flinch is an object being put in a pocket, and
+   the player never has to look for where the count lives again. */
+var flyers = [];
+function flyKey(){
+  var pv = viewOf(N, M, pos), pr = tileRect(pv[0], pv[1]);
+  var pill = $('keyPill'), r = pill.getBoundingClientRect();
+  flyers.push({x0:pr[0]+S/2, y0:pr[1]+S/2, x1:r.left+r.width*0.32, y1:r.top+r.height/2, t:0, dur:380});
+}
+function stepFlyers(dt){
+  for(var i = flyers.length-1; i >= 0; i--){
+    var f = flyers[i];
+    f.t += dt;
+    if(f.t >= f.dur){
+      flyers.splice(i,1);
+      var p = $('keyPill'); p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop');
+      sfx.keyIn();
+      var r = p.getBoundingClientRect();
+      burst(r.left+r.width*0.32, r.top+r.height/2, 10, {spd:70, life:380, r:1.8, col:'255,196,77', g:0});
+    }
+  }
+}
+function drawFlyers(){
+  for(var i = 0; i < flyers.length; i++){
+    var f = flyers[i], p = f.t/f.dur, e = p*p*(3-2*p);
+    var x = f.x0 + (f.x1-f.x0)*e, y = f.y0 + (f.y1-f.y0)*e - Math.sin(p*Math.PI)*70;
+    halo(x, y, 24, '255,196,77', 0.5*(1-p*0.5));
+    ctx.save(); ctx.fillStyle = '#ffc44d';
+    ctx.beginPath(); ctx.arc(x, y, 5*(1-p*0.35), 0, 6.284); ctx.fill(); ctx.restore();
+  }
+}
+
+/* ---------- THE FLIP ------------------------------------------------------
+   The plate is the only thing in the game that changes the BOARD rather than
+   your view of it, so it cannot be a state swap and a toast. The old
+   material has to be seen leaving.
+
+   So the change propagates outward from the plate at a fixed speed, and each
+   tile crosses over as the front reaches it: the old material shrinking out,
+   the new one growing in behind. For a second and a half you are looking at
+   two worlds at once with a lit seam running between them, and the seam
+   starts under your own feet. It reuses the level-entry wave's geometry
+   wholesale — same distance-staggered phase, different payload.            */
+var PLATE_COL = {1:'168,107,255', 2:'111,214,255'};
+var PLATE_NAME = {1:'INVERT', 2:'DRAIN'};
+var flip = null;
+function firePlate(bit, cx, cy){
+  var v = viewOf(N, M, pos);
+  var old = surf;
+  world ^= bit;
+  clearEff(lv);
+  surf = project(N, effVox(lv, world), M);
+  flip = {t:0, fu:v[0], fv:v[1], old:old, col:PLATE_COL[bit], dur:520, stagger:30, rise:150};
+  computeReach(); refreshHud();
+  revealT = -260;                       /* the reachable sweep follows the front */
+  kick(13, 0, 1);
+  impact = 1;
+  sfx.plate(bit); buzz(34);
+  burst(cx, cy, 26, {spd:150, life:760, r:2.6, col:PLATE_COL[bit], g:0});
+  burst(cx, cy, 12, {spd:52, life:1000, r:3.6, col:'240,240,255', g:-16});
+  toast(world ? (PLATE_NAME[bit] + ' — the cube is a different place') : 'restored');
+}
+function stepFlip(dt){
+  if(!flip) return;
+  flip.t += dt;
+  if(flip.t > flip.dur + N*flip.stagger + flip.rise) flip = null;
+}
+function flipPhase(u, v){
+  if(!flip) return 1;
+  var d = Math.sqrt((u-flip.fu)*(u-flip.fu) + (v-flip.fv)*(v-flip.fv));
+  var t = (flip.t - d*flip.stagger) / flip.rise;
+  t = Math.max(0, Math.min(1, t));
+  return t*t*(3-2*t);
+}
+
+/* ---------- THE REVEAL ----------------------------------------------------
+   After every turn the lit reachable set sweeps outward from the player in
+   BFS order rather than snapping on. It is the prettiest thing on screen and
+   it is also the most useful: the sweep IS the connectivity graph being
+   traced, so the player watches the answer to "what did that turn buy me"
+   get drawn one tile at a time. Juice and teaching, same effect. */
+var revealT = 999, reachDist = null;
+
+/* ---------- DUST + IMPACT -------------------------------------------------
+   Forty motes so the void is not a still image, and one white flash on the
+   cage when a turn lands so the detent you can hear has something to look
+   at. Both are pure feel and both are nearly free.                          */
+var motes = [], impact = 0, exitFlash = 0, exitPull = -1;
+function buildMotes(){
+  motes = [];
+  var rng = mulberry32(4242);
+  for(var i = 0; i < 40; i++)
+    motes.push({x:rng()*W, y:rng()*H, r:rng()*1.5+0.4, a:0.05+rng()*0.16,
+                vx:(rng()-0.5)*5, vy:-2 - rng()*7});
+}
+function stepMotes(dt){
+  var k = dt/1000;
+  for(var i = 0; i < motes.length; i++){
+    var m = motes[i];
+    m.x += m.vx*k; m.y += m.vy*k;
+    if(m.y < -8){ m.y = H + 6; m.x = Math.random()*W; }
+    if(m.x < -8) m.x = W + 6; else if(m.x > W + 8) m.x = -6;
+  }
+  if(impact > 0) impact = Math.max(0, impact - dt/340);
+}
+/* The drifting specks are little CUBES now. In a game where everything is
+   made of blocks, round motes were the one thing on screen that was not. */
+function drawMotes(){
+  ctx.save();
+  for(var i = 0; i < motes.length; i++){
+    var m = motes[i], r = m.r*2.6, hx = r, hy = r*0.56;
+    ctx.globalAlpha = m.a*1.5;
+    ctx.fillStyle = mixc(ST.vd, ST.st, 0.55);                    /* top */
+    ctx.beginPath();
+    ctx.moveTo(m.x, m.y-hy); ctx.lineTo(m.x+hx, m.y); ctx.lineTo(m.x, m.y+hy); ctx.lineTo(m.x-hx, m.y);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = m.a*1.1;
+    ctx.fillStyle = mixc(ST.vd, ST.st, 0.30);                    /* left */
+    ctx.beginPath();
+    ctx.moveTo(m.x-hx, m.y); ctx.lineTo(m.x, m.y+hy); ctx.lineTo(m.x, m.y+hy+r*0.8); ctx.lineTo(m.x-hx, m.y+r*0.8);
+    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = m.a*0.8;
+    ctx.fillStyle = mixc(ST.vd, ST.st, 0.16);                    /* right */
+    ctx.beginPath();
+    ctx.moveTo(m.x+hx, m.y); ctx.lineTo(m.x, m.y+hy); ctx.lineTo(m.x, m.y+hy+r*0.8); ctx.lineTo(m.x+hx, m.y+r*0.8);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+/* an additive halo, so the three things that mean something glow rather
+   than merely being coloured differently */
+function halo(x, y, r, col, a){
+  var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, 'rgba(' + col + ',' + a + ')');
+  g.addColorStop(0.5, 'rgba(' + col + ',' + (a*0.32).toFixed(3) + ')');
+  g.addColorStop(1, 'rgba(' + col + ',0)');
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g; ctx.fillRect(x-r, y-r, r*2, r*2); ctx.restore();
+}
+
+/* A FIXED LIGHT, NOT A FACING TERM.
+
+   Shading purely by how squarely a face meets the camera looks correct and
+   is useless: halfway through a yaw the front faces and the side faces are
+   tilted by exactly the same 45 degrees, so they come out the same value and
+   the turning solid reads as a flat smear of rectangles. (Which it
+   geometrically IS — an orthographic yaw of axis-aligned boxes produces no
+   diagonals at all. Every scrap of three-dimensionality here has to come
+   from light.)
+
+   So the light is a fixed direction in VIEW space, over the player's left
+   shoulder. The one constraint is the seam: a face square to the camera must
+   come out at exactly 1.0, because that is the case the flat renderer draws
+   at rest, and any other value would make the picture jump the moment a drag
+   begins. 0.30 + 0.70 is that seam, written so it cannot drift.            */
+function LIT(nx, ny, nz, ambient){
+  var a = ambient === undefined ? 0.30 : ambient;
+  return Math.max(0, Math.min(1, a + (1-a)*nz + 0.24*nx - 0.14*ny));
+}
+
+/* PERSPECTIVE, BUT ONLY WHILE IT IS TURNING.
+
+   The renderer is orthographic because the resting board must be a true
+   square grid — that is the surface the puzzle is read on and it cannot
+   keystone. But an orthographic turn of a box that is axis-aligned produces
+   nothing but rectangles: no diagonals, no convergence, no cube. Lighting
+   alone could not sell it.
+
+   So the projection grows a little perspective as the turn opens and gives
+   it all back as the turn lands, scaled by |sin| of the angle. At rest the
+   term is exactly zero and this is precisely the orthographic projection the
+   flat renderer draws, which is the whole reason the hand-off between the
+   two is invisible. In between, the near face is genuinely larger than the
+   far one and the eye is finally looking at a solid.                       */
+var PERSP = 0.062;
+function persp(pv, vz){ return pv ? 1 / (1 - pv*vz) : 1; }
+
+/* THE CAGE — the cube's twelve edges.
+   At rest it is simply the board's border, because eleven of the twelve
+   project onto the outline of the square. The instant a turn starts it
+   opens out into a wireframe box, and that is what tells the eye that the
+   flat grid it has been reading was a solid all along. Without it a turn
+   reads as a smear of quads sliding over each other. */
+var CAGE_E = [[0,1],[1,3],[3,2],[2,0],[4,5],[5,7],[7,6],[6,4],[0,4],[1,5],[2,6],[3,7]];
+function drawCage(m, z, alpha, pv){
+  var h = N/2, pt = [];
+  for(var i = 0; i < 8; i++){
+    var wx = (i&1?h:-h), wy = (i&2?h:-h), wz = (i&4?h:-h);
+    var k = persp(pv, m.F[0]*wx + m.F[1]*wy + m.F[2]*wz);
+    pt.push([CX + (m.R[0]*wx + m.R[1]*wy + m.R[2]*wz)*S*z*k,
+             CY - (m.U[0]*wx + m.U[1]*wy + m.U[2]*wz)*S*z*k]);
+  }
+  ctx.save();
+  ctx.strokeStyle = 'rgba(' + (ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0) + ',' + (alpha + impact*0.5) + ')';
+  ctx.lineWidth = 1.25 + impact*1.6; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for(var e = 0; e < 12; e++){
+    ctx.moveTo(pt[CAGE_E[e][0]][0], pt[CAGE_E[e][0]][1]);
+    ctx.lineTo(pt[CAGE_E[e][1]][0], pt[CAGE_E[e][1]][1]);
+  }
+  ctx.stroke(); ctx.restore();
+}
+function tileRect(u, v, z){
+  z = z || 1;
+  return [CX + (u - N/2)*S*z, CY + (N/2 - 1 - v)*S*z, S*z, S*z];
+}
+
+function draw(){
+  ctx.clearRect(0, 0, W, H);
+  if(!lv) return;
+  /* the sky first, parallaxed off the view basis: turn the cube and the
+     stars slide, which is the cheapest way to say the WORLD moved */
+  if(skyCv){
+    var m0 = liveBasis();
+    /* the one image on screen that is NOT made of blocks: the parallax lands
+       on fractional offsets, and nearest-neighbour would make the starfield
+       crawl a whole pixel at a time as the cube turns */
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(skyCv, -PAD - m0.F[0]*11 - m0.R[0]*4, -PAD + m0.U[1]*8 - m0.F[1]*9, W + PAD*2, H + PAD*2);
+    ctx.imageSmoothingEnabled = false;
+  }
+  /* the kick moves the BOARD, never the HUD — a shaken readout is an
+     unreadable one, and the DOM chrome staying nailed down is what lets the
+     impact be as big as it is */
+  var ko = kickOffset();
+  ctx.save();
+  if(ko) ctx.translate(ko[0], ko[1]);
+  /* THE LIGHT INSIDE — and ONLY on the attract screen.
+     Drawn before the cube and never masked, so the only places it survives
+     are the void columns: the gaps you are looking straight through. The cube
+     appears lit from within and it costs one gradient, because the geometry
+     does the masking for free.
+
+     It was briefly on the play board too, and that was a mistake worth
+     recording. An additive layer under the tiles lifts BEDROCK as much as it
+     lifts deck, which eats the luminance separation the whole board is read
+     off — and the palette test could not see it, because it measures
+     tileFill and this was painted underneath. Atmosphere does not get to
+     cost legibility on the surface the puzzle is solved on. */
+  if(demo){
+    var vg = ctx.createRadialGradient(CX, CY, 0, CX, CY, N*S*0.44);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    vg.addColorStop(0, 'rgba(255,150,60,0.40)');
+    vg.addColorStop(0.55, 'rgba(255,150,60,0.15)');
+    vg.addColorStop(1, 'rgba(255,150,60,0)');
+    ctx.fillStyle = vg; ctx.fillRect(CX - N*S*0.8, CY - N*S*0.8, N*S*1.6, N*S*1.6);
+    ctx.restore();
+  }
+  var a = liveAngle();
+  if(demo || (a && Math.abs(a.ang) > 1e-4)) draw3d();
+  else drawFlat();
+  drawParts();
+  ctx.restore();
+  drawFlyers();
+  drawMotes();
+  if(exitFlash > 0){
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = exitFlash * 0.5;
+    var eg = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W,H)*0.7);
+    eg.addColorStop(0, 'rgba(53,215,161,0.5)'); eg.addColorStop(1, 'rgba(53,215,161,0)');
+    ctx.fillStyle = eg; ctx.fillRect(0,0,W,H); ctx.restore();
+  }
+  if(impact > 0){
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    var r = Math.max(W, H)*0.62, g = ctx.createRadialGradient(CX, CY, N*S*0.30, CX, CY, r);
+    g.addColorStop(0, 'rgba(' + (ST.dN[0]|0) + ',' + (ST.dN[1]|0) + ',' + (ST.dN[2]|0) + ',' + (impact*0.10).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); ctx.restore();
+  }
+}
+
+function drawFlat(){
+  var u, v, s, r, i, SF = curSurf(), BM = baseBasis();
+  if(!SF) return;
+  buildDrops();
+  drawCage(BM, 1, 0.16, 0);
+  /* 1. the tiles, each riding whatever wave is passing through the board */
+  var anyWave = !!wave;
+  if(flip && !demo){
+    /* the old material is still on screen behind the front — draw it first,
+       shrinking out, so the crossover is a thing you watch rather than a
+       frame you miss */
+    for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+      var os = flip.old[u*N + v]; if(!os) continue;
+      var fp = flipPhase(u, v); if(fp >= 0.999) continue;
+      var orr = tileRect(u, v), osc = 1 - fp;
+      ctx.globalAlpha = 1 - fp;
+      drawBlock(os.t, os.d, orr[0] + S*(1-osc)/2, orr[1] + S*(1-osc)/2, S*osc + 0.6, S*osc + 0.6);
+    }
+    ctx.globalAlpha = 1;
+  }
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    s = SF[u*N + v]; if(!s) continue;
+    r = tileRect(u, v);
+    var ph = anyWave ? tilePhase(u, v) : 1;
+    if(flip && !demo) ph = Math.min(ph, flipPhase(u, v));
+    if(ph <= 0.002) continue;
+    if(ph < 0.999){
+      var sc = 0.55 + 0.45*ph, ix = r[0] + S*(1-sc)/2, iy = r[1] + S*(1-sc)/2;
+      ctx.globalAlpha = ph;
+      drawBlock(s.t, s.d, ix, iy, S*sc + 0.6, S*sc + 0.6);
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    /* The white inset that used to mark a walkable tile is gone with the
+       flat fills: the deck is laid stone or boards and the bedrock is
+       rubble, so "may I stand there" is now answered twice over — by the
+       brightness band, and by whether the block looks made. */
+    drawBlock(s.t, s.d, r[0], r[1], r[2] + 0.6, r[3] + 0.6);
+  }
+  if(anyWave){ drawWaveExtras(); return; }
+  /* 2. THE DROPS. Where two neighbouring columns sit at different depths the
+        nearer one casts onto the farther one, and a hairline marks the seam.
+        The light is at the camera, so this shadow is not a flourish — it is
+        the true one, and it is the game admitting in the open exactly which
+        of its adjacencies are lying to you about distance. */
+  ctx.lineCap = 'butt';
+  var SD = [[1,0,0,1],[-1,0,1,0],[0,1,2,3],[0,-1,3,2]];   /* du,dv, gradIntoMe, gradIntoThem */
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    s = SF[u*N + v]; if(!s) continue;
+    r = tileRect(u, v);
+    for(i = 0; i < 4; i++){
+      var u2 = u + SD[i][0], v2 = v + SD[i][1];
+      if(u2 < 0 || v2 < 0 || u2 >= N || v2 >= N) continue;
+      var s2 = SF[u2*N + v2]; if(!s2) continue;
+      var dd = s2.d - s.d;
+      if(dd <= 0) continue;                                /* only a NEARER neighbour casts */
+      ctx.save();
+      ctx.translate(r[0], r[1]);
+      ctx.globalAlpha = Math.min(MAX_SHADOW/0.45, 0.14 + dd*0.08);
+      ctx.fillStyle = shGrad[SD[i][2]];
+      ctx.fillRect(0, 0, S, S);
+      ctx.restore();
+    }
+    var nb = [[1,0],[0,1]];
+    for(i = 0; i < 2; i++){
+      var u3 = u + nb[i][0], v3 = v + nb[i][1];
+      if(u3 >= N || v3 >= N) continue;
+      var s3 = SF[u3*N + v3]; if(!s3) continue;
+      var ad = Math.abs(s3.d - s.d); if(!ad) continue;
+      ctx.strokeStyle = 'rgba(0,0,0,' + Math.min(0.85, 0.26 + ad*0.15).toFixed(2) + ')';
+      ctx.lineWidth = Math.min(3.4, 1 + ad*0.5);
+      ctx.beginPath();
+      if(i === 0){ ctx.moveTo(r[0]+S, r[1]); ctx.lineTo(r[0]+S, r[1]+S); }
+      else       { ctx.moveTo(r[0], r[1]);   ctx.lineTo(r[0]+S, r[1]); }
+      ctx.stroke();
+    }
+  }
+  if(demo) return;
+  /* 3. THE REACHABLE SET. The connectivity graph, drawn. This is the single
+        most useful thing on screen: turn the cube and watch the lit region
+        change, and the mechanic has explained itself with no words. */
+  ctx.lineWidth = Math.max(1.2, S*0.035);
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    var rk = u*N + v;
+    if(!reach[rk]) continue;
+    /* the sweep: each tile lights when the wavefront reaches its BFS depth,
+       so what you are watching is the connectivity graph being traced */
+    var lit = Math.max(0, Math.min(1, (revealT - reachDist[rk]*46) / 150));
+    if(lit <= 0) continue;
+    r = tileRect(u, v);
+    ctx.strokeStyle = 'rgba(255,106,61,' + (0.42*lit).toFixed(3) + ')';
+    ctx.strokeRect(r[0] + S*0.07, r[1] + S*0.07, S*0.86, S*0.86);
+    if(lit < 1){
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (1-lit)*0.5;
+      ctx.fillStyle = 'rgba(255,106,61,1)';
+      ctx.fillRect(r[0] + S*0.07, r[1] + S*0.07, S*0.86, S*0.86);
+      ctx.restore();
+    }
+  }
+  /* 4. depth numerals, for as long as someone wants the crutch */
+  if(store.depth){
+    ctx.font = '700 ' + Math.round(S*0.24) + 'px ui-monospace, monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+      s = SF[u*N + v]; if(!s) continue;
+      r = tileRect(u, v);
+      ctx.fillStyle = s.t === '+' ? 'rgba(10,9,16,.55)' : 'rgba(233,225,209,.42)';
+      ctx.fillText(String(s.d), r[0] + S*0.10, r[1] + S*0.09);
+    }
+  }
+  /* 4b. the seam — a lit ring at the wavefront, so the change has a leading
+         edge instead of just happening */
+  if(flip){
+    var rad = (flip.t / flip.rise) * S * 0.92;
+    if(rad > 0 && rad < N*S*1.9){
+      var fr = tileRect(flip.fu, flip.fv);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = 'rgba(' + flip.col + ',' + Math.max(0, 0.85 - rad/(N*S*1.5)).toFixed(3) + ')';
+      ctx.lineWidth = Math.max(2, S*0.11);
+      ctx.beginPath(); ctx.arc(fr[0]+S/2, fr[1]+S/2, rad, 0, 6.284); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  /* 5. things standing on the deck — none of which the attract cube needs */
+  if(demo) return;
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    var gs = SF[u*N + v];
+    if(gs && isGlyph(gs.t)) drawPlate(tileRect(u, v), GLYPH_BIT[gs.t], gs.d);
+  }
+  for(i = 0; i < lv.doors.length; i++){
+    var dv = surfaceAt(N, surf, M, lv.doors[i]); if(!dv) continue;
+    drawDoor(tileRect(dv[0], dv[1]), !!(doors & (1<<i)));
+  }
+  for(i = 0; i < lv.keys.length; i++){
+    if(kmask & (1<<i)) continue;
+    var kv = surfaceAt(N, surf, M, lv.keys[i]); if(!kv) continue;
+    drawKey(tileRect(kv[0], kv[1]));
+  }
+  var gv = surfaceAt(N, surf, M, lv.goal);
+  if(gv) drawGoal(tileRect(gv[0], gv[1]));
+  /* 6. you */
+  var p = playerScreen();
+  drawPlayer(p[0], p[1], S);
+}
+
+/* While the board is assembling or coming apart, only the two things that
+   are people-shaped stay on screen. Everything else is scenery and scenery
+   does not need to be there for the transition. */
+function drawWaveExtras(){
+  var gv = surfaceAt(N, surf, M, lv.goal);
+  if(gv && wave.mode === 'out') drawGoal(tileRect(gv[0], gv[1]));
+  if(wave.mode === 'in'){ var p = playerScreen(); drawPlayer(p[0], p[1], S); }
+}
+function playerScreen(){
+  var v = viewOf(N, M, pos), r = tileRect(v[0], v[1]);
+  var x = r[0] + S/2, y = r[1] + S/2;
+  if(walking){
+    var pv = viewOf(N, M, walking.from), pr = tileRect(pv[0], pv[1]);
+    var t = walking.t;
+    x = (pr[0] + S/2) + (x - pr[0] - S/2)*t;
+    y = (pr[1] + S/2) + (y - pr[1] - S/2)*t;
+  }
+  return [x, y];
+}
+
+/* YOU ARE THE ONLY LIGHT IN THE CUBE.
+
+   Everything else on this board is matter: laid stone, rubble, a slab with a
+   mechanism cut into it, all of it painted from a 16x16 texture at the
+   resolution the world is built at. You are not matter, and drawing you as
+   another blocky object would have lost the one thing the marker has to do,
+   which is be found instantly on a field of two hundred blocks.
+
+   So you are an orb, and the whole read is the contrast: the single smooth,
+   self-lit, hovering thing in a room made of pixels. It costs nothing to
+   find and it cannot be mistaken for a tile, a plate or a door.
+
+   Four passes, and each is doing a job:
+     a POOL      the light you throw onto the block underneath, warm and wide
+     a CONTACT   a soft dark seat under the pool, so a bright deck cannot
+                 swallow the orb — additive light on near-white stone is how
+                 a glow becomes a white smudge, and this is the fix
+     the BODY    an additive sphere, hot core offset up and left toward the
+                 same fixed light the solid is shaded by
+     a RIM       one thin bright ring, which is what makes it read as a
+                 sphere rather than as a blur
+
+   It breathes on two frequencies that do not divide into each other, so the
+   pulse never looks like a loop, and it rides a slow bob — a thing that
+   hovers is alive and a thing that sits is furniture.                      */
+function drawPlayer(x, y, sz, k){
+  /* on the way out you do not blink off the board, you are drawn into the
+     door — down to nothing, brightening as it closes, over a quarter second */
+  if(exitPull >= 0){
+    k = 1 - exitPull;
+    if(k <= 0.02) return;
+  }
+  k = k === undefined ? 1 : k;
+  var t = Date.now() / 1000;
+  var br = 0.90 + 0.10*Math.sin(t*3.1) + 0.045*Math.sin(t*7.3);
+  var rr = sz*0.29*k*br;
+  y -= sz*0.022*Math.sin(t*2.2)*k;
+
+  /* the pool: what the orb does to the block it is standing over */
+  halo(x, y, sz*1.60*k, '255,150,80', 0.13*k*br);
+  /* the contact seat, and the only thing here that removes light */
+  ctx.save();
+  var sg = ctx.createRadialGradient(x, y + sz*0.06, 0, x, y + sz*0.06, sz*0.46*k);
+  sg.addColorStop(0, 'rgba(0,0,0,0.34)'); sg.addColorStop(0.6, 'rgba(0,0,0,0.16)');
+  sg.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(x - sz*0.5, y - sz*0.44, sz, sz);
+  ctx.restore();
+  halo(x, y, sz*0.92*k, '255,120,55', 0.34*k*br);
+
+  /* the body */
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  var g = ctx.createRadialGradient(x - rr*0.30, y - rr*0.34, rr*0.04, x, y, rr);
+  g.addColorStop(0,    'rgba(255,252,240,1)');
+  g.addColorStop(0.30, 'rgba(255,216,150,0.96)');
+  g.addColorStop(0.66, 'rgba(255,122,52,0.70)');
+  g.addColorStop(1,    'rgba(255,74,26,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.fill();
+  /* the rim */
+  ctx.strokeStyle = 'rgba(255,168,92,' + (0.42*k).toFixed(3) + ')';
+  ctx.lineWidth = Math.max(1, sz*0.028);
+  ctx.beginPath(); ctx.arc(x, y, rr*0.90, 0, 6.284); ctx.stroke();
+  ctx.restore();
+
+  /* a hard core, drawn last and NOT additively, so the orb keeps a definite
+     centre against a pale deck as well as against the void */
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,120,55,.9)'; ctx.shadowBlur = sz*0.55*k;
+  ctx.fillStyle = '#fff1d6';
+  ctx.beginPath(); ctx.arc(x, y, rr*0.30, 0, 6.284); ctx.fill();
+  ctx.restore();
+}
+/* A plate reads as a thing cut INTO the deck rather than set on top of it:
+   a recessed ring, a bar across it for INVERT (the axis that flips) or a
+   level line for DRAIN, and a slow breath so it is visibly live. It is drawn
+   at its own depth like everything else, so a plate far down the cube is dim
+   — but it is never occluded, which is the one thing that makes planning
+   with them possible. */
+function drawPlate(r, bit, depth){
+  var x = r[0] + S/2, y = r[1] + S/2, col = PLATE_COL[bit];
+  var t = (Date.now() % 2600) / 2600, br = 0.55 + 0.45*Math.sin(t*6.284);
+  var lit = 0.35 + 0.65 * (depth / Math.max(1, N-1));
+  halo(x, y, S*0.95, col, 0.30*br*lit);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(' + col + ',' + (0.55 + 0.4*br*lit).toFixed(3) + ')';
+  ctx.lineWidth = Math.max(1.6, S*0.065);
+  ctx.beginPath(); ctx.arc(x, y, S*0.29, 0, 6.284); ctx.stroke();
+  ctx.lineWidth = Math.max(1.3, S*0.05);
+  ctx.beginPath();
+  if(bit === 1){ ctx.moveTo(x - S*0.17, y - S*0.17); ctx.lineTo(x + S*0.17, y + S*0.17); }
+  else { ctx.moveTo(x - S*0.19, y); ctx.lineTo(x + S*0.19, y); }
+  ctx.stroke();
+  ctx.restore();
+}
+function drawGoal(r){
+  var x = r[0] + S/2, y = r[1] + S/2, t = (Date.now() % 2400) / 2400;
+  halo(x, y, S*1.15, '53,215,161', 0.30);
+  ctx.save();
+  ctx.strokeStyle = '#35d7a1'; ctx.lineWidth = Math.max(1.6, S*0.06);
+  ctx.shadowColor = 'rgba(53,215,161,.8)'; ctx.shadowBlur = S*0.45;
+  ctx.beginPath(); ctx.arc(x, y, S*0.30, 0, 6.284); ctx.stroke();
+  ctx.globalAlpha = 0.55 * (1 - t);
+  ctx.beginPath(); ctx.arc(x, y, S*(0.16 + 0.24*t), 0, 6.284); ctx.stroke();
+  ctx.restore();
+}
+/* THE KEY IS AN OBJECT, so it is cut on the world's own grid — sixteen
+   texels, a dark outline so gold survives against a pale deck as well as a
+   dark one, and a lit edge down the side the fixed light comes from. It
+   still lives inside the same glow it always had: colour is meaning here,
+   and gold has only ever meant one thing. */
+var KEY_ROWS = [
+  '................',
+  '.....DDDDD......',
+  '....DHKKKKD.....',
+  '....DKDDDKD.....',
+  '....DKD.DKD.....',
+  '....DKD.DKD.....',
+  '....DKDDDKD.....',
+  '....DKKKKKD.....',
+  '.....DHKKD......',
+  '......DHKD......',
+  '......DHKD......',
+  '......DHKDDD....',
+  '......DHKKKKD...',
+  '......DHKDDDD...',
+  '......DHKKKD....',
+  '.......DDDD.....'
+];
+var KEY_CV = null;
+function keySprite(){
+  if(!KEY_CV) KEY_CV = pixSprite(KEY_ROWS,
+    {'D':'rgba(46,28,4,0.92)', 'K':'#ffc44d', 'H':'#fff0b4'});
+  return KEY_CV;
+}
+function drawKey(r){
+  var x = r[0] + S/2, y = r[1] + S/2 - S*0.028*Math.sin(Date.now()/420);
+  halo(x, y, S*0.85, '255,196,77', 0.26);
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,196,77,.8)'; ctx.shadowBlur = S*0.36;
+  ctx.drawImage(keySprite(), x - S*0.38, y - S*0.38, S*0.76, S*0.76);
+  ctx.restore();
+}
+/* Iron bars, and they are rects rather than strokes for the same reason
+   everything else here is: a stroke lands wherever the half-pixel falls, and
+   a bar in a world of blocks should have a width you could count. */
+function drawDoor(r, open){
+  ctx.save();
+  ctx.globalAlpha = open ? 0.22 : 1;
+  var w = Math.max(2, Math.round(S*0.075)), top = r[1] + S*0.17, h = S*0.66, i;
+  for(i = 0; i < 3; i++){
+    var x = Math.round(r[0] + S*(0.28 + i*0.22) - w/2);
+    ctx.fillStyle = '#35d7a1';
+    ctx.fillRect(x, top, w, h);
+    ctx.fillStyle = 'rgba(255,255,255,.35)';       /* the lit edge, one pixel */
+    ctx.fillRect(x, top, 1, h);
+    ctx.fillStyle = 'rgba(6,34,26,.45)';           /* and the shaded one */
+    ctx.fillRect(x + w - 1, top, 1, h);
+  }
+  if(!open){
+    var bh = Math.max(2, Math.round(S*0.05));
+    ctx.fillStyle = '#35d7a1';
+    ctx.fillRect(Math.round(r[0] + S*0.20), Math.round(r[1] + S*0.5 - bh/2), Math.round(S*0.60), bh);
+  }
+  ctx.restore();
+}
+
+/* ---------- the turning cube ---------- */
+function draw3d(){
+  var t0 = nowMs();
+  var m = liveBasis(), z = liveZoom(), c = (N-1)/2, list = [], i;
+  var la = liveAngle();
+  var pv = demo ? PERSP * 0.85 : PERSP * Math.abs(Math.sin(la ? la.ang : 0));
+  function px(wx, wy, wz, out){
+    var qx = wx - c, qy = wy - c, qz = wz - c;
+    out[2] = m.F[0]*qx + m.F[1]*qy + m.F[2]*qz;
+    var k = persp(pv, out[2]);
+    out[0] = CX + (m.R[0]*qx + m.R[1]*qy + m.R[2]*qz) * S * z * k;
+    out[1] = CY - (m.U[0]*qx + m.U[1]*qy + m.U[2]*qz) * S * z * k;
+  }
+  var tmp = [0,0,0];
+  for(i = 0; i < faces.length; i++){
+    var fc = faces[i], d = FACE_D[fc.f];
+    var nz = m.F[0]*d[0] + m.F[1]*d[1] + m.F[2]*d[2];
+    if(nz <= 0.02) continue;                                  /* pointing away — never drawn */
+    var nx = m.R[0]*d[0] + m.R[1]*d[1] + m.R[2]*d[2];
+    var ny = m.U[0]*d[0] + m.U[1]*d[1] + m.U[2]*d[2];
+    var q = FACE_Q[fc.f], pts = [], dep = 0;
+    for(var k = 0; k < 4; k++){
+      px(fc.x + q[k][0], fc.y + q[k][1], fc.z + q[k][2], tmp);
+      pts.push(tmp[0], tmp[1]); dep += tmp[2];
+    }
+    px(fc.x, fc.y, fc.z, tmp);
+    var mo = ((fc.x*73856093 ^ fc.y*19349663 ^ fc.z*83492791) >>> 8) % 100;
+    list.push({d:dep/4, k:0, pts:pts, t:fc.t, dep:tmp[2] + c, lit:LIT(nx, ny, nz),
+               up: ny > 0.55, moss: mo < 34 ? (mo/34) : 0});
+  }
+  /* markers ride half a cell proud of their own face so they stay visible
+     as the solid turns under them */
+  function marker(w, kind, extra){
+    px(w[0] + m.F[0]*0.62, w[1] + m.F[1]*0.62, w[2] + m.F[2]*0.62, tmp);
+    list.push({d:tmp[2] + 0.62, k:kind, x:tmp[0], y:tmp[1], extra:extra});
+  }
+  if(!demo){
+    for(i = 0; i < lv.doors.length; i++) marker(lv.doors[i], 3, !!(doors & (1<<i)));
+    for(i = 0; i < lv.keys.length; i++) if(!(kmask & (1<<i))) marker(lv.keys[i], 2, 0);
+    marker(lv.goal, 4, 0);
+    marker(pos, 1, 0);
+  }
+
+  /* THE PLINTH. A object needs something to stand on or it is a diagram of an
+     object. Same projection, same lighting, drawn under everything. */
+  if(demo){
+    var ph = N/2, pt = ph + 0.75, pb = ph + 0.10, py0 = ph, py1 = ph + 0.62;
+    var corner = [[-pt,-pt],[pt,-pt],[pt,pt],[-pt,pt]], top = [], bot = [];
+    for(i = 0; i < 4; i++){
+      px(c + corner[i][0], c - py0, c + corner[i][1], tmp); top.push([tmp[0], tmp[1], tmp[2]]);
+      px(c + corner[i][0], c - py1, c + corner[i][1], tmp); bot.push([tmp[0], tmp[1], tmp[2]]);
+    }
+    ctx.save();
+    for(i = 0; i < 4; i++){
+      var j = (i+1) % 4;
+      var midz = (top[i][2] + top[j][2]) / 2;
+      if(midz > 0) continue;                       /* the far sides only */
+      ctx.fillStyle = 'rgba(28,26,36,.95)';
+      ctx.beginPath(); ctx.moveTo(top[i][0],top[i][1]); ctx.lineTo(top[j][0],top[j][1]);
+      ctx.lineTo(bot[j][0],bot[j][1]); ctx.lineTo(bot[i][0],bot[i][1]); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = tileFill('#', N-1, 0.85);
+    ctx.beginPath(); ctx.moveTo(top[0][0],top[0][1]);
+    for(i = 1; i < 4; i++) ctx.lineTo(top[i][0],top[i][1]);
+    ctx.closePath(); ctx.fill();
+    /* and the plinth is cut from the same rock as the vault, so it takes the
+       same texture — one block's worth of it, stretched over the slab */
+    texQuad([top[0][0],top[0][1], top[1][0],top[1][1], top[2][0],top[2][1], top[3][0],top[3][1]],
+            texFor('#', N-1, 0.85));
+    for(i = 0; i < 4; i++){
+      var j2 = (i+1) % 4, midz2 = (top[i][2] + top[j2][2]) / 2;
+      if(midz2 <= 0) continue;                     /* then the near ones, over the top */
+      ctx.fillStyle = 'rgba(22,20,30,.98)';
+      ctx.beginPath(); ctx.moveTo(top[i][0],top[i][1]); ctx.lineTo(top[j2][0],top[j2][1]);
+      ctx.lineTo(bot[j2][0],bot[j2][1]); ctx.lineTo(bot[i][0],bot[i][1]); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  list.sort(function(a, b){ return a.d - b.d; });
+  var sz = S*z;
+  drawCage(m, z, demo ? 0.10 : 0.46, pv);
+  for(i = 0; i < list.length; i++){
+    var e = list[i];
+    if(e.k === 0){
+      ctx.fillStyle = tileFill(e.t, e.dep, e.lit);
+      ctx.beginPath();
+      ctx.moveTo(e.pts[0], e.pts[1]); ctx.lineTo(e.pts[2], e.pts[3]);
+      ctx.lineTo(e.pts[4], e.pts[5]); ctx.lineTo(e.pts[6], e.pts[7]);
+      ctx.closePath(); ctx.fill();
+      /* the flat colour underneath is not waste: it is what the quad's rim
+         is made of, so a texel that lands half outside the clip still has
+         the right material behind it. A face a few pixels across keeps the
+         fill and skips the texture, because at that size the clip costs
+         more than the detail is worth and nobody can see either. */
+      if(quadArea(e.pts) > texGate) texQuad(e.pts, texFor(e.t, e.dep, e.lit));
+      /* the path is rebuilt rather than reused: texQuad begins its own, and
+         a current path is not part of what save/restore puts back */
+      ctx.beginPath();
+      ctx.moveTo(e.pts[0], e.pts[1]); ctx.lineTo(e.pts[2], e.pts[3]);
+      ctx.lineTo(e.pts[4], e.pts[5]); ctx.lineTo(e.pts[6], e.pts[7]);
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(10,9,16,.5)'; ctx.lineWidth = 0.7; ctx.stroke();
+      /* weathering, and only where weather would reach: the faces that point
+         up. Seeded off the cell so a given block is always mossy. */
+      if(e.up && e.moss){
+        ctx.save(); ctx.globalAlpha = 0.16 + 0.2*e.moss;
+        ctx.fillStyle = 'rgb(126,150,86)';
+        ctx.beginPath();
+        ctx.moveTo(e.pts[0], e.pts[1]); ctx.lineTo(e.pts[2], e.pts[3]);
+        ctx.lineTo(e.pts[4], e.pts[5]); ctx.lineTo(e.pts[6], e.pts[7]);
+        ctx.closePath(); ctx.fill(); ctx.restore();
+      }
+    } else if(e.k === 1) drawPlayer(e.x, e.y, sz);
+    else if(e.k === 2) drawKey([e.x - sz/2, e.y - sz/2]);
+    else if(e.k === 3) drawDoor([e.x - sz/2, e.y - sz/2], e.extra);
+    else if(e.k === 4) drawGoal([e.x - sz/2, e.y - sz/2]);
+  }
+  if(t0){
+    var ms = nowMs() - t0;
+    if(ms > 9) texGate = Math.min(6000, texGate * 1.4);
+    else if(ms < 5 && texGate > TEX_GATE_MIN) texGate = Math.max(TEX_GATE_MIN, texGate / 1.12);
+  }
+}
+
+/* ============================================================
+   MOVING
+   ============================================================ */
+function snapshot(){ return {pos:pos.slice(), ori:oriIndex(M), kmask:kmask, doors:doors, turns:turns, world:world}; }
+function pushUndo(){ undoStack.push(snapshot()); if(undoStack.length > 200) undoStack.shift(); }
+function restore(s){
+  pos = s.pos.slice(); M = ORIS[s.ori]; kmask = s.kmask; doors = s.doors; turns = s.turns;
+  world = s.world | 0;
+  walking = null; anim = null; drag = null; won = false; stuck = false; flip = null;
+  settle();
+}
+
+/* Pathing treats a shut door as a wall, EXCEPT as the final square: you open
+   a door by walking into it deliberately, one at a time, never by having a
+   route swallow two of them and your last key on the way past. */
+function pathTo(tu, tv){
+  var start = viewOf(N, M, pos), from = new Int32Array(N*N).fill(-1);
+  var q = [start[0]*N + start[1]], seen = new Uint8Array(N*N);
+  seen[q[0]] = 1;
+  for(var i = 0; i < q.length; i++){
+    var u = (q[i]/N)|0, v = q[i] % N;
+    if(u === tu && v === tv) break;
+    for(var t = 0; t < 4; t++){
+      var u2 = u + TURNS[t].dx, v2 = v + TURNS[t].dy, k = u2*N + v2;
+      if(u2 < 0 || v2 < 0 || u2 >= N || v2 >= N || seen[k]) continue;
+      var cell = walkable(lv, surf, u2, v2, doors);
+      /* A PLATE MAY ONLY BE THE DESTINATION. Stepping on one rewrites the
+         board, so every step planned after it was planned against a world
+         that no longer exists. Routing stops there and you plan again — which
+         also makes standing on a plate a decision rather than something that
+         happens to you on the way past. */
+      if(cell && isGlyph(cell.t) && !(u2 === tu && v2 === tv)) continue;
+      if(!cell){
+        if(!(u2 === tu && v2 === tv)) continue;
+        var raw = surf[k];
+        if(!raw || !isWalkType(raw.t)) continue;
+        var di = doorIndexAt(lv, raw.w);
+        if(di < 0 || (doors & (1<<di)) || keysHeld() < 1) continue;
+      }
+      seen[k] = 1; from[k] = q[i]; q.push(k);
+    }
+  }
+  var end = tu*N + tv;
+  if(!seen[end]) return null;
+  var out = [], cur = end;
+  while(cur !== start[0]*N + start[1]){ out.unshift(cur); cur = from[cur]; if(cur < 0) return null; }
+  return out;
+}
+
+function tapCell(u, v){
+  if(walking || anim || won) return;
+  var s = surf[u*N + v];
+  if(!s){ toast('nothing there'); sfx.deny(); return; }
+  if(!isWalkType(s.t)){ toast('bedrock — no footing on this face'); sfx.deny(); return; }
+  var di = doorIndexAt(lv, s.w), shut = di >= 0 && !(doors & (1<<di));
+  if(shut && keysHeld() < 1){ toast('locked — find a key'); sfx.deny(); buzz(14); return; }
+  var path = pathTo(u, v);
+  if(!path){ toast(shut ? 'no way to that door' : 'not connected — turn the cube'); sfx.deny(); return; }
+  /* Tapping the cell you already stand on yields an EMPTY path, which is
+     truthy — it used to start a walk with nothing in it, and the next frame
+     read surf[undefined].w and took the render loop down with it. */
+  if(!path.length) return;
+  pushUndo();
+  walking = {queue:path, from:pos.slice(), t:0, step:0};
+}
+
+function advanceWalk(dt){
+  if(!walking) return;
+  walking.t += dt / 105;
+  if(walking.t < 1) return;
+  if(!walking.queue.length){ walking = null; settle(); return; }
+  var cell = surf[walking.queue.shift()];
+  if(!cell){ walking = null; settle(); return; }   /* the board moved under a queued step */
+  walking.from = pos.slice();
+  pos = cell.w.slice();
+  var pv2 = viewOf(N, M, pos), pr2 = tileRect(pv2[0], pv2[1]);
+  var cx2 = pr2[0] + S/2, cy2 = pr2[1] + S/2;
+  var di = doorIndexAt(lv, pos);
+  if(di >= 0 && !(doors & (1<<di))){
+    doors |= (1<<di); sfx.door(); buzz(24); toast('unlocked');
+    kick(5, 0, 1);
+    burst(cx2, cy2, 22, {spd:120, life:620, r:2.4, col:'53,215,161', g:90});
+  } else {
+    sfx.step();
+    burst(cx2, cy2 + S*0.22, 3, {spd:20, life:340, r:1.5, col:'200,190,170', g:34, fade:0.6});
+  }
+  var ki = keyIndexAt(lv, pos);
+  if(ki >= 0 && !(kmask & (1<<ki))){
+    kmask |= (1<<ki); sfx.key(); buzz(12); toast('key');
+    burst(cx2, cy2, 16, {spd:95, life:520, r:2.2, col:'255,196,77', g:20});
+    flyKey();
+  }
+  var gb = glyphAt(lv, pos);
+  if(gb){ firePlate(gb, cx2, cy2); }
+  walking.t = 0;
+  if(!walking.queue.length){
+    walking = null; sfx.land(); kick(3, 0, 1);
+    burst(cx2, cy2 + S*0.24, 6, {spd:38, life:420, r:1.8, col:'210,200,180', g:56, fade:0.7});
+    settle(); afterAction();
+  }
+  else { computeReach(); refreshHud(); }
+}
+
+function tryTurn(t){
+  if(walking || anim || won) return false;
+  var m2 = TURNS[t].f(M);
+  if(!landing(lv, m2, pos, doors, world)) return false;
+  var axis = (t === 0 || t === 1) ? 'x' : 'y';
+  var to = (t === 1 || t === 2) ? Math.PI/2 : -Math.PI/2;
+  var from = drag && drag.axis === axis ? drag.ang : 0;
+  drag = null;
+  pushUndo();
+  anim = {axis:axis, ang:from, from:from, to:to, t:0,
+          dur:180 + 150*(Math.abs(to - from)/(Math.PI/2)), turn:t, back:1};
+  return true;
+}
+
+/* A REFUSED TURN IS A PHYSICAL EVENT, not an error message.
+   The cube commits a few degrees, hits the stop, and slams back — so the
+   answer arrives in the hand before the toast arrives in the eye. */
+function refuseTurn(t){
+  var axis = (t === 0 || t === 1) ? 'x' : 'y';
+  var sgn = (t === 1 || t === 2) ? 1 : -1;
+  var from = drag && drag.axis === axis ? drag.ang : sgn * 0.14;
+  drag = null;
+  anim = {axis:axis, ang:from, from:from, to:0, t:0, dur:260, turn:-1, back:0, hard:1};
+  kick(5, t < 2 ? -sgn : 0, t < 2 ? 0 : sgn);
+  sfx.deny(); buzz(18); toast('no footing that way');
+}
+function springBack(){
+  if(!drag || !drag.axis) { drag = null; return; }
+  anim = {axis:drag.axis, ang:drag.ang, from:drag.ang, to:0, t:0, dur:190, turn:-1};
+  drag = null;
+}
+/* The detent, as a curve. A plain ease-out arrives at 90 degrees and stops,
+   which is what a slideshow does. A real latch goes slightly past its seat
+   and is pulled back into it, so this overshoots by a few degrees and
+   settles — and that half-frame of coming BACK is most of what makes the
+   turn feel like a mechanism instead of a transition. A refusal uses the
+   hard curve instead: no overshoot, arrive early, stop dead. */
+function easeSeat(p){
+  var c = 1.9;
+  return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2);
+}
+function easeSlam(p){ return 1 - Math.pow(1 - p, 5); }
+
+function advanceAnim(dt){
+  if(!anim) return;
+  anim.t += dt;
+  var p = Math.min(1, anim.t / anim.dur);
+  var e = anim.hard ? easeSlam(p) : (anim.back ? easeSeat(p) : 1 - Math.pow(1 - p, 3));
+  anim.ang = anim.from + (anim.to - anim.from) * e;
+  if(p < 1) return;
+  var t = anim.turn; anim = null;
+  if(t < 0) return;
+  M = TURNS[t].f(M);
+  var land = landing(lv, M, pos, doors, world);
+  pos = land.w.slice();
+  var ki = keyIndexAt(lv, pos);
+  if(ki >= 0 && !(kmask & (1<<ki))){ kmask |= (1<<ki); sfx.key(); flyKey(); toast('key'); }
+  turns++;
+  impact = 1;
+  /* the mass arrives: kick the camera along the turn's own axis, shake grit
+     off the whole board, and start the reachable set sweeping outward */
+  var sgn = (t === 1 || t === 2) ? 1 : -1;
+  kick(9, t < 2 ? -sgn : 0, t < 2 ? 0 : sgn);
+  var pv = viewOf(N, M, pos), pr = tileRect(pv[0], pv[1]);
+  for(var g = 0; g < 5; g++){
+    var gx = CX + (Math.random()-0.5)*N*S*0.9, gy = CY + (Math.random()-0.5)*N*S*0.9;
+    burst(gx, gy, 3, {spd:26, life:620, r:1.5, col:'190,180,160', g:70, fade:0.5});
+  }
+  burst(pr[0]+S/2, pr[1]+S/2, 8, {spd:64, life:420, r:2.1, col:'255,140,90', g:60});
+  revealT = 0;
+  sfx.turn(); buzz(11);
+  settle(); afterAction();
+}
+
+/* ============================================================
+   AFTER EVERY ACTION — win, and the thing a puzzle game owes you
+   The solver runs from the CURRENT state, not the level's, so a cube you
+   have made unwinnable says so at once instead of thirty moves later. It
+   is deferred past the frame because on a slow phone the worst level costs
+   about a tenth of a second, and that is a stutter if it lands mid-turn.
+   ============================================================ */
+var stuckT = 0;
+function afterAction(){
+  if(samePos(pos, lv.goal)){ finish(); return; }
+  clearTimeout(stuckT);
+  stuckT = setTimeout(function(){
+    if(won || walking || anim) return;
+    var r = solve(lv, 40, {pos:pos, ori:oriIndex(M), kmask:kmask, doors:doors, world:world});
+    stuck = !r.ok;
+    if(stuck){ toast('no way on from here — undo'); sfx.stuck(); buzz(30); }
+  }, 60);
+}
+function finish(){
+  won = true;
+  var best = store.best[levelNo];
+  if(best === undefined || turns < best){ store.best[levelNo] = turns; save(); }
+  if(levelNo + 1 > store.reached){ store.reached = levelNo + 1; save(); }
+  prebuild(levelNo + 1);
+  /* THE EXIT. The player is pulled into the door, a ring goes out across the
+     board, and then the board itself comes apart outward from that same
+     square. The card does not appear over a still image of a solved puzzle —
+     it appears after the puzzle has left. */
+  var gv = viewOf(N, M, pos), gr = tileRect(gv[0], gv[1]);
+  var gx = gr[0] + S/2, gy = gr[1] + S/2;
+  exitPull = 0;
+  burst(gx, gy, 30, {spd:190, life:800, r:2.6, col:'53,215,161', g:0});
+  burst(gx, gy, 16, {spd:70, life:1000, r:3.4, col:'233,245,255', g:-14});
+  kick(11, 0, 1);
+  exitFlash = 1;
+  setTimeout(function(){ startWave('out', gv[0], gv[1], 420); }, 190);
+  sfx.win(); buzz(40);
+  setTimeout(function(){
+    $('winTurns').textContent = turns;
+    $('winPar').textContent = lv.par;
+    $('winBest').textContent = store.best[levelNo];
+    var vd = $('winVerdict');
+    vd.className = 'verdict ' + (turns <= lv.par ? 'par' : 'over');
+    vd.textContent = turns <= lv.par ? 'FEWEST POSSIBLE' : (turns - lv.par) + ' OVER PAR';
+    /* a vault boundary is worth marking — it is the only structure an
+       endless game has, and the next ten cubes look different because of it */
+    var crossing = vaultOf(levelNo + 1) !== vaultOf(levelNo);
+    $('winVault').textContent = crossing ? 'VAULT ' + roman(vaultOf(levelNo+1)) + ' — ' + vaultName(vaultOf(levelNo+1)) : '';
+    $('winVault').style.display = crossing ? '' : 'none';
+    $('btnRetry').style.display = turns <= lv.par ? 'none' : '';
+    if(crossing) sfx.vault();
+    show('scWin');
+  }, 880);
+}
+
+/* ============================================================
+   INPUT — one finger, two verbs, and the clash taken out.
+   A gesture is a TAP until it has travelled far enough to be a drag, and
+   once it is a drag it is locked to one axis for the rest of its life. No
+   gesture ever changes its mind halfway, because a control that
+   reinterprets itself under the thumb feels broken even when it is right.
+   ============================================================ */
+var TAP_SLOP = 14;
+function pxPerQuarter(){ return Math.max(90, Math.min(W, H) * 0.40); }
+function pointer(e){
+  var t = e.touches ? e.touches[0] : e;
+  return {x:t.clientX, y:t.clientY};
+}
+function onDown(e){
+  if(won || anim || walking || !lv) return;
+  if(!$('hud').classList.contains('on')) return;
+  audio();
+  var p = pointer(e);
+  drag = {x0:p.x, y0:p.y, axis:null, ang:0};
+}
+function onMove(e){
+  if(!drag) return;
+  var p = pointer(e), dx = p.x - drag.x0, dy = p.y - drag.y0;
+  if(!drag.axis){
+    if(Math.abs(dx) < TAP_SLOP && Math.abs(dy) < TAP_SLOP) return;
+    drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+  }
+  if(e.cancelable) e.preventDefault();
+  var amt = drag.axis === 'x' ? dx : -dy;
+  var q = Math.max(-1, Math.min(1, amt / pxPerQuarter()));
+  var was = Math.abs(drag.ang);
+  drag.ang = q * Math.PI/2;
+  /* the vault complains as it moves, and complains louder near the detent —
+     so the commit threshold is something you can hear coming */
+  if(Math.abs(drag.ang) - was > 0.12){ sfx.creak(Math.abs(q)); }
+  if(was < Math.PI/4 && Math.abs(drag.ang) >= Math.PI/4) buzz(8);
+  refreshTicks();
+}
+function onUp(e){
+  if(!drag) return;
+  if(!drag.axis){
+    var p = {x:drag.x0, y:drag.y0};
+    drag = null;
+    var u = Math.round((p.x - CX)/S + N/2 - 0.5), v = Math.round((CY - p.y)/S + N/2 - 0.5);
+    if(u >= 0 && v >= 0 && u < N && v < N) tapCell(u, v);
+    return;
+  }
+  var ang = drag.ang, axis = drag.axis;
+  if(Math.abs(ang) > Math.PI/4){
+    var t = axis === 'x' ? (ang > 0 ? 1 : 0) : (ang > 0 ? 2 : 3);
+    if(!tryTurn(t)) refuseTurn(t);
+  } else springBack();
+  refreshTicks();
+}
+cv.addEventListener('touchstart', onDown, {passive:true});
+cv.addEventListener('touchmove', onMove, {passive:false});
+cv.addEventListener('touchend', onUp);
+cv.addEventListener('touchcancel', function(){ springBack(); });
+cv.addEventListener('mousedown', onDown);
+window.addEventListener('mousemove', onMove);
+window.addEventListener('mouseup', onUp);
+/* desktop, for anyone who opens this on one */
+window.addEventListener('keydown', function(e){
+  if(!lv || !$('hud').classList.contains('on')) return;
+  var map = {ArrowLeft:0, ArrowRight:1, ArrowUp:2, ArrowDown:3};
+  if(map[e.key] !== undefined){
+    e.preventDefault();
+    if(!tryTurn(map[e.key])) refuseTurn(map[e.key]);
+  }
+  else if(e.key === 'z') undo();
+  else if(e.key === 'Escape') show('scPause');
+});
+
+/* ============================================================
+   UI
+   ============================================================ */
+function $(id){ return document.getElementById(id); }
+var toastT = 0;
+function toast(msg){
+  var el = $('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(function(){ el.classList.remove('on'); }, 1500);
+}
+function show(id){
+  ['scTitle','scCubes','scManual','scPause','scWin','scPlate'].forEach(function(s){
+    $(s).classList.toggle('hide', s !== id);
+  });
+  $('hud').classList.toggle('on', !id);
+  /* the attract cube tumbles behind the title and the manual; behind the
+     pause and win cards the real board stays put, because those are about
+     the level you are in the middle of */
+  var wasDemo = demo;
+  /* the manual opened mid-level is NOT an attract screen — the board behind
+     it is a puzzle somebody is in the middle of */
+  demo = (id === 'scTitle') || (id === 'scManual' && manualFrom === 'scTitle');
+  if(demo && !lv){ loadLevel(1); wave = null; }
+  if(!demo) demoAng = 0;
+  if(demo !== wasDemo){ if(demo) demoStart(); setStyle(curBand); layout(); }
+}
+var ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+function roman(b){ return b < ROMAN.length ? ROMAN[b] : String(b+1); }
+function refreshHud(){
+  if(!lv) return;
+  $('lvName').textContent = levelNo + ' · ' + lv.name;
+  var tn = $('turnN');
+  if(tn.textContent !== String(turns)){
+    tn.textContent = turns;
+    var tp = $('turnPill'); tp.classList.remove('bump'); void tp.offsetWidth; tp.classList.add('bump');
+  }
+  $('parN').textContent = '/' + lv.par;
+  $('turnPill').classList.toggle('over', turns > lv.par);
+  var wt = $('worldTag'), names = {0:'', 1:'INVERTED', 2:'DRAINED', 3:'INVERTED · DRAINED'};
+  wt.textContent = names[world] || '';
+  wt.classList.toggle('on', world !== 0);
+  wt.style.color = 'rgb(' + (world === 2 ? PLATE_COL[2] : PLATE_COL[1]) + ')';
+  wt.style.boxShadow = 'inset 0 0 0 1px rgba(' + (world === 2 ? PLATE_COL[2] : PLATE_COL[1]) + ',.34)';
+  wt.style.background = 'rgba(' + (world === 2 ? PLATE_COL[2] : PLATE_COL[1]) + ',.10)';
+  var kp = $('keyPill'), held = keysHeld();
+  kp.style.display = lv.keys.length ? '' : 'none';
+  $('keyN').textContent = held;
+  $('btnUndo').disabled = !undoStack.length;
+  refreshTicks();
+}
+/* The ticks are the only answer to "may I turn?", so they are recomputed on
+   every drag frame rather than only when something settles. */
+function refreshTicks(){
+  var ids = ['tkL','tkR','tkU','tkD'], order = [0,1,2,3];
+  var live = liveAngle();
+  for(var i = 0; i < 4; i++){
+    var t = order[i], el = $(ids[i]);
+    var can = lv && !won && !!landing(lv, TURNS[t].f(M), pos, doors, world);
+    el.className = 'tick ' + (can ? 'ok' : 'no');
+    if(live && Math.abs(live.ang) > 0.1){
+      var act = live.axis === 'x' ? (live.ang > 0 ? 1 : 0) : (live.ang > 0 ? 2 : 3);
+      el.classList.toggle('armed', act === t && Math.abs(live.ang) > Math.PI/4 && can);
+      el.style.opacity = act === t ? '1' : '.3';
+    } else { el.style.opacity = ''; el.classList.remove('armed'); }
+  }
+}
+function undo(){
+  if(!undoStack.length || walking || anim) return;
+  restore(undoStack.pop());
+  sfx.step();
+}
+function hint(){
+  if(!lv || won) return;
+  var r = solve(lv, 40, {pos:pos, ori:oriIndex(M), kmask:kmask, doors:doors, world:world});
+  if(!r.ok){ toast('no way on from here — undo'); sfx.stuck(); return; }
+  if(!r.first){ toast('you are standing on it'); return; }
+  if(r.first.kind === 'turn'){
+    var names = ['drag LEFT', 'drag RIGHT', 'drag UP', 'drag DOWN'];
+    toast(names[r.first.dir]);
+  } else {
+    toast(r.turns ? 'walk first — ' + r.turns + ' turn' + (r.turns>1?'s':'') + ' to go' : 'walk — no turns left to make');
+  }
+}
+
+/* The cube list is a window on an endless shelf, so it pages by vault
+   rather than trying to be a list of everything. Par is not shown for a
+   cube you have not opened — it is a fact about a level that does not
+   exist yet, and minting ten of them to fill in a grid would cost seconds. */
+function buildCubeGrid(){
+  var g = $('cubeGrid'); g.innerHTML = '';
+  var st = vaultStyle(viewBand);
+  $('vaultName').textContent = 'VAULT ' + roman(viewBand) + ' — ' + st.name;
+  $('vaultSwatch').style.background = 'linear-gradient(135deg,' + rgbs(st.dN) + ' 0 50%,' + rgbs(st.rN) + ' 50% 100%)';
+  $('vaultPrev').disabled = viewBand === 0;
+  $('vaultNext').disabled = (viewBand+1)*10 + 1 > store.reached;
+  for(var k = 0; k < 10; k++){
+    var level = viewBand*10 + k + 1;
+    var best = store.best[level], done = best !== undefined;
+    var locked = level > store.reached;
+    var par = level <= BAKED.length ? BAKED[level-1].par : (mintCache[level] ? mintCache[level].par : null);
+    var marks = !done ? 0 : (par === null ? 1 : best <= par ? 3 : best <= par + 2 ? 2 : 1);
+    var el = document.createElement('button');
+    el.className = 'cube' + (done ? ' done' : '') + (marks === 3 ? ' perfect' : '') + (locked ? ' locked' : '');
+    el.innerHTML = '<div class="idx">' + level + '</div><div class="nm">' + (locked ? '—' : levelName(level)) + '</div>' +
+      '<div class="marks">' + [0,1,2].map(function(j){ return '<i class="' + (j < marks ? 'on' : '') + '"></i>'; }).join('') + '</div>';
+    (function(L, lk){ el.onclick = function(){
+      if(lk){ toast('clear the cubes before it'); return; }
+      goLevel(L);
+    }; })(level, locked);
+    g.appendChild(el);
+  }
+}
+function openCubes(){ viewBand = vaultOf(levelNo); buildCubeGrid(); show('scCubes'); }
+
+/* ---------- bindings, each exactly once ---------- */
+$('btnPlay').onclick = function(){
+  audio();
+  if(!store.taught){ store.taught = 1; save(); show('scManual'); return; }
+  goLevel(firstUncleared());
+};
+function firstUncleared(){
+  for(var i = 1; i <= store.reached; i++) if(store.best[i] === undefined) return i;
+  return store.reached;
+}
+$('btnCubes').onclick = openCubes;
+$('btnCubesBack').onclick = function(){ show('scTitle'); };
+$('vaultPrev').onclick = function(){ if(viewBand > 0){ viewBand--; buildCubeGrid(); } };
+$('vaultNext').onclick = function(){ if((viewBand+1)*10 + 1 <= store.reached){ viewBand++; buildCubeGrid(); } };
+var manualFrom = 'scTitle';
+$('btnManual').onclick = function(){ manualFrom = 'scTitle'; show('scManual'); };
+$('btnManual2').onclick = function(){ manualFrom = 'scPause'; show('scManual'); };
+$('btnManualBack').onclick = function(){
+  /* Opened from the pause menu this is just a reference card — go back to the
+     level. Opened from the title it is the way IN, and it must load a level
+     rather than reveal whatever the attract cube left lying around. */
+  if(manualFrom === 'scPause'){ show(null); return; }
+  goLevel(firstUncleared());
+};
+$('btnMenu').onclick = function(){
+  $('pauseName').textContent = lv ? lv.name : 'PAUSED';
+  $('pauseSub').textContent = lv ? ('Vault ' + roman(vaultOf(levelNo)) + ' · ' + vaultName(vaultOf(levelNo)) +
+      ' — fewest possible: ' + lv.par + ' turn' + (lv.par===1?'':'s')) : '';
+  show('scPause');
+};
+$('btnResume').onclick = function(){ show(null); };
+$('btnPlateGo').onclick = function(){ show(null); };
+$('btnRestart').onclick = function(){ loadLevel(levelNo); show(null); };
+$('btnToCubes').onclick = openCubes;
+$('btnUndo').onclick = undo;
+$('btnHint').onclick = hint;
+$('btnNext').onclick = function(){ goLevel(levelNo + 1); };
+$('btnRetry').onclick = function(){ loadLevel(levelNo); show(null); };
+$('btnWinCubes').onclick = openCubes;
+function bindSwitch(id, key){
+  var el = $(id);
+  el.classList.toggle('on', !!store[key]);
+  el.parentElement.onclick = function(){
+    store[key] = store[key] ? 0 : 1;
+    el.classList.toggle('on', !!store[key]);
+    save();
+    if(key === 'sound' && store.sound) audio();
+  };
+}
+bindSwitch('swSound', 'sound');
+bindSwitch('swHaptic', 'haptic');
+bindSwitch('swDepth', 'depth');
+
+/* ============================================================
+   THE THREE HOOKS A NATIVE HOST NEEDS.
+   A packaged WebView has no address bar, so the app owns the back gesture,
+   the lifecycle, and — see the safe-area note in the stylesheet — the
+   insets. All three are published on one object rather than scattered
+   across globals the host has to guess at.
+   ============================================================ */
+window.TURNKEY = {
+  /* true = handled, keep the Activity alive. false = let Android finish it. */
+  onBack: function(){
+    if(!$('scWin').classList.contains('hide')){ buildCubeGrid(); show('scCubes'); return true; }
+    if(!$('scManual').classList.contains('hide')){ show(lv ? 'scPause' : 'scTitle'); return true; }
+    if(!$('scPause').classList.contains('hide')){ show(null); return true; }
+    if(!$('scPlate').classList.contains('hide')){ show(null); return true; }
+    if(!$('scCubes').classList.contains('hide')){
+      if(viewBand > 0){ viewBand--; buildCubeGrid(); return true; }
+      show('scTitle'); return true;
+    }
+    if($('hud').classList.contains('on')){ show('scPause'); return true; }
+    return false;
+  },
+  pause: function(){ running = false; },
+  resume: function(){ if(!running){ running = true; last = 0; requestAnimationFrame(loop); } },
+  /* the host measures the real display cutout and hands it over */
+  setInsets: function(t, r, b, l){
+    var s = document.documentElement.style;
+    s.setProperty('--sa-top', t + 'px'); s.setProperty('--sa-right', r + 'px');
+    s.setProperty('--sa-bottom', b + 'px'); s.setProperty('--sa-left', l + 'px');
+    fit();
+  },
+  version: '1.0'
+};
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden) window.TURNKEY.pause(); else window.TURNKEY.resume();
+});
+window.addEventListener('resize', fit);
+window.addEventListener('orientationchange', function(){ setTimeout(fit, 120); });
+if(window.visualViewport){
+  /* Safari collapses and expands its bars as you play; without this the board
+     is laid out against a height that stopped being true two seconds ago. */
+  var vvT = 0;
+  var onVV = function(){ clearTimeout(vvT); vvT = setTimeout(fit, 60); };
+  window.visualViewport.addEventListener('resize', onVV);
+  window.visualViewport.addEventListener('scroll', onVV);
+}
+
+/* ============================================================
+   LOOP
+   ============================================================ */
+var running = true, last = 0;
+/* THE LOOP MUST NOT BE ABLE TO DIE.
+
+   An exception thrown in here propagates out before the next
+   requestAnimationFrame is queued, and the chain is gone — permanently. The
+   game does not crash to an error screen, it silently freezes: taps do
+   nothing, nothing redraws, and the only cure is a restart. That is exactly
+   what one bad tap did, and no single defect should ever be able to brick
+   the app. So the frame is wrapped and the next one is always armed, while
+   the error still goes to the console so a test harness watching for it
+   fails loudly rather than quietly passing. */
+function loop(ts){
+  if(!running) return;
+  var dt = last ? Math.min(64, ts - last) : 16;
+  last = ts;
+  try{
+    advanceAnim(dt);
+    advanceWalk(dt);
+    stepMotes(dt); stepParts(dt); stepWave(dt); stepFlip(dt); stepFlyers(dt); stepDemo(dt);
+    if(kickV.t < 1) kickV.t = Math.min(1, kickV.t + dt/kickV.dur);
+    if(revealT < 2000) revealT += dt;
+    if(exitFlash > 0) exitFlash = Math.max(0, exitFlash - dt/620);
+    if(exitPull >= 0){ exitPull += dt/260; if(exitPull > 1) exitPull = 1; }
+    draw();
+  } catch(err){
+    console.error('frame error', err);
+    walking = null; anim = null; drag = null;
+    if(lv) settle();
+  }
+  requestAnimationFrame(loop);
+}
+buildMotes(); setStyle(0);
+try{ $('wordmark').src = buildWordmark('TURNKEY', 22).toDataURL('image/png'); }catch(e){}
+fit();
+show('scTitle');
+/* the label has its own node: writing textContent on the button itself wiped
+   the play chip out of the DOM every boot */
+$('playLabel').textContent = store.reached > 1 ? 'CONTINUE' : 'BEGIN';
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
