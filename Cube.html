@@ -971,6 +971,29 @@ function doorIndexAt(lv, w){
 }
 function samePos(a,b){ return a[0]===b[0] && a[1]===b[1] && a[2]===b[2]; }
 
+/* THE OTHER SIDE OF THE CUBE, exactly.
+
+   The cell diametrically opposite the one you are standing in — through the
+   centre, not around the outside. If something is sitting there it can be
+   seen through the horizon, faintly, and that is ALL it does: no reach, no
+   route, no bearing on any turn. It is a look through a hole at the far
+   side of the world, and the only reward is noticing.
+
+   Which is worth having precisely because it costs nothing. A player who
+   never sees it has lost nothing; a player who does has found out what the
+   thing they are moving actually is. */
+function antipode(){ return [N-1-pos[0], N-1-pos[1], N-1-pos[2]]; }
+function throughLook(){
+  if(!lv) return null;
+  var a = antipode(), i;
+  if(samePos(a, lv.goal)) return {kind:4};
+  for(i = 0; i < lv.keys.length; i++)
+    if(!(kmask & (1<<i)) && samePos(a, lv.keys[i])) return {kind:2};
+  for(i = 0; i < lv.doors.length; i++)
+    if(samePos(a, lv.doors[i])) return {kind:3, i:i};
+  return null;
+}
+
 /* Turning is legal only when the column you are standing in still has
    footing after the turn. That single rule is what makes WHERE you stand
    gate WHICH turns you have — position gating rotation, rotation gating
@@ -3086,7 +3109,13 @@ function buildGlow(){
 /* the target for anything that is LIGHT rather than matter: the low-res
    buffer when bloom is on, the frame itself when it is not, so turning
    effects down never turns a marker's glow off entirely */
-function lightCtx(){ return (store.fx && gx) ? gx : ctx; }
+/* WHEN GLOW MUST OBEY A CLIP. The bloom buffer is composited over the
+   whole frame, so anything routed into it escapes whatever the caller
+   clipped — which is fine for every marker standing on a block and fatal
+   for one being glimpsed through a hole. Turn this on and light draws into
+   the frame instead, where the clip can reach it. */
+var glowOff = false;
+function lightCtx(){ return (!glowOff && store.fx && gx) ? gx : ctx; }
 function glowBegin(){
   if(!gx) return;
   gx.setTransform(GLOW_S, 0, 0, GLOW_S, 0, 0);
@@ -4181,14 +4210,26 @@ function drawPlayer(x, y, sz, k){
   ctx.fillStyle = '#03040c';
   ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
   if(skyCv){
+    /* SAMPLE THE SKY, DO NOT SCALE IT.
+
+       This began as the whole starfield drawn at 2.6x and clipped to a
+       circle a few dozen pixels across — which asks the compositor to
+       transform an image the size of the screen and then throw away all
+       but a thumbnail of it, every frame, for as long as a peek is held.
+       It cost two milliseconds a frame and nobody could have told you what
+       for. The source-rectangle form of drawImage lifts exactly the patch
+       of sky behind the hole and maps it into the hole. Same picture, and
+       the work is proportional to what is actually visible. */
+    var k2 = skyCv.width / (W + PAD*2), half = rr/2.6;
     ctx.save();
-    ctx.translate(x, y); ctx.rotate(t*0.07); ctx.scale(2.6, 2.6); ctx.translate(-x, -y);
+    ctx.translate(x, y); ctx.rotate(t*0.07); ctx.translate(-x, -y);
     ctx.imageSmoothingEnabled = true;
     /* half strength: the sky canvas is mostly its own ambient wash, and at
        this magnification that wash alone filled the horizon with a flat
        slate grey. What is wanted through the hole is STARS, not sky. */
     ctx.globalAlpha = 0.5;
-    ctx.drawImage(skyCv, -PAD, -PAD, W + PAD*2, H + PAD*2);
+    ctx.drawImage(skyCv, (x + PAD - half)*k2, (y + PAD - half)*k2, half*2*k2, half*2*k2,
+                  x - rr, y - rr, rr*2, rr*2);
     ctx.imageSmoothingEnabled = false;
     ctx.restore();
   }
@@ -4202,6 +4243,29 @@ function drawPlayer(x, y, sz, k){
   hz.addColorStop(1,    'rgba(0,0,0,0.25)');
   ctx.fillStyle = hz;
   ctx.fillRect(x - rr, y - rr, rr*2, rr*2);
+  /* AND WHATEVER IS DIRECTLY OPPOSITE YOU, seen through it. Drawn after the
+     core has eaten the light, dimmed, and rocking very slightly — the point
+     is that it is GLIMPSED. Its halo is forced into the frame rather than
+     the bloom buffer for the duration, or the glow of a key on the far side
+     of the cube would spill out around a hole that is meant to be letting
+     almost nothing out. */
+  var thru = (!demo && !won) ? throughLook() : null;
+  if(thru){
+    ctx.save();
+    glowOff = true;
+    ctx.globalAlpha = 0.58*k;
+    ctx.translate(x, y);
+    ctx.rotate(Math.sin(t*0.42)*0.07);
+    ctx.scale(0.86, 0.86);
+    ctx.translate(-x, -y);
+    if(thru.kind === 2) drawKey(x, y, rr*1.5);
+    else if(thru.kind === 4) drawGoal(x, y, rr*1.4);
+    else drawDoor(x, y, rr*1.6, doorT[thru.i] || 0);
+    glowOff = false;
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
   /* a few lensed points, dragged round the rim: without them the rind is a
      smear, and with them it is somewhere */
   ctx.globalCompositeOperation = 'lighter';
@@ -4684,6 +4748,92 @@ function draw3d(){
     return 'rgba(' + (c[0]|0) + ',' + (c[1]|0) + ',' + (c[2]|0) + ','
       + (xr * (back ? 0.22 : 0.62) * (gi < 2 ? 1 : 0.66)).toFixed(3) + ')';
   }
+  /* ============================================================
+     THE CONDUIT — the throat, drawn only while the cube is glass.
+
+     A black hole that is a way through should be able to SHOW the way
+     through, and the peek is the one place there is room to: the rock has
+     already gone translucent and the player is turning the cube in their
+     hand looking for what is on the far side. So a tube is run from the
+     cell you occupy, through the centre of the cube, to the cell exactly
+     opposite — the same one the horizon is showing you a glimpse of.
+
+     It is real geometry, not a screen-space line. Rings are generated in
+     WORLD space around the axis and projected one point at a time through
+     the same px() the blocks use, so the throat foreshortens correctly,
+     passes behind the blocks it should, and stays honest at every angle an
+     orbit can reach. A drawn line between two projected endpoints would
+     look right from exactly one camera and wrong from all the others.
+
+     Three things make it read as a flow rather than a pipe: the rings are
+     fattest at the waist and pinch at both mouths, their brightness runs
+     along the axis on a travelling wave so light appears to move toward
+     the far end, and two long edges are traced down the silhouette to give
+     the tube a skin. Additive throughout, because it is light in a space
+     that is already see-through.                                          */
+  function drawConduit(){
+    if(demo || !lv) return;
+    var A = pos, B = [N-1-pos[0], N-1-pos[1], N-1-pos[2]];
+    var dx = B[0]-A[0], dy = B[1]-A[1], dz = B[2]-A[2];
+    var len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if(len < 0.6) return;                       /* standing at the centre */
+    dx /= len; dy /= len; dz /= len;
+    /* two vectors across the axis */
+    var ux = Math.abs(dy) < 0.9 ? 0 : 1, uy = Math.abs(dy) < 0.9 ? 1 : 0, uz = 0;
+    var ax = uy*dz - uz*dy, ay = uz*dx - ux*dz, az = ux*dy - uy*dx;
+    var al = Math.sqrt(ax*ax + ay*ay + az*az) || 1; ax /= al; ay /= al; az /= al;
+    var bx = dy*az - dz*ay, by = dz*ax - dx*az, bz = dx*ay - dy*ax;
+    /* TEN BY EIGHT, not thirteen by ten. The peek is a HELD state — a
+       player sits in it turning the cube — so anything drawn here is paid
+       for every frame for as long as the thumb is down. The first pass put
+       two milliseconds a frame into a tube nobody was counting the rings
+       of; a third fewer rings and two fewer points each is invisible and
+       gives most of it back. */
+    var SEG = 10, RING = 8, i2, j2, flow = (Date.now() % 1600)/1600;
+    var pts = [], edgeL = [], edgeR = [];
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for(i2 = 0; i2 <= SEG; i2++){
+      var u = i2/SEG;
+      var cxw = A[0] + (B[0]-A[0])*u, cyw = A[1] + (B[1]-A[1])*u, czw = A[2] + (B[2]-A[2])*u;
+      var rad = 0.30 * (0.30 + 0.70*Math.sin(Math.PI*u));      /* pinched at both mouths */
+      var wave = 0.30 + 0.70*Math.pow(Math.max(0, Math.sin((u - flow)*Math.PI*2.4)), 2);
+      ctx.strokeStyle = 'rgba(206,244,255,' + (xr*0.72*wave).toFixed(3) + ')';
+      ctx.lineWidth = (1.2 + xr*1.1) * (0.6 + 0.7*wave);
+      ctx.beginPath();
+      for(j2 = 0; j2 <= RING; j2++){
+        var th = j2/RING * 6.28318;
+        var ox = Math.cos(th)*rad, oy = Math.sin(th)*rad;
+        px(cxw + ax*ox + bx*oy, cyw + ay*ox + by*oy, czw + az*ox + bz*oy, tmp);
+        if(j2 === 0){ ctx.moveTo(tmp[0], tmp[1]); pts[0] = [tmp[0], tmp[1]]; }
+        else ctx.lineTo(tmp[0], tmp[1]);
+        if(j2 === 0) edgeL.push([tmp[0], tmp[1]]);
+        if(j2 === (RING>>1)) edgeR.push([tmp[0], tmp[1]]);
+      }
+      ctx.stroke();
+    }
+    /* the skin */
+    ctx.strokeStyle = 'rgba(226,248,255,' + (xr*0.46).toFixed(3) + ')';
+    ctx.lineWidth = 1 + xr*0.8;
+    for(var e2 = 0; e2 < 2; e2++){
+      var arr = e2 ? edgeR : edgeL;
+      ctx.beginPath();
+      for(i2 = 0; i2 < arr.length; i2++){
+        if(i2) ctx.lineTo(arr[i2][0], arr[i2][1]); else ctx.moveTo(arr[i2][0], arr[i2][1]);
+      }
+      ctx.stroke();
+    }
+    /* and the far mouth, which is where the glimpse in the horizon is
+       coming from — worth a mark of its own */
+    px(B[0], B[1], B[2], tmp);
+    var g3 = ctx.createRadialGradient(tmp[0], tmp[1], 0, tmp[0], tmp[1], S*z*0.5);
+    g3.addColorStop(0, 'rgba(214,246,255,' + (xr*0.6).toFixed(3) + ')');
+    g3.addColorStop(1, 'rgba(120,200,255,0)');
+    ctx.fillStyle = g3;
+    ctx.beginPath(); ctx.arc(tmp[0], tmp[1], S*z*0.5, 0, 6.284); ctx.fill();
+    ctx.restore();
+  }
+
   function flushWire(){
     if(wireDone) return;
     wireDone = true;
@@ -4702,6 +4852,7 @@ function draw3d(){
       ctx.stroke();
     }
     ctx.restore();
+    if(xr > 0.05) drawConduit();
   }
   drawCage(m, z, (demo ? 0.10 : 0.46) + xr*0.40, pv);
   for(i = 0; i < list.length; i++){
