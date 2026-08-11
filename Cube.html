@@ -4114,9 +4114,22 @@ function stepOrb(dt){
   orbEmit -= dt;
   if(orbEmit <= 0){
     orbEmit = walking ? 42 : 150;
-    burst(p[0] + (Math.random()-0.5)*S*0.22, p[1] + (Math.random()-0.5)*S*0.22, 1,
-          {kind:'ember', spd:8, lift:14, life:900, r:1.5, col:'56,214,255',
-           g:-10, fade:0.65, drag:0.99});
+    /* INFALL. The emitter used to shed embers upward, which is what a lamp
+       does; this thing is the opposite of a lamp. Debris is spawned out on
+       a ring and thrown INWARD, so what you see around the character is
+       light being pulled in and going out at the horizon. Same particle
+       system, same cost — the velocity is simply aimed the other way. */
+    var ia = Math.random()*6.28318, ir = S*(0.38 + Math.random()*0.14);
+    burst(p[0] + Math.cos(ia)*ir, p[1] + Math.sin(ia)*ir, 1,
+          {kind:'ember', spd:0, life:520, r:1.4, col:'150,225,255',
+           g:0, fade:0.8, drag:0.97});
+    var pt = parts[parts.length-1];
+    if(pt){
+      /* aimed at the centre, with a sideways kick so it arrives on a spiral
+         rather than falling straight down a drain */
+      pt.vx = (p[0] - pt.x)*2.1 + Math.cos(ia + 1.57)*70;
+      pt.vy = (p[1] - pt.y)*2.1 + Math.sin(ia + 1.57)*70;
+    }
   }
 }
 function drawOrbTrail(){
@@ -4177,48 +4190,93 @@ function drawPlayer(x, y, sz, k){
   ctx.restore();
   halo(x, y, sz*0.92*k, '56,214,255', 0.20*k*br);
 
-  /* IT IS AN OBJECT IN THE SCENE NOW, not a picture on top of one.
+  /* A SINGULARITY, and one thing had to be settled before it could be one.
 
-     Drawn through the same renderer as the blocks, the key, the gate and
-     the way out: real geometry, real normals, lit by the one fixed light
-     over the player's left shoulder that every solid in this game agrees
-     about. It turns, and turning shows you a sphere rather than a disc,
-     because the shading moves across it while the silhouette does not.
+     DARK ALREADY MEANS SOMETHING HERE. A void column is the impassable
+     tile and it is drawn as the sky showing through, so a black disc
+     sitting on a block is a floor with a hole in it — the exact wrong
+     sentence. The version that survives contact with this board is
+     accretion-disc-forward: the horizon stays small and absolutely black,
+     and a blazing ring does all the finding. Which is also, by some
+     distance, the most recognisable way anyone has ever drawn one.
 
-     The ring is welded into the same mesh, so its far half sorts behind the
-     body and its near half in front with no bookkeeping at all — and that
-     read survives being orbited to any angle a peek can reach, which a
-     front/back split faked in screen space never would.
+     Everything is real geometry through the same renderer as the blocks:
+     a sphere for the horizon and two tori for the discs, welded into ONE
+     mesh so a single depth sort puts the near half of each disc in front
+     of the horizon and the far half behind it. That occlusion is the whole
+     illusion — a bright ring passing behind something perfectly black is
+     what makes the black read as a volume instead of a hole.
 
-     The seam pass is on and the facet edges are off: at forty pixels the
-     shading steps fall below what the eye separates, and it comes out as a
-     turned ball rather than a bag of triangles. Its own spin is slow and on
-     two axes, so the highlight travels and the ring sweeps.
+     Three cheats on top of the geometry, each doing a specific job:
 
-     THE FACE STAYS FLAT AND FACING YOU, which is not an inconsistency — it
-     is what every stylised 3D game does with a character whose expression
-     has to be readable from any camera. Bodies are geometry; faces are
-     drawn on. Painting one into the sphere's surface would put an eye on
-     the far side of the ball half the time. */
+       LENSING   two arcs bent over and under the horizon. Light from the
+                 disc's far side arrives ABOVE and BELOW a real one rather
+                 than behind it, and those two arcs are the single detail
+                 that says "singularity" instead of "planet with a ring".
+       BEAMING   the approaching side of the disc is brighter than the
+                 receding side. Costs one dot product and buys the whole
+                 sense of rotation.
+       INFALL    debris spiralling in and disappearing at the horizon,
+                 rather than particles drifting out of it. The character
+                 EATS light; it should never be seen shedding it.
+
+     The disc is arc-light blue and not gold, deliberately: gold has meant
+     the way out since the exit became a ring, and two blazing gold rings
+     on one board would be a puzzle about which is which. */
   var glow = lightCtx();
   if(glow !== ctx){
     glow.save(); glow.globalCompositeOperation = 'lighter';
-    var au = glow.createRadialGradient(x, y, rr*0.3, x, y, rr*2.3);
-    au.addColorStop(0,   'rgba(150,235,255,' + (0.20*k).toFixed(3) + ')');
-    au.addColorStop(0.45,'rgba(70,190,255,' + (0.10*k).toFixed(3) + ')');
-    au.addColorStop(1,   'rgba(30,110,240,0)');
+    /* A DONUT, NOT A DISC. The bloom composites over everything, so an
+       aura filled to its centre lights up the one part of this character
+       that must never be lit — and the horizon came out teal. The glow
+       starts outside the horizon and the hole stays a hole. */
+    var au = glow.createRadialGradient(x, y, rr*0.62, x, y, rr*2.4);
+    au.addColorStop(0,    'rgba(120,220,255,0)');
+    au.addColorStop(0.22, 'rgba(140,225,255,' + (0.15*k).toFixed(3) + ')');
+    au.addColorStop(0.5,  'rgba(60,170,255,' + (0.07*k).toFixed(3) + ')');
+    au.addColorStop(1,    'rgba(30,110,240,0)');
     glow.fillStyle = au;
-    glow.beginPath(); glow.arc(x, y, rr*2.3, 0, 6.284); glow.fill();
+    glow.beginPath(); glow.arc(x, y, rr*2.4, 0, 6.284); glow.fill();
     glow.restore();
   }
-  /* the glow is deliberately thin. A solid that is also its own light
-     source loses its form: every facet clips to the same white and the ball
-     goes back to being a blob, which is the exact failure the last three
-     versions each found their own way into. It is lit like an object and it
-     GLOWS like a lamp beside it. */
-  drawSolid(CHAR, x, y, rr, t*0.55, 0.30 + 0.10*Math.sin(t*0.7), [86, 190, 255],
-            {cull:1, face:1, seam:1.1, amb:0.28, glow:0.13, glowR:1.6});
-  if(k > 0.55) drawFace(x, y, rr, k);
+
+  var spin = t*0.9, tilt = 0.34 + 0.06*Math.sin(t*0.5);
+
+  /* the far lensed arc, behind everything */
+  function lens(front){
+    var c2 = ctx;
+    c2.save();
+    c2.globalCompositeOperation = 'lighter';
+    c2.strokeStyle = 'rgba(196,242,255,' + ((front ? 0.72 : 0.34)*k).toFixed(3) + ')';
+    c2.lineWidth = Math.max(1.1, rr*(front ? 0.11 : 0.08));
+    c2.beginPath();
+    c2.ellipse(x, y, rr*0.80, rr*0.80, 0,
+               front ? Math.PI*0.06 : Math.PI*1.06, front ? Math.PI*0.94 : Math.PI*1.94);
+    c2.stroke();
+    c2.restore();
+  }
+  lens(false);
+
+  drawSolid(CHAR, x, y, rr, spin, tilt, [10, 12, 30], {
+    cull:1, face:1, seam:1.0,
+    cols: [[6, 7, 20], [128, 208, 252], [96, 176, 244]],
+    ambs: [0.0, 0.44, 0.34],
+    specs: [0, 1, 0.8],
+    glow:0.06, glowR:1.5
+  });
+
+  lens(true);
+
+  /* the horizon's own edge: a hairline of light where the disc's photons
+     graze it, which is what keeps a black circle from looking like a gap */
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(150,225,255,' + (0.55*k).toFixed(3) + ')';
+  ctx.lineWidth = Math.max(0.9, rr*0.055);
+  ctx.beginPath(); ctx.arc(x, y, rr*0.625, 0, 6.284); ctx.stroke();
+  ctx.restore();
+
+  if(k > 0.55) drawFace(x, y, rr*0.62, k);
   if(pushed) ctx.restore();
 }
 /* ============================================================
@@ -4364,18 +4422,22 @@ function meshBox(w, h, d, ox, oy, oz){
              [x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],
           f:[[0,3,2,1],[4,5,6,7],[0,1,5,4],[2,3,7,6],[1,2,6,5],[0,4,7,3]]};
 }
+/* A merged mesh remembers which piece each face came from, so one solid can
+   be made of two materials and still be ONE depth-sorted list. That matters
+   the moment a bright thing has to pass both behind and in front of a dark
+   thing: split them into two draws and the sort is gone. */
 function meshMerge(list){
-  var v = [], f = [], i, j, k;
+  var v = [], f = [], g = [], i, j, k;
   for(i = 0; i < list.length; i++){
     var m = list[i], base = v.length;
     for(j = 0; j < m.v.length; j++) v.push(m.v[j]);
     for(j = 0; j < m.f.length; j++){
       var src = m.f[j], dst = [];
       for(k = 0; k < src.length; k++) dst.push(src[k] + base);
-      f.push(dst);
+      f.push(dst); g.push(i);
     }
   }
-  return {v:v, f:f};
+  return {v:v, f:f, g:g};
 }
 
 /* ---- the renderer ----------------------------------------------------
@@ -4384,7 +4446,7 @@ function meshMerge(list){
    light that got through it and came back, and painting the far side at a
    third of the alpha under the near side is the cheapest honest version of
    that. Opaque solids pass cull:1 and skip it. */
-function drawSolid(m, x, y, s, ry, rx, col, o){
+function drawSolid(m, x, y, s, ry, rx, baseCol, o){
   o = o || {};
   var c = lightCtx(), i, j, n = m.v.length, nf = m.f.length;
   var cy = Math.cos(ry), sy = Math.sin(ry), cx = Math.cos(rx), sx = Math.sin(rx);
@@ -4425,10 +4487,17 @@ function drawSolid(m, x, y, s, ry, rx, col, o){
       if(o.cull) continue;
       nx = -nx; ny = -ny; nz = -nz;
     }
+    var col = (o.cols && m.g) ? o.cols[m.g[fiA[i]]] : baseCol;
     var dif = Math.max(0, nx*SOLID_L[0] + ny*SOLID_L[1] + nz*SOLID_L[2]);
-    var amb = o.amb === undefined ? 0.34 : o.amb;
+    var amb = (o.ambs && m.g) ? o.ambs[m.g[fiA[i]]] : (o.amb === undefined ? 0.34 : o.amb);
     var lum = amb + (1-amb)*dif;
+    /* THE SHEEN HAS TO KNOW WHAT IT IS SHINING ON. It was a flat white
+       term added on top of whatever colour the facet was, which is fine
+       until a material is meant to be BLACK — an event horizon with
+       specular highlights is a shiny marble, and the whole point of the
+       thing is that no light comes off it. Materials can now turn it off. */
     var spc = Math.pow(Math.max(0, nx*SOLID_H[0] + ny*SOLID_H[1] + nz*SOLID_H[2]), 18);
+    if(o.specs && m.g) spc *= o.specs[m.g[fiA[i]]];
     var g = front ? 1 : 0.42;                       /* the far side, seen through */
     var r0 = Math.min(255, col[0]*lum*g + 255*spc*(front?0.85:0));
     var g0 = Math.min(255, col[1]*lum*g + 255*spc*(front?0.85:0));
@@ -4537,8 +4606,18 @@ function drawPlate(r, bit, depth){
    Cheap enough to build at boot and never think about again: the largest is
    the gate at thirty-six faces, and the whole set is under a hundred. */
 var GEM_KEY = meshOcta(1);
-/* the character: a sphere with its ring welded on, so one sort handles both */
-var CHAR = meshMerge([meshSphere(9, 14, 1), meshTilt(meshTorus(18, 5, 1.44, 0.05), 0.36)]);
+/* THE CHARACTER IS A SINGULARITY: an event horizon with two accretion
+   discs welded to it, all in one mesh so one sort puts the near half of a
+   disc in front of the horizon and the far half behind it. That occlusion
+   IS the effect — a bright ring passing behind something perfectly black is
+   the only thing that makes the black read as a volume rather than a hole
+   punched in the picture. Two discs at slightly different tilts and radii,
+   because one is a hoop and two is a disc with structure in it. */
+var CHAR = meshMerge([
+  meshSphere(9, 14, 0.62),
+  meshTilt(meshTorus(26, 6, 1.16, 0.115), 0.30),
+  meshTilt(meshTorus(22, 5, 1.52, 0.055), 0.44)
+]);
 var GEM_EXIT = meshTorus(24, 12, 0.74, 0.26);
 var GATE = meshMerge([
   meshBox(0.10, 0.62, 0.10, -0.62, 0.02, 0),        /* posts */
