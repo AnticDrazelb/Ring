@@ -472,22 +472,39 @@ h2+.manual{margin-top:14px;}
 }
 .hudline{display:flex;align-items:baseline;gap:14px;width:100%;min-width:0;flex-wrap:nowrap;}
 #hudCtx{gap:8px;justify-content:space-between;}
-#hudVault{font-size:var(--t-micro);letter-spacing:.20em;color:var(--dim-2);white-space:nowrap;
-          overflow:hidden;text-overflow:ellipsis;}
-/* inside the readout a pill is not a plaque — it is a labelled value. It
-   must reset EVERY property the plaque set: the base rule is a centred flex
-   box with a gap and a minimum size, and inheriting any of that turns three
-   readouts into three columns that fight over the width. */
+#hudVault{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+          margin-left:auto;}
+/* ---------- THE READOUT HAS TO BE READ -----------------------------------
+   IT WAS NINE PIXELS TALL WITH A TENTH OF AN EM OF TRACKING.
+
+   Turning the HUD into a line of text was right; setting it at --t-micro
+   was not. On the phone this actually ships to, FOLDS / NODES / TO GO came
+   out at about nine device-independent pixels with heavy tracking on top —
+   under every mobile minimum there is, and unreadable at arm's length in a
+   lit room. It looked like an instrument in a screenshot and like nothing
+   at all in a hand.
+
+   The rule for a readout is not "small because it is chrome". It is: the
+   LABEL may be quiet, the VALUE may not. Labels go up two rungs and stay
+   dim; the numbers go up three and carry full ink. The line is still one
+   line and still text, and now it can be read without leaning in.
+
+   It must also reset EVERY property the plaque set — the base .pill is a
+   centred flex box with a gap and a minimum size, and inheriting any of it
+   turns three readouts into three columns fighting over the width. */
 #barTop .pill{
   display:inline-flex;align-items:baseline;justify-content:flex-start;
   height:auto;min-width:0;padding:0;gap:0;background:none;box-shadow:none;
   white-space:nowrap;flex:0 0 auto;
-  font-size:var(--t-micro);letter-spacing:.18em;color:var(--dim);
+  font-size:var(--t-fine);letter-spacing:.14em;color:var(--dim);
 }
-#barTop .pill .n{font-size:var(--t-lg);letter-spacing:0;margin-left:.55em;}
-#barTop #parN,#barTop #keyTot{font-size:var(--t-fine);color:var(--dim-2);margin-left:.1em;}
-#barTop #lvName{color:var(--ink);font-size:var(--t-fine);letter-spacing:.16em;gap:.6em;}
-#hudVals{gap:clamp(12px,4.4vw,24px);}
+#barTop .pill .n{font-size:var(--t-2xl);letter-spacing:0;margin-left:.42em;color:var(--ink);}
+#barTop #parN,#barTop #keyTot{font-size:var(--t-md);color:var(--dim);margin-left:.06em;}
+#barTop #lvName{color:var(--ink);font-size:var(--t-md);letter-spacing:.14em;gap:.6em;}
+#barTop #lvNo{font-size:var(--t-fine);color:var(--rust);}
+#hudVault{font-size:var(--t-fine);letter-spacing:.16em;}
+#hudVals{gap:clamp(14px,5vw,28px);}
+#barTop{gap:5px;}
 #barBot{bottom:calc(var(--sa-bottom) + 12px);justify-content:center;gap:12px;}
 /* TURNS carries a word, two numbers and a slash — the widest thing on the
    bar, and every pixel it gives back is a pixel the cube's name keeps */
@@ -633,27 +650,17 @@ h2+.manual{margin-top:14px;}
           mask-image:linear-gradient(90deg,#000 calc(100% - 15px),transparent);}
 #turnPill .n{color:var(--rust);}
 #turnPill.over .n{color:var(--fault);}
-#keyPill{color:var(--node);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(163,230,53,.34),
-    0 8px 22px -12px rgba(0,0,0,.9);}
-
-/* FEWEST FROM HERE. Shaped like the key pill because it is the same kind of
-   thing — a live count of something you are carrying — and coloured jade
-   because jade has meant the way out since cube one. It changes colour only
-   to say you have left the perfect line, and it is the one readout allowed
-   to say a cube is dead. */
-#goPill{color:var(--arc);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(34,211,238,.34),
-    0 8px 22px -12px rgba(0,0,0,.9);}
+/* THESE STILL CARRIED THEIR PLAQUE. When the readout stopped being four
+   boxes and became two lines of text, these three rules were left behind
+   with the box-shadows they had as plaques — so the moment a cube went over
+   par, .slip fired and drew a rust RECTANGLE around TO GO in the middle of
+   a line of plain text. A state change must change the state, not resurrect
+   a component that was deleted. Colour only. */
+#keyPill{color:var(--node);}
+#goPill{color:var(--arc);}
 #goPill .n{color:var(--arc);}
-#goPill.slip{color:var(--rust);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(234,88,12,.34),
-    0 8px 22px -12px rgba(0,0,0,.9);}
-#goPill.slip .n{color:var(--rust);}
-#goPill.dead{color:var(--fault);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(239,68,68,.42),
-    0 8px 22px -12px rgba(0,0,0,.9);}
-#goPill.dead .n{color:var(--fault);}
+#goPill.slip,#goPill.slip .n{color:var(--rust);}
+#goPill.dead,#goPill.dead .n{color:var(--fault);}
 #goPill.think{opacity:.5;}
 #goPill.bump .n{display:inline-block;animation:turnBump .34s var(--seat);}
 
@@ -2848,12 +2855,47 @@ function popcnt(x){ var c = 0; while(x){ x &= x-1; c++; } return c; }
    ramps down to almost nothing behind it, so the BRIGHTEST lattice is the
    specified one and everything darker is depth. The trace floor comes up to
    sky-700 to meet it. Gap: about forty-seven. */
+/* THE BOARD WAS UNDEREXPOSED, AND THAT IS A LEGIBILITY BUG, NOT A MOOD.
+
+   The lattice used to top out at #1e293b because that is the value the
+   brief names for GRID. Against pure black, on a real phone, in a lit room,
+   #1e293b is very nearly nothing: the dead cells vanished, the board
+   stopped having a visible extent, and the screen read as a few blue
+   squares floating in the dark. A colour picked off a swatch list is not
+   the same thing as a colour that survives a panel.
+
+   So both ramps come up together and the gap comes up with them. #1e293b is
+   still on the lattice — it is where the ramp STARTS now, at the back of the
+   cube, rather than where it ends — and #38bdf8 is still on the trace,
+   sitting mid-range where the eye spends most of its time. What changed is
+   that a near dead cell is slate you can actually see, and a near trace is
+   bright enough to be the brightest thing on a phone at half brightness.
+
+   FOUR CONSTRAINTS, AND THEY PULL AGAINST EACH OTHER. Getting this wrong in
+   either direction is what produced two bad builds in a row, so they are
+   written down:
+
+     1  the lattice must be VISIBLE on a phone      -> its ceiling goes up
+     2  a trace must still read as SKY BLUE         -> its ceiling is capped
+     3  the two materials must not be confusable    -> big gap between them
+     4  depth must be readable along the trace ramp -> big spread within it
+
+   Push (1) and (3) fights you. Push (2) up to fix (1) and the traces wash to
+   white — which is what happened when the near trace went to sky-300: the
+   board was legible and the circuits had stopped being blue. The numbers
+   below are the point where all four hold at once.
+
+     lattice   #1a2332 (34) .. #3b485c (71)
+     trace     #0b8ed0 (119) .. #38bdf8 (165)
+
+   Gap 48 between materials, 46 of spread within the trace, and the near
+   trace is exactly the value the brief names. */
 var ST = {
   name:'ENGINE',
-  dF:[3, 105, 161],    /* trace, far  — sky-700, the dimmest a circuit may be */
-  dN:[56, 189, 248],   /* trace, near — #38bdf8 exactly */
-  rF:[7, 11, 17],      /* lattice, far — barely above the void */
-  rN:[30, 41, 59],     /* lattice, near — #1e293b exactly, and its ceiling */
+  dF:[11, 142, 208],   /* trace, far  — the dimmest a circuit may be */
+  dN:[56, 189, 248],   /* trace, near — #38bdf8 exactly, the brief's value */
+  rF:[26, 35, 50],     /* lattice, far */
+  rN:[59, 72, 92],     /* lattice, near, and its ceiling */
   vd:[0, 0, 0],        /* unrendered space */
   st:[56, 189, 248],
   at:[234, 88, 12]
@@ -2978,9 +3020,12 @@ function cellSprite(deck, dq, lq){
   if(deck){
     /* the body, ramped sky-700 -> sky-400, with the lamp allowed to lift it
        a couple of percent and nothing else */
-    var r0 = (3   + (56  - 3)  *k) * lm,
-        g0 = (105 + (189 - 105)*k) * lm,
-        b0 = (161 + (248 - 161)*k) * lm;
+    /* OFF THE PALETTE, NOT OFF A COPY OF IT. These were the ramp endpoints
+       written out a second time, so brightening ST left every tile exactly
+       as dark as it was and the fix appeared not to work. One source. */
+    var r0 = (ST.dF[0] + (ST.dN[0] - ST.dF[0])*k) * lm,
+        g0 = (ST.dF[1] + (ST.dN[1] - ST.dF[1])*k) * lm,
+        b0 = (ST.dF[2] + (ST.dN[2] - ST.dF[2])*k) * lm;
     g.fillStyle = 'rgb(' + (r0|0) + ',' + (g0|0) + ',' + (b0|0) + ')';
     g.fillRect(0, 0, CELL_R, CELL_R);
     /* A LIFT, NOT A CORE. The first pass opened the centre of every trace
@@ -2990,8 +3035,12 @@ function cellSprite(deck, dq, lq){
        own edge and no more — enough that a cell reads as lit from inside
        rather than filled, which is the entire job. */
     gr = g.createRadialGradient(h, h*0.88, 0, h, h, h*1.5);
-    gr.addColorStop(0, 'rgba(186,240,255,' + (0.10 + 0.12*k).toFixed(3) + ')');
-    gr.addColorStop(1, 'rgba(186,240,255,0)');
+    /* SUBTLE, because the body is already bright. At 0.12+0.14k over a
+       sky-300 body the middle of every tile clipped and the circuits came
+       out white — the second time this exact mistake has been made, and
+       both times it was the centre lift rather than the palette. */
+    gr.addColorStop(0, 'rgba(224,247,255,' + (0.06 + 0.09*k).toFixed(3) + ')');
+    gr.addColorStop(1, 'rgba(224,247,255,0)');
     g.fillStyle = gr;
     g.fillRect(0, 0, CELL_R, CELL_R);
     /* THE INNER RIM, blurred rather than stroked. It is the one pixel of
@@ -3000,7 +3049,7 @@ function cellSprite(deck, dq, lq){
        is three device pixels on one phone and half of one on another. */
     g.save();
     g.filter = 'blur(2.4px)';
-    g.strokeStyle = 'rgba(196,244,255,' + (0.26 + 0.34*k).toFixed(3) + ')';
+    g.strokeStyle = 'rgba(224,247,255,' + (0.24 + 0.30*k).toFixed(3) + ')';
     g.lineWidth = 3;
     g.strokeRect(3, 3, CELL_R - 6, CELL_R - 6);
     g.restore();
@@ -3015,7 +3064,9 @@ function cellSprite(deck, dq, lq){
        THE CEILING IS #1e293b AND NOTHING HERE MAY PASS IT, which is what
        keeps the brightest lattice forty-seven luminance under the dimmest
        trace. Everything below only ever darkens. */
-    var lr = 7 + (30 - 7)*k, lg = 11 + (41 - 11)*k, lb = 17 + (59 - 17)*k;
+    var lr = ST.rF[0] + (ST.rN[0] - ST.rF[0])*k,
+        lg = ST.rF[1] + (ST.rN[1] - ST.rF[1])*k,
+        lb = ST.rF[2] + (ST.rN[2] - ST.rF[2])*k;
     g.fillStyle = 'rgb(' + (lr|0) + ',' + (lg|0) + ',' + (lb|0) + ')';
     g.fillRect(0, 0, CELL_R, CELL_R);
     g.save();
@@ -3040,27 +3091,92 @@ function drawBlock(t, d, x, y, w, h, lit){
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(cellSprite(deck, dq, lq), x, y, w, h);
   ctx.imageSmoothingEnabled = sm;
-  /* AND THE CIRCUIT LEAVES THE CELL. A trace paints a soft rect into the
-     bloom buffer as well, so a run of connected traces lights the black
-     around it as one shape — which is the whole difference between a
-     diagram of a circuit and a circuit that is carrying something. Only
-     traces: the lattice is not energised and must never glow, or the one
-     separation the board is read off starts leaking. */
-  if(deck && !glowOff && store.fx && gx){
-    /* AT THE TILE'S OWN BOUNDS, NOT PADDED. Padding the rect made every
-       trace throw a square halo that OVERLAPPED its neighbour's, and two
-       additive halves at a shared edge is a bright bar down the seam — a
-       run of circuits came out as a ladder. Unpadded, adjacent traces tile
-       exactly and the spread comes from the buffer, which is a third of
-       the resolution and composited twice at different scales. That is the
-       blur; it does not need help. */
-    var k = dq / CELL_DQ;
-    gx.save();
-    gx.globalCompositeOperation = 'lighter';
-    gx.fillStyle = 'rgba(56,189,248,' + (0.07 + 0.15*k).toFixed(3) + ')';
-    gx.fillRect(x, y, w, h);
-    gx.restore();
+}
+
+/* ---------- THE HALO IS A RING, AND IT TOOK FOUR GOES ---------------------
+   A trace should light the black around it. Every attempt at that broke
+   something, and all four failures are worth keeping because each one is a
+   different lesson.
+
+   ONE — a soft rect per tile, padded outward. Neighbouring tiles' halos
+   overlapped along shared edges, and two additive halves is a bright bar:
+   a run of circuits came out as a ladder.
+
+   TWO — the same rect unpadded, so it could not overlap. It could not miss
+   the tile either. The bloom buffer is composited additively TWICE, so a
+   quarter-alpha rect over a tile came back as a third of full sky added to
+   something that was already sky: a near trace measured 96,247,255 against
+   a palette asking for 56,189,248. Green and blue pinned. The board was not
+   bright, it was CLIPPED, and every near trace was the same white whatever
+   colour it had been given. That is why the circuits stopped looking blue.
+
+   THREE — fill the union, then punch the tiles back out with
+   destination-out. Correct idea, and it removed thirty percent of what it
+   should have removed, because destination-out erases in proportion to
+   SOURCE ALPHA and the fillStyle still carried the halo's own 0.30. A hole
+   has to be cut with something opaque.
+
+   FOUR — with the hole finally cut, the ring showed up as a hard rectangle
+   a few pixels outside the circuit. Widening it made it a bigger rectangle:
+   at a third of the screen resolution the composite is a plain upscale, and
+   an upscale of a rect is a rect. It needs a real blur. Applying
+   ctx.filter per frame took the flat path from 0.4ms to 22.1ms.
+
+   SO IT IS BAKED. The union is a property of the BOARD, not of the frame —
+   it changes when the surface changes, which is a turn or a plate, a
+   handful of times per level, and never during a walk. It is built once
+   into its own sheet, blurred there, and blitted into the bloom buffer
+   every frame for the price of one drawImage. Same picture, no filter in
+   the hot path.                                                            */
+var HALO_A = 0.26;
+var haloCv = null, haloSig = '', haloPad = 0;
+function buildHalo(SF, sig){
+  var pad = Math.max(8, S*0.75), span = N*S + pad*2, u, v, r;
+  haloCv = document.createElement('canvas');
+  /* half resolution: it is about to be blurred and then downscaled again by
+     the bloom buffer, so full resolution would be paying twice to throw the
+     same detail away */
+  var sc = 0.5;
+  haloCv.width = haloCv.height = Math.max(1, Math.ceil(span*sc));
+  var g = haloCv.getContext('2d');
+  g.setTransform(sc, 0, 0, sc, 0, 0);
+  var ox = pad - (CX - N*S/2), oy = pad - (CY - N*S/2);
+  g.filter = 'blur(' + Math.max(2, S*0.20).toFixed(2) + 'px)';
+  g.fillStyle = 'rgba(56,189,248,1)';
+  g.beginPath();
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    var c0 = SF[u*N + v]; if(!c0 || !isWalkType(c0.t)) continue;
+    r = tileRect(u, v);
+    g.rect(r[0] + ox - S*0.16, r[1] + oy - S*0.16, S*1.32, S*1.32);
   }
+  g.fill();
+  /* and the circuit itself back out, wider than the cell so the blur that
+     falls inward lands on ground that has already been cleared */
+  g.filter = 'none';
+  g.globalCompositeOperation = 'destination-out';
+  g.fillStyle = '#000';
+  g.beginPath();
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    var c1 = SF[u*N + v]; if(!c1 || !isWalkType(c1.t)) continue;
+    r = tileRect(u, v);
+    g.rect(r[0] + ox - S*0.06, r[1] + oy - S*0.06, S*1.12, S*1.12);
+  }
+  g.fill();
+  haloCv.span = span; haloPad = pad; haloSig = sig;
+}
+function traceHalo(SF){
+  if(!gx || !store.fx || glowOff) return;
+  /* the signature is the tile size and which cells are circuit — the only
+     two things that can change the shape */
+  var sig = S + ':' + N, i;
+  for(i = 0; i < N*N; i++) sig += (SF[i] && isWalkType(SF[i].t)) ? '1' : '0';
+  if(sig !== haloSig || !haloCv) buildHalo(SF, sig);
+  gx.save();
+  gx.globalCompositeOperation = 'lighter';
+  gx.globalAlpha = HALO_A;
+  gx.imageSmoothingEnabled = true;
+  gx.drawImage(haloCv, CX - N*S/2 - haloPad, CY - N*S/2 - haloPad, haloCv.span, haloCv.span);
+  gx.restore();
 }
 
 /* The lamp is nearly gone. It used to tint the tile at the source so the
@@ -3680,7 +3796,7 @@ function drawFlashes(){
 function drawVignette(){
   var g0 = ctx.createRadialGradient(CX, CY, Math.min(W,H)*0.34, CX, CY, Math.max(W,H)*0.78);
   g0.addColorStop(0, 'rgba(0,0,0,0)');
-  g0.addColorStop(1, 'rgba(0,0,0,' + (0.34 + vig*0.40).toFixed(3) + ')');
+  g0.addColorStop(1, 'rgba(0,0,0,' + (0.18 + vig*0.44).toFixed(3) + ')');
   ctx.fillStyle = g0; ctx.fillRect(0, 0, W, H);
 }
 
@@ -4499,6 +4615,7 @@ function drawFlat(){
        and the band guarantee never even hears about it. */
     drawBlock(s.t, s.d, r[0], r[1], r[2] + 0.6, r[3] + 0.6, deckLight(u, v, s.t));
   }
+  traceHalo(SF);
   if(anyWave){ drawWaveExtras(); return; }
   /* 2. THE SCANLINE. Everything that used to be here — a cast shadow from
         every nearer column onto its farther neighbour, and a hairline at
@@ -5535,8 +5652,8 @@ function draw3d(){
         wire[isWalkType(e.t) ? 0 : 2].push(e.pts);
       } else {
         ctx.strokeStyle = isWalkType(e.t)
-          ? 'rgba(186,240,255,' + (0.22 + 0.38*depthK(e.dep)).toFixed(3) + ')'
-          : 'rgba(30,41,59,'    + (0.40 + 0.60*depthK(e.dep)).toFixed(3) + ')';
+          ? 'rgba(224,247,255,' + (0.24 + 0.38*depthK(e.dep)).toFixed(3) + ')'
+          : 'rgba(90,105,128,'  + (0.40 + 0.60*depthK(e.dep)).toFixed(3) + ')';
         ctx.lineWidth = 1;
         ctx.stroke();
       }
