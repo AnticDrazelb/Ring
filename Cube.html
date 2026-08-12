@@ -124,9 +124,9 @@
      they get their own smaller rung and give the board back the difference.
      Anything TAPPABLE still has the hard 44px floor. */
   --h-read:clamp(38px,9.6vw,42px);
-  --h-ctl:clamp(46px,12vw,52px);
-  --h-btn:clamp(52px,14.5vw,62px);
-  --h-row:clamp(54px,15vw,64px);
+  --h-ctl:clamp(44px,11.5vw,48px);
+  --h-btn:clamp(46px,12.5vw,52px);
+  --h-row:clamp(50px,13.5vw,58px);
 
   /* ---- TYPE -------------------------------------------------------
      Nine rungs that scale together. The vw term is calibrated so each
@@ -196,9 +196,52 @@ button{font-family:inherit;color:inherit;border:0;background:none;padding:0;curs
   transition:opacity .12s linear;
 }
 /* A PANEL DOES NOT ARRIVE, IT SWITCHES ON. No scale, no seat curve, no
-   bounce — one hundred and twenty milliseconds of opacity and it is
-   either displayed or it is not, because that is what a display does. */
+   bounce — the panel itself is either displayed or it is not, because that
+   is what a display does. */
 .layer.hide{opacity:0;pointer-events:none;}
+
+/* ---------- BUT ITS CONTENTS BOOT ---------------------------------------
+   A SCREEN THAT IS SIMPLY THERE IS A SCREENSHOT.
+
+   Every menu in this game appeared fully formed in a single frame, which is
+   correct for a display and wrong for a display that has just been switched
+   to. Real instruments come up a line at a time, and the reason it matters
+   here is not decoration: a staggered arrival tells you the READING ORDER.
+   Sixty milliseconds apart, top to bottom, and the eye has been walked down
+   the screen before it has decided anything.
+
+   It is done in STEPS, not with an ease. An eased fade is a soft consumer
+   transition and it would be the one un-milled thing in the interface; four
+   steps reads as a field being populated. Nothing moves — no slide, no
+   scale — because a panel that is settling into place is a panel with mass,
+   and none of this has any.
+
+   The delays are hand-assigned by depth rather than by nth-child so the
+   order survives markup changes, and the whole thing is 240ms end to end:
+   long enough to read as a sequence, short enough that a player pressing
+   RESUME twice in a second never sees it. */
+@keyframes boot{from{opacity:0}to{opacity:1}}
+.layer:not(.hide)>*{animation:boot .16s steps(4,end) both;}
+.layer:not(.hide)>*:nth-child(1){animation-delay:.00s}
+.layer:not(.hide)>*:nth-child(2){animation-delay:.05s}
+.layer:not(.hide)>*:nth-child(3){animation-delay:.09s}
+.layer:not(.hide)>*:nth-child(4){animation-delay:.13s}
+.layer:not(.hide)>*:nth-child(5){animation-delay:.16s}
+.layer:not(.hide)>*:nth-child(n+6){animation-delay:.19s}
+/* the spacers are pseudo-content and must not be animated, or the column
+   collapses for a sixth of a second every time a panel opens */
+.layer::before,.layer::after{animation:none!important;}
+/* and the title's two bands boot their own rows, because the bands
+   themselves are the layer's children and would otherwise arrive whole */
+.titleTop>*,.titleBottom>*{animation:boot .16s steps(4,end) both;}
+.titleBottom>*:nth-child(1){animation-delay:.10s}
+.titleBottom>*:nth-child(2){animation-delay:.15s}
+.titleBottom>*:nth-child(3){animation-delay:.19s}
+.titleBottom>*:nth-child(4){animation-delay:.23s}
+.titleBottom>*:nth-child(5){animation-delay:.26s}
+@media (prefers-reduced-motion: reduce){
+  .layer:not(.hide)>*,.titleTop>*,.titleBottom>*{animation:none;}
+}
 .layer{backdrop-filter:none;-webkit-backdrop-filter:none;}
 /* A SCREEN MADE OF WORDS IS NOT A WINDOW. The pause card sits over a puzzle
    somebody is in the middle of and should let it through; the manual and the
@@ -263,7 +306,7 @@ button{font-family:inherit;color:inherit;border:0;background:none;padding:0;curs
 #scTitle h1{text-shadow:0 2px 24px rgba(0,0,0,.95),0 0 60px rgba(0,0,0,.8);}
 #scTitle .sub,#scManual .sub,#scTitle .foot{text-shadow:0 1px 12px rgba(0,0,0,.95);}
 #scTitle .sub{margin-bottom:0;}
-#scTitle .foot{margin-top:10px;}
+#scTitle .foot{margin-top:14px;}
 #scTitle .btn,#scManual .btn{backdrop-filter:none;-webkit-backdrop-filter:none;}
 #scTitle .btn{position:relative;}
 #scTitle .btn:not(.primary){background:var(--void);}
@@ -292,7 +335,7 @@ h1{
    that is allowed to be large. */
 #wordmark{
   display:flex;flex-direction:column;align-items:center;gap:2px;
-  width:min(88vw,420px);margin:0 auto 18px;padding-bottom:14px;
+  width:min(88vw,420px);margin:0 auto 14px;padding-bottom:12px;
   font-size:clamp(26px,8.6vw,40px);font-weight:500;letter-spacing:.30em;
   line-height:1.06;text-indent:.30em;color:var(--ink);
   border-bottom:var(--hair) solid var(--rust);
@@ -300,7 +343,7 @@ h1{
 #wordmark span:last-child{color:var(--rust);}
 h2{font-size:var(--t-xl);font-weight:500;letter-spacing:.18em;margin:0 0 4px;text-align:center;}
 h2+.manual{margin-top:14px;}
-.sub{color:var(--dim);font-size:var(--t-sm);text-align:center;line-height:1.5;max-width:31ch;margin:0 auto 26px;}
+.sub{color:var(--dim);font-size:var(--t-fine);text-align:center;line-height:1.65;letter-spacing:.12em;max-width:34ch;margin:0 auto 18px;}
 .eyebrow{font-size:var(--t-tiny);letter-spacing:.24em;color:var(--rust);text-transform:uppercase;font-weight:500;}
 
 /* A TELEVISION IS NOT A BIG PHONE.
@@ -341,26 +384,70 @@ h2+.manual{margin-top:14px;}
    word is bracketed — [ CALIBRATE ] — so it reads as a selectable field on
    a console rather than as a surface to press. Pressing does not squash it:
    it INVERTS, the way a field on an instrument does when it is armed. */
+/* ---------- THE CONTROL SYSTEM -----------------------------------------
+   FOUR IDENTICAL OUTLINED SLABS IS NOT A MENU, IT IS A LIST OF BOXES.
+
+   Every action used to be the same object: a full-width hairline rectangle
+   sixty-odd pixels tall with a bracketed word floating in the middle of it.
+   Nothing was louder than anything else, three quarters of every box was
+   empty, and the eye had nowhere to start. That is the clearest tell there
+   is between a hobby build and a shipped one — a shipped menu tells you
+   what to press before you have read a word of it.
+
+   Three RANKS, and they are different objects rather than one object in
+   three colours:
+
+     PRIMARY    filled rust, black text, corner ticks. Exactly one per
+                screen, and the only solid mass of colour in the interface.
+     SECONDARY  hairline box, ink text. The things you might want.
+     GHOST      no box at all — a ruled row, dim. Taking the box away is
+                what stops a menu reading as a stack of equal weights.
+
+   And they are SHORTER. A control does not need sixty-two pixels to hold
+   one word; it needed them when it was the only shape on screen. Compact
+   controls let the stack sit as one block with air around it, which is what
+   makes a menu look composed rather than stretched. The 44px thumb floor
+   still holds — that is not negotiable, it is only no longer exceeded by
+   twenty pixels of decoration. */
 .btn{
   min-height:var(--h-btn);width:100%;max-width:340px;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  border-radius:0;margin:0 auto 11px;padding:0 20px;
-  font-size:var(--t-md);font-weight:500;letter-spacing:.18em;
+  border-radius:0;margin:0 auto 9px;padding:0 18px;
+  font-size:var(--t-sm);font-weight:500;letter-spacing:.20em;
   background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge);
-  color:var(--ink);
-  transition:background .1s linear, color .1s linear, box-shadow .1s linear;
+  color:var(--ink);position:relative;
+  transition:background .09s linear, color .09s linear, box-shadow .09s linear;
 }
 .btn:active{background:var(--rust);color:#000;box-shadow:inset 0 0 0 var(--hair) var(--rust);}
+
+/* THE ONE SOLID THING ON THE SCREEN. */
 .btn.primary{
-  background:transparent;color:var(--rust);
-  box-shadow:inset 0 0 0 var(--hair) var(--rust);
+  background:var(--rust);color:#000;box-shadow:none;
+  font-size:var(--t-md);letter-spacing:.22em;
+  min-height:calc(var(--h-btn) + 8px);
+  margin-bottom:15px;
 }
-.btn.primary:active{background:var(--rust);color:#000;}
-.btn.ghost{background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);color:var(--dim);}
+.btn.primary:active{background:var(--rust-hi);color:#000;}
+/* the same crop marks the board is ruled with, so the primary belongs to
+   the same instrument as the thing behind it */
+.btn.primary::before,.btn.primary::after{
+  content:'';position:absolute;top:4px;bottom:4px;width:7px;
+  border-top:var(--hair) solid rgba(0,0,0,.5);
+  border-bottom:var(--hair) solid rgba(0,0,0,.5);
+}
+.btn.primary::before{left:4px;border-left:var(--hair) solid rgba(0,0,0,.5);}
+.btn.primary::after{right:4px;border-right:var(--hair) solid rgba(0,0,0,.5);}
+
+/* NO BOX AT ALL — a ruled row reads as "also available" without competing */
+.btn.ghost{
+  background:transparent;box-shadow:inset 0 1px 0 var(--edge-2);
+  color:var(--dim);min-height:var(--h-ctl);font-size:var(--t-fine);
+  letter-spacing:.22em;margin-bottom:0;
+}
+.btn.ghost:active{background:transparent;color:var(--rust);box-shadow:inset 0 1px 0 var(--rust);}
 /* the daily says whether today's is done, in the row itself, because a
    second screen to find that out is a second screen */
 .dailyMark{font-size:var(--t-tiny);letter-spacing:.16em;color:var(--arc);margin-left:12px;}
-.btn.ghost:active{background:var(--dim-2);color:var(--ink);box-shadow:inset 0 0 0 var(--hair) var(--dim);}
 
 /* ---------- THE HUD ----------------------------------------------
    Two bars and nothing between them, so the middle of the screen — the
@@ -714,23 +801,30 @@ h2+.manual{margin-top:14px;}
   box-shadow:inset 0 0 0 var(--hair) var(--edge-2);margin-bottom:9px;
   width:100%;max-width:360px;
 }
-.row .lbl{font-size:var(--t-md);font-weight:500;letter-spacing:.1em;text-align:left;}
+.row .lbl{font-size:var(--t-sm);font-weight:500;letter-spacing:.14em;text-align:left;}
 /* the hints are three to six words now, so they can afford to be a legible
    size instead of a legal-notice one */
-.row .hint{font-size:var(--t-fine);color:var(--dim-2);letter-spacing:.02em;margin-top:2px;line-height:1.35;}
+.row .hint{font-size:var(--t-micro);color:var(--dim-2);letter-spacing:.10em;margin-top:3px;line-height:1.4;}
 /* The track used to fill with 34% rust, which against this background comes
    out as a muddy brown that reads as "broken", not as "on". On is the full
    colour with a glow under the knob; off is a neutral rail. */
-/* A SWITCH IS A STATE, AND A STATE HAS A NAME. A sliding knob is a piece
-   of hardware pretending to be on screen; this reads OFF or ON in the
-   palette's own colours and moves nothing at all. */
-.sw{width:52px;height:24px;border-radius:0;background:transparent;position:relative;
+/* A SWITCH IS A STATE, AND A STATE HAS A NAME. A sliding knob is a piece of
+   hardware pretending to be on screen; this reads OFF or ON and moves
+   nothing at all.
+
+   IT IS SMALL NOW, AND THAT MATTERS MORE THAN IT SOUNDS. At button size and
+   filled rust, five of them stacked were five solid orange slabs — the
+   loudest thing in the whole interface was the settings list, and the eye
+   went to SOUND / HAPTICS / EFFECTS before it went to RESUME. A switch is
+   the least important control on the screen. It is now a small field with a
+   rust rule under it when live: unmistakable at a glance, and quiet. */
+.sw{width:46px;height:20px;border-radius:0;background:transparent;position:relative;
     flex:0 0 auto;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
-    transition:background .1s linear,box-shadow .1s linear;}
+    transition:background .09s linear,box-shadow .09s linear;}
 .sw::after{content:'OFF';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-           font-size:var(--t-micro);letter-spacing:.16em;color:var(--dim-2);}
-.sw.on{background:var(--rust);box-shadow:inset 0 0 0 var(--hair) var(--rust);}
-.sw.on::after{content:'ON';color:#000;}
+           font-size:var(--t-micro);letter-spacing:.14em;color:var(--dim-2);}
+.sw.on{background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--rust),inset 0 -3px 0 var(--rust);}
+.sw.on::after{content:'ON';color:var(--rust);}
 
 /* Two secondary actions, side by side, because they are secondary. A phone
    menu that spends sixty pixels of height each on RESTART and ALL CUBES is
@@ -783,6 +877,11 @@ h2+.manual{margin-top:14px;}
        margin:8px 0 calc((var(--sa-bottom) + 22px) * -1);
        background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.94) 34%,#000 62%);}
 .stick .btn{margin-bottom:0;}
+/* THE FOOTER IS PINNED, SO THE SCROLL HAS TO END ABOVE IT. Without this the
+   last two rules of the manual sat behind [ GOT IT ] and could not be
+   scrolled clear — the content ended exactly where the viewport did and the
+   button was over the top of it. The list reserves the footer's height. */
+#scManual .manual,#scPlate .manual{padding-bottom:calc(var(--h-btn) + 26px);}
 
 .foot{font-size:var(--t-micro);color:var(--dim-2);letter-spacing:.16em;text-align:center;margin-top:16px;}
 </style>
@@ -2409,14 +2508,55 @@ function layout(){
     var ov = Math.round(Math.min(W, H) * 0.035);
     ins = {t:ins.t + ov, r:ins.r + ov, b:ins.b + ov, l:ins.l + ov};
   }
-  /* On the title screen the chrome owns a band at each end and the cube owns
-     the middle, so it is sized and centred against THAT band rather than the
-     whole plate — which is what stops the hero sitting under the buttons. */
-  var topBar = ins.t + (demo ? Math.round(H*0.26) : 54);
-  var botBar = ins.b + (demo ? Math.round(H*0.34) : 112);
-  var availW = W - ins.l - ins.r - (demo ? 8 : 12);
+  /* THE TITLE BAND IS MEASURED, NOT GUESSED.
+
+     This used to reserve 26% of the height for the wordmark and 34% for the
+     actions, which was right for the layout it was written against and
+     wrong the moment a fourth button arrived: on a real phone the cube came
+     out sitting UNDER [ CONTINUE ], with the primary action of the whole
+     game floating on top of the hero object. A fraction cannot know how
+     tall a stack of buttons is.
+
+     So the chrome is asked. The two title bands are laid out by flexbox and
+     have real heights; the cube takes exactly what is left between them and
+     is centred in it. Add a button, change the pitch copy, run it on a
+     shorter screen — the hero re-fits itself and can never collide. */
+  /* THE BOARD SITS IN THE MIDDLE OF WHAT IS LEFT. These two used to be 54
+     and 112, which reserved eighty pixels the bottom bar does not use — so
+     the free space came out fifty above the board and a hundred and twenty
+     below it, and the whole composition read as top-heavy on a tall phone.
+     They are measured against the chrome that is actually there. */
+  var topBar = ins.t + 62, botBar = ins.b + 84;
+  if(demo){
+    var tT = document.querySelector('.titleTop'), tB = document.querySelector('.titleBottom');
+    var sc = document.getElementById('scTitle');
+    if(tT && tB && sc && !sc.classList.contains('hide')){
+      var rT = tT.getBoundingClientRect(), rB = tB.getBoundingClientRect();
+      topBar = Math.max(ins.t + 8, rT.bottom + 10);
+      botBar = Math.max(ins.b + 8, H - rB.top + 10);
+    } else {
+      topBar = ins.t + Math.round(H*0.26);
+      botBar = ins.b + Math.round(H*0.34);
+    }
+  }
+  /* the rule was landing seven points off the bezel, which is not a margin,
+     it is a near miss. A board is allowed to give up two percent to have
+     air around it. */
+  var availW = W - ins.l - ins.r - (demo ? 8 : 30);
   var availH = H - topBar - botBar;
-  var side = Math.max(60, Math.min(availW, demo ? availH*1.45 : availH));
+  /* A TUMBLING CUBE IS WIDER THAN ITS OWN SIDE. Fitting the hero to the
+     band by its flat width is fitting the one pose it is never in: halfway
+     through a yaw the silhouette is the face diagonal, about 1.41 times the
+     side, and with the perspective term a little more. Sized flat, it fitted
+     the band on paper and pushed into the buttons on every frame that
+     mattered. It is fitted to the DIAGONAL, so the pose that reaches
+     furthest is the one that just clears. */
+  /* 1.46 rather than 1.41: the diagonal is the geometry, and the
+     perspective term the hero is drawn with adds a little on top of it.
+     At 1.34 the cube cleared on two phones and clipped the band by a pixel
+     on the third, which is exactly the kind of margin that ships. */
+  var side = demo ? Math.max(60, Math.min(availW, availH) / 1.46)
+                  : Math.max(60, Math.min(availW, availH));
   /* THE RULE IS PART OF THE BOARD'S FOOTPRINT.
 
      It is drawn outside the tiles, so a board sized to the last available
@@ -2429,7 +2569,10 @@ function layout(){
   if(!demo) side = side / (1 + 2*FRAME_GAP/N);
   S = side / N;
   CX = ins.l + (W - ins.l - ins.r)/2;
-  CY = topBar + availH/2 - (demo ? 0 : Math.min(30, (availH - side)*0.14));
+  /* and it is CENTRED in that band. The nudge upward existed to make room
+     for a bottom bar that has since got shorter, and all it does now is
+     re-introduce the imbalance the numbers above just removed. */
+  CY = topBar + availH/2;
   /* the chrome follows the board rather than the screen */
   document.documentElement.style.setProperty('--barw',
     Math.round(Math.max(300, Math.min(W - ins.l - ins.r, side + S*1.2))) + 'px');
@@ -4396,8 +4539,14 @@ function drawFlat(){
         the board it was annotating. Four corner marks say the same thing
         and leave the tile whole, which is how a scope brackets a region it
         has locked onto. */
-  var cm = Math.max(3, S*0.20), ins = S*0.12;
-  ctx.lineWidth = Math.max(1, S*0.028);
+  /* QUIETER. At full rust on a lit trace these were the loudest marks on
+     the board — six tiles' worth of bright orange corner brackets over the
+     one surface the player is trying to read. The reachable set is an
+     ANNOTATION: it has to be unmistakable and it must never be the first
+     thing the eye lands on. Thinner, shorter, and a third of the way back
+     toward the ground. */
+  var cm = Math.max(3, S*0.16), ins = S*0.10;
+  ctx.lineWidth = Math.max(1, S*0.020);
   ctx.lineCap = 'butt';
   for(u = 0; u < N; u++) for(v = 0; v < N; v++){
     var rk = u*N + v;
@@ -4408,7 +4557,7 @@ function drawFlat(){
     if(lit <= 0) continue;
     r = tileRect(u, v);
     var x0 = r[0] + ins, y0 = r[1] + ins, x1 = r[0] + S - ins, y1 = r[1] + S - ins;
-    ctx.strokeStyle = 'rgba(234,88,12,' + (0.90*lit).toFixed(3) + ')';
+    ctx.strokeStyle = 'rgba(234,88,12,' + (0.62*lit).toFixed(3) + ')';
     ctx.beginPath();
     ctx.moveTo(x0, y0 + cm); ctx.lineTo(x0, y0); ctx.lineTo(x0 + cm, y0);
     ctx.moveTo(x1 - cm, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + cm);
@@ -5239,9 +5388,13 @@ function draw3d(){
     var lc2 = lightCtx();
     lc2.save();
     lc2.globalCompositeOperation = 'lighter';
+    /* THE CONTACT GLOW IS THE ENGINE'S OWN COLOUR. It was a warm amber —
+       the last survivor of the palette this game used to have, and on a
+       black title screen under a blue object it read as a fire somewhere
+       off-stage. The hero glows with what the hero is made of. */
     var bg2 = lc2.createRadialGradient(CX, gy, 0, CX, gy, gw*0.8);
-    bg2.addColorStop(0, 'rgba(255,150,60,0.20)');
-    bg2.addColorStop(1, 'rgba(255,150,60,0)');
+    bg2.addColorStop(0, 'rgba(56,189,248,0.24)');
+    bg2.addColorStop(1, 'rgba(56,189,248,0)');
     lc2.translate(CX, gy); lc2.scale(1, gh/gw*1.4); lc2.translate(-CX, -gy);
     lc2.fillStyle = bg2;
     lc2.fillRect(CX - gw, gy - gw, gw*2, gw*2);
@@ -6063,7 +6216,9 @@ function refreshHud(){
     var tp = $('turnPill'); tp.classList.remove('bump'); void tp.offsetWidth; tp.classList.add('bump');
   }
   $('parN').textContent = '/' + lv.par;
-  $('hudVault').textContent = daily ? ('DAILY / ' + dayLabel())
+  /* the name on the left already carries the date on a daily, so the
+     right-hand slot carries the thing the left one cannot */
+  $('hudVault').textContent = daily ? 'DAILY ENGINE'
     : ('VAULT ' + roman(vaultOf(levelNo)) + ' / ' + vaultName(vaultOf(levelNo)));
   $('turnPill').classList.toggle('over', turns > lv.par);
   var wt = $('worldTag'), names = {0:'', 1:'LATTICE INVERTED', 2:'DRAINED', 3:'INVERTED · DRAINED'};
@@ -6222,8 +6377,12 @@ $('btnMenu').onclick = function(){
   /* one line, and it fits on one line: the vault, its name, and par. The
      old string wrapped to two on every phone, which is why the card opened
      with a paragraph instead of a heading. */
+  /* IT SAID THE SAME THING TWICE. The heading is the cube's name and for
+     the daily that name IS the date, so the line under it read
+     "DAILY 2026.08.12 / DAILY 2026.08.12 / PAR 4". A subtitle exists to add
+     what the heading could not carry, and nothing else. */
   $('pauseSub').textContent = !lv ? ''
-    : daily ? ('DAILY ' + dayLabel() + ' / PAR ' + lv.par)
+    : daily ? ('PAR ' + lv.par + ' FOLDS')
     : ('VAULT ' + roman(vaultOf(levelNo)) + ' / ' + vaultName(vaultOf(levelNo)) + ' / PAR ' + lv.par);
   show('scPause');
 };
