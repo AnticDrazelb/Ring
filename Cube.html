@@ -2786,50 +2786,137 @@ function depthK(d){ return Math.max(0, Math.min(1, d / Math.max(1, N-1))); }
 var SCAN_MS = 4200;
 function scanY(){ return ((Date.now() % SCAN_MS) / SCAN_MS); }
 
-/* ONE TILE. x,y,w,h in screen units; d is the cell's depth in the column;
-   lit is the old lamp term, which now only nudges the trace a few percent
-   so that stepping still registers on the tile underfoot. */
-function drawBlock(t, d, x, y, w, h, lit){
-  var k = depthK(d), deck = isWalkType(t);
+/* ============================================================
+   THE CELL IS A SHADER, NOT A STROKE.
+
+   The plotter version of this was correct and it was correct in a vacuum.
+   Seen on an actual panel at three device pixels to the CSS pixel, a 47pt
+   tile carrying a 3x3 crosshatch of one-pixel lines does not read as a
+   crosshatch — the lines fuse, the cell reads as a soft slate volume, and
+   the bright cells bloom into the black around them. The picture the device
+   produced was better than the picture the code described, which is the
+   only kind of evidence that actually counts.
+
+   So the strokes are gone and the SOFTNESS IS AUTHORED rather than being an
+   artefact of a display. Every cell is a small shaded field:
+
+     TRACE  a hot core falling to the depth-ramped body, a bright inner rim
+            just inside the edge, and a bloom that leaves the cell entirely
+            and lands in the glow buffer. Circuits look energised, and a run
+            of them lights as a mass rather than as adjacent squares.
+     GRID   a solid slate body, ramped by depth, darkening toward its own
+            border so cells separate by falloff instead of by a line. It is
+            a volume the display has mapped and found nothing in.
+
+   WHAT DID NOT CHANGE IS WHAT THE COLOURS MEAN. The band guarantee still
+   holds and is still asserted: the trace floor is sky-700 and the lattice
+   ceiling is #1e293b, forty-seven apart, and no gradient stop on either
+   side is allowed outside its own material's range. Softening how a cell is
+   drawn is not permission to soften what it says.
+
+   IT IS CACHED, AND IT HAS TO BE. A radial gradient per cell per frame is
+   forty-nine createRadialGradient calls sixty times a second, which is the
+   one thing this renderer got rid of and should not quietly reintroduce.
+   Each material at each quantised depth is baked once into a small canvas
+   and blitted with smoothing on — the upscale IS part of the look, because
+   a 72px sprite stretched over a 110px tile is softer than anything that
+   could be drawn at full size, and it costs a quarter of the fill.        */
+var CELL_R = 72, cellCache = {}, cellCount = 0;
+function cellReset(){ cellCache = {}; cellCount = 0; }
+
+function cellSprite(deck, dq, lq){
+  var key = (deck ? 'T' : 'G') + dq + '_' + lq, c = cellCache[key];
+  if(c) return c;
+  if(cellCount > 96) cellReset();
+  var k = dq / CELL_DQ, lm = 1 + lq*0.02;
+  c = document.createElement('canvas');
+  c.width = c.height = CELL_R;
+  var g = c.getContext('2d'), h = CELL_R/2, gr;
   if(deck){
-    var lm = lit === undefined ? 1 : Math.max(1, lit);
-    /* the body: sky-400 at full depth, sky-900 at the back of the cube */
-    var r = (12 + (56-12)*k) * lm, g = (74 + (189-74)*k) * lm, b = (110 + (248-110)*k) * lm;
-    ctx.fillStyle = 'rgb(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ')';
-    ctx.fillRect(x, y, w, h);
-    /* THE INNER GLOW, one pixel in. Not a bevel — it does not run brighter
-       on one side and darker on the other, because there is no light in
-       this room. It is a uniform hot edge, the way an illuminated region on
-       a vector display is hottest where the beam turns around. */
-    ctx.strokeStyle = 'rgba(186,240,255,' + (0.30 + 0.45*k).toFixed(3) + ')';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 1.5, y + 1.5, w - 3, h - 3);
+    /* the body, ramped sky-700 -> sky-400, with the lamp allowed to lift it
+       a couple of percent and nothing else */
+    var r0 = (3   + (56  - 3)  *k) * lm,
+        g0 = (105 + (189 - 105)*k) * lm,
+        b0 = (161 + (248 - 161)*k) * lm;
+    g.fillStyle = 'rgb(' + (r0|0) + ',' + (g0|0) + ',' + (b0|0) + ')';
+    g.fillRect(0, 0, CELL_R, CELL_R);
+    /* A LIFT, NOT A CORE. The first pass opened the centre of every trace
+       by ninety-six points toward white, which turned a run of circuits
+       into a row of headlights and lost the flat, even, saturated blue the
+       whole look rests on. The centre is a few percent brighter than its
+       own edge and no more — enough that a cell reads as lit from inside
+       rather than filled, which is the entire job. */
+    gr = g.createRadialGradient(h, h*0.88, 0, h, h, h*1.5);
+    gr.addColorStop(0, 'rgba(186,240,255,' + (0.10 + 0.12*k).toFixed(3) + ')');
+    gr.addColorStop(1, 'rgba(186,240,255,0)');
+    g.fillStyle = gr;
+    g.fillRect(0, 0, CELL_R, CELL_R);
+    /* THE INNER RIM, blurred rather than stroked. It is the one pixel of
+       hot edge the brief asked for, drawn as a falloff so it survives being
+       scaled to any tile size on any panel instead of being a hairline that
+       is three device pixels on one phone and half of one on another. */
+    g.save();
+    g.filter = 'blur(2.4px)';
+    g.strokeStyle = 'rgba(196,244,255,' + (0.26 + 0.34*k).toFixed(3) + ')';
+    g.lineWidth = 3;
+    g.strokeRect(3, 3, CELL_R - 6, CELL_R - 6);
+    g.restore();
   } else {
-    /* THE LATTICE IS NOT A DARK TILE, IT IS AN EMPTY ONE. Black ground, and
-       a crosshatch drawn over it in slate — so it reads as a region the
-       display has mapped and found nothing running through, which is a
-       different statement from "here is a dark grey square". */
-    ctx.fillStyle = '#000';
-    ctx.fillRect(x, y, w, h);
-    /* THE INK IS THE CEILING, NOT ABOVE IT. Both strokes are #1e293b and
-       only their alpha moves with depth, so nothing a lattice cell paints
-       can ever exceed the value bandGap was measured against. A brighter
-       boundary colour was tried and it put the near lattice's outline back
-       at the far trace's luminance — the exact collision, reintroduced by
-       a detail rather than by the palette. */
-    var a = 0.30 + 0.70*k, step = w/4, i;
-    ctx.strokeStyle = 'rgba(30,41,59,' + a.toFixed(3) + ')';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for(i = 1; i < 4; i++){
-      ctx.moveTo(x + step*i, y);       ctx.lineTo(x + step*i, y + h);
-      ctx.moveTo(x, y + (h/4)*i);      ctx.lineTo(x + w, y + (h/4)*i);
-    }
-    ctx.stroke();
-    /* and its own boundary, so two lattice cells at different depths are
-       still two cells */
-    ctx.strokeStyle = 'rgba(30,41,59,' + (0.45 + 0.55*k).toFixed(3) + ')';
-    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    /* THE LATTICE IS FLAT, AND THAT WAS THE SECOND MISTAKE. A radial
+       gradient falling to forty percent at the corners turned every dead
+       cell into a dark pill, so the lattice read as a grid of blobs rather
+       than as one unlit surface with cells in it. It is a flat field at the
+       depth-ramped value with its border softly darkened — separation by
+       falloff, no line, no blob.
+
+       THE CEILING IS #1e293b AND NOTHING HERE MAY PASS IT, which is what
+       keeps the brightest lattice forty-seven luminance under the dimmest
+       trace. Everything below only ever darkens. */
+    var lr = 7 + (30 - 7)*k, lg = 11 + (41 - 11)*k, lb = 17 + (59 - 17)*k;
+    g.fillStyle = 'rgb(' + (lr|0) + ',' + (lg|0) + ',' + (lb|0) + ')';
+    g.fillRect(0, 0, CELL_R, CELL_R);
+    g.save();
+    g.filter = 'blur(3px)';
+    g.strokeStyle = 'rgba(0,0,0,0.55)';
+    g.lineWidth = 5;
+    g.strokeRect(2.5, 2.5, CELL_R - 5, CELL_R - 5);
+    g.restore();
+  }
+  cellCache[key] = c; cellCount++;
+  return c;
+}
+
+/* Depth is quantised to half-cells so a seven-cube needs thirteen sprites a
+   material rather than one per tile, and the lamp to four steps. */
+var CELL_DQ = 12;
+function drawBlock(t, d, x, y, w, h, lit){
+  var deck = isWalkType(t);
+  var dq = Math.max(0, Math.min(CELL_DQ, Math.round(depthK(d) * CELL_DQ)));
+  var lq = (deck && lit !== undefined) ? Math.max(0, Math.min(4, Math.round((lit - 1) * 40))) : 0;
+  var sm = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(cellSprite(deck, dq, lq), x, y, w, h);
+  ctx.imageSmoothingEnabled = sm;
+  /* AND THE CIRCUIT LEAVES THE CELL. A trace paints a soft rect into the
+     bloom buffer as well, so a run of connected traces lights the black
+     around it as one shape — which is the whole difference between a
+     diagram of a circuit and a circuit that is carrying something. Only
+     traces: the lattice is not energised and must never glow, or the one
+     separation the board is read off starts leaking. */
+  if(deck && !glowOff && store.fx && gx){
+    /* AT THE TILE'S OWN BOUNDS, NOT PADDED. Padding the rect made every
+       trace throw a square halo that OVERLAPPED its neighbour's, and two
+       additive halves at a shared edge is a bright bar down the seam — a
+       run of circuits came out as a ladder. Unpadded, adjacent traces tile
+       exactly and the spread comes from the buffer, which is a third of
+       the resolution and composited twice at different scales. That is the
+       blur; it does not need help. */
+    var k = dq / CELL_DQ;
+    gx.save();
+    gx.globalCompositeOperation = 'lighter';
+    gx.fillStyle = 'rgba(56,189,248,' + (0.07 + 0.15*k).toFixed(3) + ')';
+    gx.fillRect(x, y, w, h);
+    gx.restore();
   }
 }
 
@@ -2847,7 +2934,7 @@ function deckLight(u, v, t){
 
 /* texReset survives as a no-op call site: loadLevel and the vault change
    both ask for it, and there is no longer anything cached to throw away. */
-function texReset(){}
+function texReset(){ cellReset(); }
 
 function nowMs(){ return (window.performance && performance.now) ? performance.now() : 0; }
 
@@ -4725,6 +4812,22 @@ function drawPlayer(x, y, sz, k){
     glow.restore();
   }
 
+  /* AND IT TAKES THE BLOOM WITH IT.
+
+     The traces now paint into the glow buffer, and that buffer is
+     composited over everything at the end of the frame — including over
+     the hole. So the tile the marker stands on was lighting the inside of
+     the event horizon, and the one thing on this board that must be black
+     came out dark teal. A black hole does not emit, and it does not let
+     the thing behind it emit either: the same disc is cleared out of the
+     bloom buffer before the horizon is drawn. It is in register because
+     camBegin transforms both contexts identically. */
+  if(gx && store.fx && !glowOff){
+    gx.save();
+    gx.beginPath(); gx.arc(x, y, rr*1.04, 0, 6.284); gx.clip();
+    gx.clearRect(x - rr*1.1, y - rr*1.1, rr*2.2, rr*2.2);
+    gx.restore();
+  }
   ctx.save();
   ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.284); ctx.clip();
   /* THE DECK UNDER IT IS REMOVED, not covered. clearRect obeys the clip, so
@@ -4764,7 +4867,7 @@ function drawPlayer(x, y, sz, k){
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.strokeStyle = 'rgba(34,211,238,' + Math.min(1, 0.95*k*rim).toFixed(3) + ')';
-  ctx.lineWidth = Math.max(1.1, rr*0.075*rim);
+  ctx.lineWidth = Math.max(1.5, rr*0.105*rim);
   ctx.beginPath(); ctx.arc(x, y, rr*0.965, 0, 6.284); ctx.stroke();
   /* brighter over one arc, travelling: the whole of "it is turning" */
   ctx.strokeStyle = 'rgba(165,243,252,' + (0.55*k*rim).toFixed(3) + ')';
@@ -4912,6 +5015,19 @@ function seat(cx, cy, r){
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.28318); ctx.clip();
   ctx.clearRect(cx - r, cy - r, r*2, r*2);
   ctx.restore();
+  /* AND THE BLOOM COMES OUT OF THE OPENING TOO. The trace under a mark
+     paints into the glow buffer, which composites over everything at the
+     end of the frame — so an opening cut in the mask was being filled back
+     in with the light of the tile it was cut out of, and every component
+     sat on a faintly blue disc rather than on black. The mark's own halo is
+     drawn AFTER this and is unaffected: what is removed is the ground's
+     light, not the component's. */
+  if(gx && store.fx && !glowOff){
+    gx.save();
+    gx.beginPath(); gx.arc(cx, cy, r, 0, 6.28318); gx.clip();
+    gx.clearRect(cx - r, cy - r, r*2, r*2);
+    gx.restore();
+  }
 }
 
 /* THE NODE — collectible data. A diamond, because that is the shape this
