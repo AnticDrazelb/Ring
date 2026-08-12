@@ -86,6 +86,22 @@
   --glass:rgba(3,6,10,.90);
   --glass-2:rgba(56,189,248,.05);
 
+  /* ---- SURFACES -------------------------------------------------
+     BLACK IS A BACKGROUND, NOT A MATERIAL, and the interface had
+     nothing else. Every control was a hairline drawn straight onto
+     the void, which is why a menu read as a diagram of a menu: there
+     was no SURFACE anywhere, so nothing could sit on top of anything
+     and the whole screen was one plane with lines on it.
+
+     Three planes now, and the difference between them is small on
+     purpose — this is still a dark instrument, not a stack of grey
+     cards. Void is the ground. Panel is anything you can press.
+     Card is anything that has come forward and taken the screen. */
+  --panel:#0d1117;
+  --panel-hi:#161c26;
+  --card:#141924;
+  --scrim:rgba(0,0,0,.72);
+
   --grid:#1e293b;      --grid-hi:#334155;   /* inactive lattice */
   --trace:#38bdf8;     --trace-lo:#0c4a6e;  /* active circuit, walkable */
   --arc:#22d3ee;       /* you, data flow, a perfect collapse */
@@ -269,7 +285,7 @@ button{font-family:inherit;color:inherit;border:0;background:none;padding:0;curs
    blur, no scrim, nothing between the player and the object. The gradient
    only darkens where words have to sit on top of it. */
 #scTitle{
-  justify-content:space-between;
+  justify-content:center;
   backdrop-filter:none;-webkit-backdrop-filter:none;
   background:linear-gradient(180deg,
     rgba(0,0,0,.96) 0%, rgba(0,0,0,.80) 13%, rgba(0,0,0,.12) 27%,
@@ -278,6 +294,10 @@ button{font-family:inherit;color:inherit;border:0;background:none;padding:0;curs
 }
 #scTitle::before,#scTitle::after{display:none;}
 .titleTop,.titleBottom{width:100%;display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+/* clamped at the bottom so a 568pt phone still fits its own menu */
+.heroSlot{flex:0 0 auto;width:100%;height:clamp(132px, min(70vw,36vh), 320px);}
+/* the spacers are what pushed the bands apart; the column centres itself */
+#scTitle::before,#scTitle::after{flex:0 1 auto;}
 .titleTop{padding-top:2px;}
 .titleBottom{padding-bottom:2px;}
 /* THE MANUAL IS TWO DIFFERENT SCREENS AND HAS TO BE LIT LIKE TWO.
@@ -317,7 +337,7 @@ button{font-family:inherit;color:inherit;border:0;background:none;padding:0;curs
 #scTitle .foot{margin-top:14px;}
 #scTitle .btn,#scManual .btn{backdrop-filter:none;-webkit-backdrop-filter:none;}
 #scTitle .btn{position:relative;}
-#scTitle .btn:not(.primary){background:var(--void);}
+#scTitle .btn:not(.primary):not(.ghost){background:var(--panel);}
 #scManual .mkey,#scManual .mtxt{text-shadow:0 1px 10px rgba(0,0,0,.9);}
 .layer::before,.layer::after{content:'';flex:1 1 auto;min-height:0;}
 .layer>*{flex-shrink:0;}
@@ -341,20 +361,34 @@ h1{
    own face, stacked, tracked wide and ruled underneath is what a machine
    stencils on its own front panel, and it is the only thing on this screen
    that is allowed to be large. */
+/* THE MASTHEAD IS ONE BLOCK, AND IT IS SMALLER THAN IT WAS.
+
+   The wordmark was set at nine and a half percent of the viewport width
+   with a third of an em of tracking, which on a phone is two lines of type
+   the height of a thumb — the title of the game shouting at somebody who
+   has already bought it. It was also ruled directly underneath, which cut
+   the masthead in half and left VAULT IV / OLD SEAM stranded below the line
+   as though it belonged to the paragraph rather than to the title.
+
+   One block: name, then what the name is currently pointing at, then ONE
+   rule under the whole thing. The rule is the bottom of the masthead, not a
+   divider inside it. And it is all about a third smaller, which is what
+   buys the hero the space it needs to be the thing you look at. */
 #wordmark{
   display:flex;flex-direction:column;align-items:center;gap:0;
-  width:min(88vw,420px);margin:0 auto 10px;padding-bottom:9px;
-  font-size:clamp(24px,7.8vw,36px);font-weight:500;letter-spacing:.30em;
-  line-height:1.06;text-indent:.30em;color:var(--ink);
-  border-bottom:var(--hair) solid var(--rust);
+  width:min(88vw,420px);margin:0 auto 6px;
+  font-size:clamp(20px,6.2vw,29px);font-weight:500;letter-spacing:.26em;
+  line-height:1.1;text-indent:.26em;color:var(--ink);
 }
 #wordmark span:last-child{color:var(--rust);}
-.resume{text-align:center;margin:-2px auto 10px;}
-.resume .eyebrow{color:var(--dim);}
-.resumeName{font-size:var(--t-lg);letter-spacing:.16em;color:var(--ink);margin-top:3px;
-            display:flex;align-items:center;justify-content:center;gap:.7em;}
+.resume{text-align:center;margin:0 auto;}
+.resume .eyebrow{color:var(--dim);font-size:var(--t-micro);}
+.resumeName{font-size:var(--t-md);letter-spacing:.16em;color:var(--ink);margin-top:2px;
+            display:flex;align-items:center;justify-content:center;gap:.6em;}
 .resumeName i{font-style:normal;color:var(--rust);}
-.resumeName span:last-child{color:var(--dim);font-size:var(--t-sm);}
+.resumeName span:last-child{color:var(--dim);}
+.mastRule{display:block;width:min(88vw,420px);height:1px;background:var(--rust);
+          margin:11px auto 12px;}
 h2{font-size:var(--t-xl);font-weight:500;letter-spacing:.18em;margin:0 0 4px;text-align:center;}
 h2+.manual{margin-top:14px;}
 .sub{color:var(--dim);font-size:var(--t-micro);text-align:center;line-height:1.6;letter-spacing:.10em;max-width:40ch;margin:0 auto 12px;}
@@ -428,7 +462,7 @@ h2+.manual{margin-top:14px;}
   display:flex;align-items:center;justify-content:center;gap:10px;
   border-radius:var(--r-btn);margin:0 auto 9px;padding:0 18px;
   font-size:var(--t-sm);font-weight:500;letter-spacing:.20em;
-  background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge);
+  background:var(--panel);box-shadow:inset 0 0 0 var(--hair) var(--edge);
   color:var(--ink);position:relative;
   transition:background .09s linear, color .09s linear, box-shadow .09s linear;
 }
@@ -456,7 +490,7 @@ h2+.manual{margin-top:14px;}
 
 /* NO BOX AT ALL — a ruled row reads as "also available" without competing */
 .btn.ghost{
-  background:transparent;box-shadow:inset 0 1px 0 var(--edge-2);
+  background:transparent;box-shadow:none;
   color:var(--dim);min-height:var(--h-ctl);font-size:var(--t-fine);
   letter-spacing:.22em;margin-bottom:0;
 }
@@ -552,7 +586,7 @@ h2+.manual{margin-top:14px;}
   top:calc(var(--sa-top) + 8px + var(--h-read) + 30px);
   display:flex;align-items:center;gap:8px;padding:4px 8px;
   border-radius:var(--r-chip);box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
-  font-size:var(--t-micro);letter-spacing:.16em;color:var(--dim);background:var(--void);
+  font-size:var(--t-micro);letter-spacing:.16em;color:var(--dim);background:var(--panel);
 }
 #viewTog .vVal{color:var(--ink);min-width:2.1em;text-align:center;}
 #viewTog .vSw{width:30px;height:15px;border-radius:var(--r-pill);background:var(--dim-2);
@@ -615,7 +649,7 @@ h2+.manual{margin-top:14px;}
   height:var(--h-ctl);min-width:var(--h-ctl);padding:0 15px;
   display:flex;align-items:center;justify-content:center;gap:9px;
   border-radius:var(--r-ctl);
-  background:var(--void);
+  background:var(--panel);
   box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
   font-size:var(--t-tiny);font-weight:500;letter-spacing:.19em;
   color:var(--dim);
@@ -778,7 +812,7 @@ h2+.manual{margin-top:14px;}
   transform:translate(-50%,12px);
   /* A LINE PRINTED BY THE MACHINE, not a notification bubble. */
   padding:10px 16px;border-radius:var(--r-ctl);
-  background:var(--void);
+  background:var(--panel-hi);
   box-shadow:inset 0 0 0 var(--hair) var(--edge);
   font-size:var(--t-fine);font-weight:500;letter-spacing:.16em;white-space:nowrap;
   color:var(--rust);
@@ -793,7 +827,7 @@ h2+.manual{margin-top:14px;}
 }
 .cube{
   aspect-ratio:1;border-radius:var(--r-card);position:relative;
-  background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
+  background:var(--panel);box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   min-height:88px;transition:background .1s linear,box-shadow .1s linear,color .1s linear;
 }
@@ -826,7 +860,7 @@ h2+.manual{margin-top:14px;}
 /* ---------- CARDS ---------- */
 .card{
   width:100%;max-width:360px;margin:0 auto;padding:26px 22px 20px;
-  border-radius:var(--r-card);background:var(--void);
+  border-radius:var(--r-card);background:var(--card);
   box-shadow:inset 0 0 0 var(--hair) var(--edge);
 }
 .stat{display:flex;align-items:baseline;justify-content:space-between;padding:11px 0;}
@@ -850,7 +884,7 @@ h2+.manual{margin-top:14px;}
    now — the shape every phone user already reads as "settings" — and the
    screen lost about a third of its height. */
 .settings{width:100%;max-width:340px;margin:2px auto 12px;border-radius:var(--r-card);
-  background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);overflow:hidden;}
+  background:var(--card);box-shadow:inset 0 0 0 var(--hair) var(--edge-2);overflow:hidden;}
 .settings .row{background:none;box-shadow:none;border-radius:0;margin:0;
   min-height:50px;padding:9px 14px;max-width:none;}
 .settings .row+.row{box-shadow:inset 0 1px 0 var(--edge-2);}
@@ -945,7 +979,41 @@ h2+.manual{margin-top:14px;}
 .mkey.node{color:var(--node);}
 .mkey.core{color:var(--core);}
 .mkey.plate{color:var(--rust);}
-.mtxt{flex:1;font-size:var(--t-sm);line-height:1.4;color:var(--dim);}
+.mtxt{flex:1;min-width:0;font-size:var(--t-sm);line-height:1.4;color:var(--dim);}
+/* ---------- THE DIAGRAMS ------------------------------------------------
+   One per rule, on the right, at a fixed width so every row's text block
+   starts and ends in the same place — a column of pictures of different
+   widths is a ragged edge down the middle of the screen and reads as an
+   accident. Everything is stroked at the same weight and painted from the
+   palette by class, so a diagram cannot introduce a colour. */
+.mrow{align-items:center;gap:14px;}
+.dia{flex:0 0 auto;width:96px;height:56px;overflow:visible;}
+.dia g,.dia circle,.dia path,.dia rect{fill:none;stroke-width:1.6;
+  stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke;}
+.dLine  {stroke:var(--dim-2);}
+.dTrace {stroke:var(--trace);}
+.dArc   {stroke:var(--arc);}
+.dRust  {stroke:var(--rust);}
+.dNode  {stroke:var(--node);}
+.dLock  {stroke:var(--lock);}
+.dCore  {stroke:var(--core);}
+.dInk   {stroke:var(--arc);}
+.dia .dTrace rect,.dia .dTrace path{fill:rgba(56,189,248,.16);}
+.dia [fill="currentColor"]{fill:currentColor;}
+.dia [fill="#000"]{fill:#000;}
+
+/* ---------- THE OBJECT SET ----------------------------------------------
+   These four are a SET — one board vocabulary — and four stacked rows do
+   not say so. Four tiles in a row do, and it is the one place in the manual
+   where a player can compare the shapes side by side, which is the only way
+   anybody learns to tell a hex from a diamond at tile size. */
+.objs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 2px;}
+.obj{display:flex;flex-direction:column;align-items:center;gap:5px;
+     padding:11px 3px 9px;border-radius:var(--r-chip);
+     background:var(--panel);box-shadow:inset 0 0 0 var(--hair) var(--edge-2);}
+.obj .oIc{width:30px;height:30px;}
+.obj b{font-size:var(--t-micro);letter-spacing:.1em;color:var(--ink);font-weight:500;}
+.obj span{font-size:8px;letter-spacing:.12em;color:var(--dim-2);}
 .mtxt b{display:block;color:var(--ink);font-weight:500;font-size:var(--t-md);
         letter-spacing:.07em;line-height:1.2;margin-bottom:3px;}
 .mtxt .c{color:var(--rust);font-weight:500;}
@@ -1034,8 +1102,17 @@ h2+.manual{margin-top:14px;}
       <div class="eyebrow" id="resumeVault"></div>
       <div class="resumeName"><span id="resumeName"></span><i>/</i><span id="resumePar"></span></div>
     </div>
+    <i class="mastRule"></i>
     <p class="sub">You are a black hole inside a broken machine. Fold the engine until its circuits align, then collapse into the core.</p>
   </div>
+  <!-- THE HERO'S SLOT. The cube used to be given whatever was left between
+       the two bands, which on a tall phone is five hundred pixels for an
+       object that can only be three hundred wide — so it sat in the middle
+       of a void with a hundred and thirty pixels of nothing above and below
+       it, and the screen read as three things that had drifted apart. It
+       gets a DECLARED height instead, the column packs to the centre, and
+       the composition closes up. -->
+  <div class="heroSlot" id="heroSlot"></div>
   <div class="titleBottom">
     <button class="btn primary" id="btnPlay"><span id="playLabel">[ CONTINUE ]</span></button>
     <div class="btn2">
@@ -1070,22 +1147,84 @@ h2+.manual{margin-top:14px;}
      is instead of at the end of a scroll. -->
 <div class="layer hide" id="scManual">
   <h2>CALIBRATION</h2>
+  <!-- ============ THE MANUAL IS DRAWN, NOT DESCRIBED ============
+       Every rule here was a label and a sentence, and a sentence explaining
+       a SPATIAL rule is the worst tool available: "two traces that line up
+       when you fold are connected" is nine words that mean nothing until
+       you have seen it happen, and a picture of two faces coming together
+       with an arrow between them means it immediately.
+
+       The diagrams are inline SVG rather than canvas or images: they are a
+       dozen shapes each, they inherit currentColor so they are painted out
+       of the same nine values as everything else, and they stay sharp at
+       any density with nothing to load. -->
   <div class="manual">
     <div class="meyebrow">THE RULE</div>
-    <div class="mrow"><i class="mkey">◫</i><div class="mtxt"><b>ONE FACE AT A TIME</b>Two traces that line up when you fold are <span class="c">connected</span>, however far apart they look.</div></div>
+    <div class="mrow">
+      <div class="mtxt"><b>ONE FACE AT A TIME</b>Two traces that line up when you fold are <span class="c">connected</span>, however far apart they look.</div>
+      <svg class="dia" viewBox="0 0 96 56" aria-hidden="true">
+        <g class="dLine"><path d="M10 12 30 6v38l-20 6Z"/><path d="M66 12 86 6v38l-20 6Z"/></g>
+        <g class="dTrace"><path d="M14 20h12v9H14z"/><path d="M70 27h12v9H70z"/></g>
+        <g class="dRust"><path d="M40 27h14"/><path d="M50 23l6 4-6 4"/></g>
+      </svg>
+    </div>
     <div class="meyebrow">THE VERBS</div>
-    <div class="mrow"><i class="mkey">↔</i><div class="mtxt"><b>SWIPE TO FOLD</b>Past halfway it commits. The ticks say which folds have footing.</div></div>
-    <div class="mrow"><i class="mkey arc">●</i><div class="mtxt"><b>TAP TO MOVE</b>Any trace connected to the one under you.</div></div>
-    <div class="mrow"><i class="mkey core">◎</i><div class="mtxt"><b>COLLAPSE INTO THE CORE</b>The vault is solved.</div></div>
+    <div class="mrow">
+      <div class="mtxt"><b>SWIPE TO FOLD</b>Past halfway it commits. The ticks say which folds have footing.</div>
+      <svg class="dia" viewBox="0 0 96 56" aria-hidden="true">
+        <g class="dRust">
+          <path d="M48 8v13M48 48V35M28 28H15M68 28h13"/>
+          <path d="M44 12l4-5 4 5M44 44l4 5 4-5M19 24l-5 4 5 4M77 24l5 4-5 4"/>
+        </g>
+        <g class="dLine"><rect x="34" y="21" width="28" height="14" rx="2"/></g>
+      </svg>
+    </div>
+    <div class="mrow">
+      <div class="mtxt"><b>TAP TO MOVE</b>The singularity walks to any trace connected to the one under it.</div>
+      <svg class="dia" viewBox="0 0 96 56" aria-hidden="true">
+        <g class="dTrace"><rect x="10" y="18" width="20" height="20" rx="2"/><rect x="38" y="18" width="20" height="20" rx="2"/><rect x="66" y="18" width="20" height="20" rx="2"/></g>
+        <circle cx="20" cy="28" r="6" fill="#000" class="dInk"/>
+        <g class="dArc"><circle cx="76" cy="28" r="9"/><circle cx="76" cy="28" r="13.5" opacity=".45"/></g>
+      </svg>
+    </div>
+    <div class="mrow">
+      <div class="mtxt"><b>COLLAPSE INTO THE CORE</b>Reach it and the vault is solved.</div>
+      <svg class="dia" viewBox="0 0 96 56" aria-hidden="true">
+        <g class="dCore"><circle cx="48" cy="28" r="16" opacity=".35"/><circle cx="48" cy="28" r="10" opacity=".7"/><circle cx="48" cy="28" r="3.4" fill="currentColor"/>
+        <path d="M22 28h7M67 28h7M48 2v7M48 47v7"/></g>
+      </svg>
+    </div>
+
     <div class="meyebrow">THE OBJECTS</div>
-    <div class="mrow"><i class="mkey">▣</i><div class="mtxt"><b>TRACE</b>Active circuit. Walkable. Bright is near, dim is far.</div></div>
-    <div class="mrow"><i class="mkey">▦</i><div class="mtxt"><b>GRID</b>Dead lattice. No footing. Pure black is VOID.</div></div>
-    <div class="mrow"><i class="mkey node">◆</i><div class="mtxt"><b>NODE</b>Collect every one to open every lock.</div></div>
-    <div class="mrow"><i class="mkey lock">⬢</i><div class="mtxt"><b>LOCK</b>A hex barrier. Opens when the nodes are in.</div></div>
-    <div class="mrow"><i class="mkey plate">⊘</i><div class="mtxt"><b>PLATE</b>Inverts the lattice for five seconds.</div></div>
+    <!-- four tiles, because these four are a SET and a list of four rows
+         does not say so -->
+    <div class="objs">
+      <div class="obj"><svg viewBox="0 0 40 40" class="oIc dTrace"><rect x="7" y="7" width="26" height="26" rx="4"/></svg>
+        <b>TRACE</b><span>CIRCUIT</span></div>
+      <div class="obj"><svg viewBox="0 0 40 40" class="oIc dNode"><path d="M20 5 35 20 20 35 5 20Z"/><path d="M20 13.5 26.5 20 20 26.5 13.5 20Z" fill="currentColor"/></svg>
+        <b>NODE</b><span>COLLECT</span></div>
+      <div class="obj"><svg viewBox="0 0 40 40" class="oIc dLock"><path d="M20 4.5 33.4 12.2v15.6L20 35.5 6.6 27.8V12.2Z"/><path d="M12 24 24 12M16 28 28 16"/></svg>
+        <b>LOCK</b><span>BARRIER</span></div>
+      <div class="obj"><svg viewBox="0 0 40 40" class="oIc dRust"><circle cx="20" cy="20" r="14"/><path d="M11 11 29 29"/></svg>
+        <b>PLATE</b><span>INVERTS</span></div>
+    </div>
+
     <div class="meyebrow">WORTH KNOWING</div>
-    <div class="mrow"><i class="mkey">◱</i><div class="mtxt"><b>HOLD FOR MATRIX</b>The lattice goes to glass. Keep holding and drag to turn it.</div></div>
-    <div class="mrow"><i class="mkey arc">◎</i><div class="mtxt"><b>TO GO</b>The fewest folds still possible from where you stand.</div></div>
+    <div class="mrow">
+      <div class="mtxt"><b>HOLD FOR MATRIX</b>The lattice goes to glass. Keep holding and drag to turn it.</div>
+      <svg class="dia" viewBox="0 0 96 56" aria-hidden="true">
+        <g class="dLine"><path d="M34 12h30v30H34z"/><path d="M34 12 44 5h30l-10 7M64 42l10-7V5"/></g>
+        <g class="dTrace"><rect x="38" y="16" width="10" height="10" rx="1.5"/><rect x="50" y="28" width="10" height="10" rx="1.5"/></g>
+        <g class="dArc"><circle cx="49" cy="27" r="17" opacity=".5"/></g>
+      </svg>
+    </div>
+    <div class="mrow">
+      <div class="mtxt"><b>TO GO</b>The fewest folds still possible from where you stand.</div>
+      <svg class="dia" viewBox="0 0 96 56" aria-hidden="true">
+        <g class="dArc"><circle cx="48" cy="28" r="13"/><circle cx="48" cy="28" r="4.5"/></g>
+        <g class="dRust"><path d="M18 28h12M66 28h12"/></g>
+      </svg>
+    </div>
   </div>
   <div class="stick"><button class="btn primary" id="btnManualBack">[ GOT IT ]</button></div>
 </div>
@@ -2680,12 +2819,12 @@ function layout(){
      They are measured against the chrome that is actually there. */
   var topBar = ins.t + 62, botBar = ins.b + 84;
   if(demo){
-    var tT = document.querySelector('.titleTop'), tB = document.querySelector('.titleBottom');
+    var slot = document.getElementById('heroSlot');
     var sc = document.getElementById('scTitle');
-    if(tT && tB && sc && !sc.classList.contains('hide')){
-      var rT = tT.getBoundingClientRect(), rB = tB.getBoundingClientRect();
-      topBar = Math.max(ins.t + 8, rT.bottom + 10);
-      botBar = Math.max(ins.b + 8, H - rB.top + 10);
+    if(slot && sc && !sc.classList.contains('hide')){
+      var rS = slot.getBoundingClientRect();
+      topBar = Math.max(ins.t + 4, rS.top);
+      botBar = Math.max(ins.b + 4, H - rS.bottom);
     } else {
       topBar = ins.t + Math.round(H*0.26);
       botBar = ins.b + Math.round(H*0.34);
@@ -2713,7 +2852,7 @@ function layout(){
      any rounding tips it into an overlap. Two phones out of three failed at
      that number. A fit constant has to have slack in it or it is not a fit,
      it is a coincidence. */
-  var side = demo ? Math.max(60, Math.min(availW, availH) / 1.48)
+  var side = demo ? Math.max(60, Math.min(availW, availH) / 1.56)
                   : Math.max(60, Math.min(availW, availH));
   /* THE RULE IS PART OF THE BOARD'S FOOTPRINT.
 
@@ -3518,6 +3657,32 @@ function frameFade(){
   var a = liveAngle(), t = peek.amt;
   if(a) t = Math.max(t, Math.min(1, Math.abs(a.ang)/(Math.PI/5)));
   return 1 - t;
+}
+/* ---------- THE PLATE THE BOARD SITS ON -----------------------------------
+   The grid was drawn straight onto the void, so a cell that happened to be
+   empty and the space OUTSIDE the board were the same black — the board had
+   no extent of its own, and the graticule was a rule around nothing. A
+   plate one step up from the ground gives it one, and it is the same
+   surface every control in the interface stands on, so the board reads as
+   part of the instrument rather than as a picture floating in front of it.
+
+   It goes down before either renderer, which is why it is not part of
+   drawFrame: the frame is drawn on top of the board and this is underneath
+   it. It fades out with the turn for the same reason the rule does. */
+function drawBoardPlate(){
+  if(!N || !S || demo) return;
+  var f = frameFade();
+  if(f <= 0.01) return;
+  var board = N*S, gap = Math.max(9, S*FRAME_GAP), half = board/2 + gap;
+  var x0 = CX - half, y0 = CY - half, side = half*2, r = Math.max(6, S*0.14);
+  ctx.save();
+  ctx.globalAlpha = f;
+  ctx.fillStyle = '#0b0f16';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x0, y0, side, side, r);
+  else ctx.rect(x0, y0, side, side);
+  ctx.fill();
+  ctx.restore();
 }
 function drawFrame(){
   if(!N || !S) return;
@@ -4718,6 +4883,7 @@ function draw(){
      and the one colour that has no meaning in this palette is the one
      colour a display must never emit by accident. The engine is unlit. It
      is a diagram of a machine that has failed. */
+  drawBoardPlate();
   var a = liveAngle();
   if(demo || view3d || peek.amt > 0.001 || (a && Math.abs(a.ang) > 1e-4)) draw3d();
   else drawFlat();
