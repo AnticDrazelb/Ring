@@ -104,13 +104,21 @@
   --edge-on:rgba(234,88,12,.85);
 
   /* ---- SHAPE ----------------------------------------------------
-     ZERO. Every radius in the interface is zero, and that is not a
-     stylistic preference — a rounded corner is a manufacturing tell. It
-     says injection-moulded, friendly, consumer. This is a diagnostic
-     readout for a drive that has failed, and every edge on it should
-     look like it was milled and then left alone. The variables survive
-     so nothing has to be hunted down, but they all read 0. */
-  --r-chip:0px; --r-ctl:0px; --r-btn:0px; --r-card:0px; --r-sheet:0px; --r-pill:0px;
+     A SMALL RADIUS, NOT NONE AND NOT SOFT.
+
+     Everything was set to zero on the argument that a rounded corner is a
+     manufacturing tell — injection-moulded, friendly, consumer — and that
+     a milled instrument has none. That is true of a rack unit and false of
+     a screen: at zero, four hairline rectangles stacked on black read as a
+     wireframe of a menu rather than as controls, and the whole interface
+     came out looking like a mockup of itself.
+
+     Six pixels is the number. It is small enough that nothing reads as a
+     bubble and large enough that a field reads as an OBJECT — which is
+     what makes a stack of them scan as a control panel. Cells get four,
+     because a tile is smaller and the corner has less room to be seen. */
+  --r-chip:6px; --r-ctl:6px; --r-btn:7px; --r-card:10px; --r-sheet:12px; --r-pill:999px;
+  --r-cell:4px;
   --hair:1px;          /* the only stroke weight the chrome owns */
 
   /* ---- CONTROL HEIGHTS --------------------------------------------
@@ -334,16 +342,22 @@ h1{
    stencils on its own front panel, and it is the only thing on this screen
    that is allowed to be large. */
 #wordmark{
-  display:flex;flex-direction:column;align-items:center;gap:2px;
-  width:min(88vw,420px);margin:0 auto 14px;padding-bottom:12px;
-  font-size:clamp(26px,8.6vw,40px);font-weight:500;letter-spacing:.30em;
+  display:flex;flex-direction:column;align-items:center;gap:0;
+  width:min(88vw,420px);margin:0 auto 10px;padding-bottom:9px;
+  font-size:clamp(24px,7.8vw,36px);font-weight:500;letter-spacing:.30em;
   line-height:1.06;text-indent:.30em;color:var(--ink);
   border-bottom:var(--hair) solid var(--rust);
 }
 #wordmark span:last-child{color:var(--rust);}
+.resume{text-align:center;margin:-2px auto 10px;}
+.resume .eyebrow{color:var(--dim);}
+.resumeName{font-size:var(--t-lg);letter-spacing:.16em;color:var(--ink);margin-top:3px;
+            display:flex;align-items:center;justify-content:center;gap:.7em;}
+.resumeName i{font-style:normal;color:var(--rust);}
+.resumeName span:last-child{color:var(--dim);font-size:var(--t-sm);}
 h2{font-size:var(--t-xl);font-weight:500;letter-spacing:.18em;margin:0 0 4px;text-align:center;}
 h2+.manual{margin-top:14px;}
-.sub{color:var(--dim);font-size:var(--t-fine);text-align:center;line-height:1.65;letter-spacing:.12em;max-width:34ch;margin:0 auto 18px;}
+.sub{color:var(--dim);font-size:var(--t-micro);text-align:center;line-height:1.6;letter-spacing:.10em;max-width:40ch;margin:0 auto 12px;}
 .eyebrow{font-size:var(--t-tiny);letter-spacing:.24em;color:var(--rust);text-transform:uppercase;font-weight:500;}
 
 /* A TELEVISION IS NOT A BIG PHONE.
@@ -412,7 +426,7 @@ h2+.manual{margin-top:14px;}
 .btn{
   min-height:var(--h-btn);width:100%;max-width:340px;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  border-radius:0;margin:0 auto 9px;padding:0 18px;
+  border-radius:var(--r-btn);margin:0 auto 9px;padding:0 18px;
   font-size:var(--t-sm);font-weight:500;letter-spacing:.20em;
   background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge);
   color:var(--ink);position:relative;
@@ -422,7 +436,9 @@ h2+.manual{margin-top:14px;}
 
 /* THE ONE SOLID THING ON THE SCREEN. */
 .btn.primary{
-  background:var(--rust);color:#000;box-shadow:none;
+  background:var(--rust);color:#000;
+  /* the one lit object in the interface actually casts */
+  box-shadow:0 0 22px -4px rgba(234,88,12,.7), 0 0 0 1px rgba(251,146,60,.5) inset;
   font-size:var(--t-md);letter-spacing:.22em;
   min-height:calc(var(--h-btn) + 8px);
   margin-bottom:15px;
@@ -474,6 +490,28 @@ h2+.manual{margin-top:14px;}
 #hudCtx{gap:8px;justify-content:space-between;}
 #hudVault{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
           margin-left:auto;}
+/* ---------- THE CHIP ------------------------------------------------------
+   A field with a symbol in it, a number, and a hairline round the pair. The
+   symbol is stroked rather than filled so it belongs to the same drawing as
+   the graticule and the corner ticks, and it inherits currentColor so a
+   chip's whole identity — icon, number and border — moves together when its
+   state changes. */
+.chips{display:flex;align-items:center;gap:0;width:100%;min-width:0;}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;
+  padding:5px 9px;border-radius:var(--r-chip);
+  box-shadow:inset 0 0 0 var(--hair) currentColor;
+  font-size:var(--t-fine);letter-spacing:.10em;color:var(--dim);
+  white-space:nowrap;
+}
+.chip .ic{width:15px;height:15px;flex:0 0 auto;fill:none;stroke:currentColor;
+          stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round;}
+.chip .n{font-size:var(--t-lg);letter-spacing:0;color:var(--ink);font-variant-numeric:tabular-nums;}
+.chip .sub2{font-size:var(--t-fine);color:var(--dim);letter-spacing:0;margin-left:-3px;}
+.chip .lbl2{font-size:var(--t-micro);letter-spacing:.14em;}
+/* the dividers are the instrument's own ruling, not part of any chip */
+.csep{flex:1 1 auto;height:1px;background:var(--edge-2);min-width:6px;margin:0 7px;}
+
 /* ---------- THE READOUT HAS TO BE READ -----------------------------------
    IT WAS NINE PIXELS TALL WITH A TENTH OF AN EM OF TRACKING.
 
@@ -494,18 +532,36 @@ h2+.manual{margin-top:14px;}
    turns three readouts into three columns fighting over the width. */
 #barTop .pill{
   display:inline-flex;align-items:baseline;justify-content:flex-start;
-  height:auto;min-width:0;padding:0;gap:0;background:none;box-shadow:none;
-  white-space:nowrap;flex:0 0 auto;
-  font-size:var(--t-fine);letter-spacing:.14em;color:var(--dim);
+  height:auto;min-width:0;padding:0;gap:.6em;background:none;box-shadow:none;
+  white-space:nowrap;flex:0 1 auto;
+  font-size:var(--t-fine);letter-spacing:.14em;color:var(--ink);
 }
-#barTop .pill .n{font-size:var(--t-2xl);letter-spacing:0;margin-left:.42em;color:var(--ink);}
-#barTop #parN,#barTop #keyTot{font-size:var(--t-md);color:var(--dim);margin-left:.06em;}
-#barTop #lvName{color:var(--ink);font-size:var(--t-md);letter-spacing:.14em;gap:.6em;}
 #barTop #lvNo{font-size:var(--t-fine);color:var(--rust);}
 #hudVault{font-size:var(--t-fine);letter-spacing:.16em;}
-#hudVals{gap:clamp(14px,5vw,28px);}
-#barTop{gap:5px;}
+#barTop{gap:7px;}
+#turnPill{color:var(--rust);}
+#keyPill{color:var(--node);}
+#goPill{color:var(--arc);}
+#hintPill{color:var(--lock);}
+#hintPill.spent{color:var(--dim-2);}
+#hintPill.spent .n{color:var(--dim-2);}
+#turnPill.over{color:var(--fault);}
 #barBot{bottom:calc(var(--sa-bottom) + 12px);justify-content:center;gap:12px;}
+#viewTog{
+  position:absolute;right:calc(var(--sa-right) + 12px);
+  top:calc(var(--sa-top) + 8px + var(--h-read) + 30px);
+  display:flex;align-items:center;gap:8px;padding:4px 8px;
+  border-radius:var(--r-chip);box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
+  font-size:var(--t-micro);letter-spacing:.16em;color:var(--dim);background:var(--void);
+}
+#viewTog .vVal{color:var(--ink);min-width:2.1em;text-align:center;}
+#viewTog .vSw{width:30px;height:15px;border-radius:var(--r-pill);background:var(--dim-2);
+              position:relative;flex:0 0 auto;transition:background .14s var(--snap);}
+#viewTog .vSw::after{content:'';position:absolute;top:2px;left:2px;width:11px;height:11px;
+              border-radius:50%;background:var(--ink);transition:transform .14s var(--snap);}
+#viewTog.on{color:var(--arc);box-shadow:inset 0 0 0 var(--hair) var(--arc);}
+#viewTog.on .vSw{background:var(--arc);}
+#viewTog.on .vSw::after{transform:translateX(15px);background:#04222b;}
 /* TURNS carries a word, two numbers and a slash — the widest thing on the
    bar, and every pixel it gives back is a pixel the cube's name keeps */
 /* the word is a label and the count is the readout, so the word drops a
@@ -558,7 +614,7 @@ h2+.manual{margin-top:14px;}
 .pill{
   height:var(--h-ctl);min-width:var(--h-ctl);padding:0 15px;
   display:flex;align-items:center;justify-content:center;gap:9px;
-  border-radius:0;
+  border-radius:var(--r-ctl);
   background:var(--void);
   box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
   font-size:var(--t-tiny);font-weight:500;letter-spacing:.19em;
@@ -648,19 +704,15 @@ h2+.manual{margin-top:14px;}
 #lvName.fade span{
   -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 15px),transparent);
           mask-image:linear-gradient(90deg,#000 calc(100% - 15px),transparent);}
-#turnPill .n{color:var(--rust);}
-#turnPill.over .n{color:var(--fault);}
+
 /* THESE STILL CARRIED THEIR PLAQUE. When the readout stopped being four
    boxes and became two lines of text, these three rules were left behind
    with the box-shadows they had as plaques — so the moment a cube went over
    par, .slip fired and drew a rust RECTANGLE around TO GO in the middle of
    a line of plain text. A state change must change the state, not resurrect
    a component that was deleted. Colour only. */
-#keyPill{color:var(--node);}
-#goPill{color:var(--arc);}
-#goPill .n{color:var(--arc);}
-#goPill.slip,#goPill.slip .n{color:var(--rust);}
-#goPill.dead,#goPill.dead .n{color:var(--fault);}
+#goPill.slip{color:var(--rust);}
+#goPill.dead{color:var(--fault);}
 #goPill.think{opacity:.5;}
 #goPill.bump .n{display:inline-block;animation:turnBump .34s var(--seat);}
 
@@ -684,7 +736,7 @@ h2+.manual{margin-top:14px;}
 #worldTag{
   position:absolute;left:50%;top:calc(var(--sa-top) + 8px + var(--h-read) + 10px);
   transform:translateX(-50%);
-  padding:5px 14px;border-radius:0;
+  padding:5px 14px;border-radius:var(--r-chip);
   font-size:var(--t-micro);font-weight:500;letter-spacing:.22em;
   box-shadow:inset 0 0 0 var(--hair) currentColor;
   opacity:0;transition:opacity .18s linear;
@@ -725,7 +777,7 @@ h2+.manual{margin-top:14px;}
   position:absolute;left:50%;bottom:calc(var(--sa-bottom) + 120px);
   transform:translate(-50%,12px);
   /* A LINE PRINTED BY THE MACHINE, not a notification bubble. */
-  padding:10px 16px;border-radius:0;
+  padding:10px 16px;border-radius:var(--r-ctl);
   background:var(--void);
   box-shadow:inset 0 0 0 var(--hair) var(--edge);
   font-size:var(--t-fine);font-weight:500;letter-spacing:.16em;white-space:nowrap;
@@ -740,7 +792,7 @@ h2+.manual{margin-top:14px;}
   gap:11px;width:100%;max-width:440px;margin:0 auto 18px;
 }
 .cube{
-  aspect-ratio:1;border-radius:0;position:relative;
+  aspect-ratio:1;border-radius:var(--r-card);position:relative;
   background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   min-height:88px;transition:background .1s linear,box-shadow .1s linear,color .1s linear;
@@ -774,7 +826,7 @@ h2+.manual{margin-top:14px;}
 /* ---------- CARDS ---------- */
 .card{
   width:100%;max-width:360px;margin:0 auto;padding:26px 22px 20px;
-  border-radius:0;background:var(--void);
+  border-radius:var(--r-card);background:var(--void);
   box-shadow:inset 0 0 0 var(--hair) var(--edge);
 }
 .stat{display:flex;align-items:baseline;justify-content:space-between;padding:11px 0;}
@@ -797,41 +849,66 @@ h2+.manual{margin-top:14px;}
    you had to scroll. They are one grouped card with hairlines between them
    now — the shape every phone user already reads as "settings" — and the
    screen lost about a third of its height. */
-.settings{width:100%;max-width:340px;margin:2px auto 12px;border-radius:0;
+.settings{width:100%;max-width:340px;margin:2px auto 12px;border-radius:var(--r-card);
   background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);overflow:hidden;}
 .settings .row{background:none;box-shadow:none;border-radius:0;margin:0;
   min-height:50px;padding:9px 14px;max-width:none;}
 .settings .row+.row{box-shadow:inset 0 1px 0 var(--edge-2);}
 .row{
   min-height:var(--h-row);display:flex;align-items:center;justify-content:space-between;gap:14px;
-  padding:12px 16px;border-radius:0;background:transparent;
+  padding:12px 16px;border-radius:var(--r-ctl);background:transparent;
   box-shadow:inset 0 0 0 var(--hair) var(--edge-2);margin-bottom:9px;
   width:100%;max-width:360px;
 }
 .row .lbl{font-size:var(--t-sm);font-weight:500;letter-spacing:.14em;text-align:left;}
+/* the card announces itself, the way a settings sheet does everywhere */
+.setHead{font-size:var(--t-md);letter-spacing:.24em;color:var(--ink);text-align:center;
+         padding:13px 0 12px;box-shadow:inset 0 -1px 0 var(--rust);}
+.rowL{display:flex;align-items:center;gap:12px;min-width:0;flex:1;}
+.rIc{width:19px;height:19px;flex:0 0 auto;fill:none;stroke:var(--dim);
+     stroke-width:1.3;stroke-linejoin:round;stroke-linecap:round;}
+.row.on .rIc,.settings .row:has(.sw.on) .rIc{stroke:var(--rust);}
+.rowSlide{align-items:flex-start;}
+.slide{display:flex;align-items:center;gap:10px;margin-top:9px;}
+.sLbl{font-size:var(--t-micro);letter-spacing:.16em;color:var(--dim-2);flex:0 0 auto;}
+/* the one range input in the file, built out of the same two colours */
+#buzzRange{-webkit-appearance:none;appearance:none;flex:1;height:3px;border-radius:2px;
+           background:linear-gradient(90deg,var(--rust) 0 var(--fill,66%),var(--dim-2) var(--fill,66%) 100%);
+           outline:none;}
+#buzzRange::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+           background:var(--ink);box-shadow:0 0 0 1px rgba(0,0,0,.6);cursor:pointer;}
+#buzzRange::-moz-range-thumb{width:17px;height:17px;border:0;border-radius:50%;background:var(--ink);}
 /* the hints are three to six words now, so they can afford to be a legible
    size instead of a legal-notice one */
 .row .hint{font-size:var(--t-micro);color:var(--dim-2);letter-spacing:.10em;margin-top:3px;line-height:1.4;}
 /* The track used to fill with 34% rust, which against this background comes
    out as a muddy brown that reads as "broken", not as "on". On is the full
    colour with a glow under the knob; off is a neutral rail. */
-/* A SWITCH IS A STATE, AND A STATE HAS A NAME. A sliding knob is a piece of
-   hardware pretending to be on screen; this reads OFF or ON and moves
-   nothing at all.
+/* A SWITCH SAYS WHETHER, AND IT SAYS IT TWICE.
 
-   IT IS SMALL NOW, AND THAT MATTERS MORE THAN IT SOUNDS. At button size and
-   filled rust, five of them stacked were five solid orange slabs — the
-   loudest thing in the whole interface was the settings list, and the eye
-   went to SOUND / HAPTICS / EFFECTS before it went to RESUME. A switch is
-   the least important control on the screen. It is now a small field with a
-   rust rule under it when live: unmistakable at a glance, and quiet. */
-.sw{width:46px;height:20px;border-radius:0;background:transparent;position:relative;
-    flex:0 0 auto;box-shadow:inset 0 0 0 var(--hair) var(--edge-2);
-    transition:background .09s linear,box-shadow .09s linear;}
-.sw::after{content:'OFF';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-           font-size:var(--t-micro);letter-spacing:.14em;color:var(--dim-2);}
-.sw.on{background:transparent;box-shadow:inset 0 0 0 var(--hair) var(--rust),inset 0 -3px 0 var(--rust);}
-.sw.on::after{content:'ON';color:var(--rust);}
+   It has been three things. A sliding knob (hardware pretending to be on
+   screen), then a bare field reading OFF or ON with no motion at all —
+   which was honest and which nobody could find, because a two-state control
+   with no MOVING PART does not look like a control, it looks like a label.
+
+   Both, then: the word AND the knob. The word is what makes it
+   unambiguous under a thumb and at a glance in a photograph; the knob is
+   what makes it read as a switch in the first place. It is the one place in
+   this interface where something slides, and it slides because that is the
+   single gesture the entire population of phone users already knows. */
+.sw{width:54px;height:26px;border-radius:var(--r-pill);background:var(--dim-2);
+    position:relative;flex:0 0 auto;
+    box-shadow:inset 0 0 0 var(--hair) rgba(255,255,255,.10);
+    transition:background .14s var(--snap);}
+.sw::before{content:'OFF';position:absolute;inset:0;display:flex;align-items:center;
+            justify-content:flex-end;padding-right:8px;
+            font-size:8px;letter-spacing:.1em;color:var(--dim);}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;
+           border-radius:50%;background:var(--ink);
+           transition:transform .14s var(--snap),background .14s var(--snap);}
+.sw.on{background:var(--rust);}
+.sw.on::before{content:'ON';justify-content:flex-start;padding-left:9px;color:#3a1200;}
+.sw.on::after{transform:translateX(28px);background:#fff;}
 
 /* Two secondary actions, side by side, because they are secondary. A phone
    menu that spends sixty pixels of height each on RESTART and ALL CUBES is
@@ -898,19 +975,40 @@ h2+.manual{margin-top:14px;}
 
 <!-- ============ HUD ============ -->
 <div id="hud">
-  <!-- THE READOUT. Two lines of text, left-aligned, no boxes: a section
-       line saying where in the machine you are, and a value line saying
-       what it is doing. Boxed pills fought each other for width the moment
-       a label was longer than a glyph, and a lab instrument does not put a
-       frame round every number anyway — it lines them up. -->
+  <!-- THE READOUT IS A ROW OF CHIPS.
+       Two lines of bare text was legible and anonymous: three labels in a
+       row, all the same shape, and nothing to tell you at a glance which
+       number belonged to which idea. A chip with a SYMBOL in it is read
+       before it is parsed — you find the green diamond, not the word NODES
+       — and it survives being glanced at with a thumb over half of it. The
+       label stays, quietly, because a symbol nobody has met yet is a rebus. -->
   <div class="bar" id="barTop">
-    <div class="hudline" id="hudCtx"><span class="pill" id="lvName"><i class="no" id="lvNo">—</i><span id="lvNameTxt">—</span></span><span id="hudVault"></span></div>
-    <div class="hudline" id="hudVals">
-      <span class="pill" id="turnPill">FOLDS <span class="n" id="turnN">0</span><span class="n" id="parN">/0</span></span>
-      <span class="pill" id="keyPill" style="display:none">NODES <span class="n" id="keyN">0</span><span class="n" id="keyTot">/0</span></span>
-      <span class="pill" id="goPill" aria-label="fewest folds from here">TO GO <span class="n" id="goN">·</span></span>
+    <div class="chips" id="hudVals">
+      <span class="chip" id="turnPill" title="folds used / par">
+        <svg viewBox="0 0 16 16" class="ic"><rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M8 2.5v11"/></svg>
+        <span class="n" id="turnN">0</span><span class="sub2" id="parN">/0</span></span>
+      <i class="csep"></i>
+      <span class="chip" id="keyPill" style="display:none" title="nodes collected">
+        <svg viewBox="0 0 16 16" class="ic"><path d="M8 1.6 14.4 8 8 14.4 1.6 8Z"/></svg>
+        <span class="n" id="keyN">0</span><span class="sub2" id="keyTot">/0</span></span>
+      <i class="csep" id="sepKey" style="display:none"></i>
+      <span class="chip" id="goPill" title="fewest folds from here">
+        <svg viewBox="0 0 16 16" class="ic"><circle cx="8" cy="8" r="6.2"/><circle cx="8" cy="8" r="2.2"/></svg>
+        <span class="lbl2">TO GO</span><span class="n" id="goN">·</span></span>
+      <i class="csep"></i>
+      <span class="chip" id="hintPill" title="hints remaining">
+        <svg viewBox="0 0 16 16" class="ic"><path d="M8 1.8a4.4 4.4 0 0 0-2.6 7.95V11.5h5.2V9.75A4.4 4.4 0 0 0 8 1.8Z"/><path d="M6.4 13.6h3.2"/></svg>
+        <span class="n" id="hintN">3</span></span>
     </div>
+    <div class="hudline" id="hudCtx"><span class="pill" id="lvName"><i class="no" id="lvNo">—</i><span id="lvNameTxt">—</span></span><span id="hudVault"></span></div>
   </div>
+  <!-- VIEW. The cube has always been drawn two ways — the flat schematic
+       you read a puzzle in, and the solid you see while it turns — and the
+       second one was only ever visible for the third of a second a fold
+       takes, or under a held finger. It is a mode now, because some people
+       think in plan and some think in perspective, and the game has both
+       renderers sitting right there. -->
+  <button id="viewTog" aria-label="View mode"><span class="vLbl">VIEW</span><span class="vVal" id="viewVal">2D</span><i class="vSw"></i></button>
   <div id="worldTag"><span id="worldName"></span><span class="wclock" id="worldClock"></span><i class="wbar" id="worldBar"></i></div>
   <div id="dpad">
     <div class="tick" id="tkL"></div><div class="tick" id="tkD"></div>
@@ -928,12 +1026,22 @@ h2+.manual{margin-top:14px;}
 <div class="layer" id="scTitle">
   <div class="titleTop">
     <h1 id="wordmark"><span>SINGULARITY</span><span>ENGINE</span></h1>
+    <!-- WHERE YOU LEFT OFF, ON THE SCREEN THAT OFFERS TO TAKE YOU BACK.
+         [ CONTINUE ] used to be a promise with no subject: it did not say
+         which cube, which vault, or what it would cost. Naming the thing a
+         button is about is the cheapest confidence a menu can buy. -->
+    <div class="resume" id="titleResume">
+      <div class="eyebrow" id="resumeVault"></div>
+      <div class="resumeName"><span id="resumeName"></span><i>/</i><span id="resumePar"></span></div>
+    </div>
     <p class="sub">You are a black hole inside a broken machine. Fold the engine until its circuits align, then collapse into the core.</p>
   </div>
   <div class="titleBottom">
     <button class="btn primary" id="btnPlay"><span id="playLabel">[ CONTINUE ]</span></button>
-    <button class="btn" id="btnDaily">[ DAILY ]<span class="dailyMark" id="dailyMark"></span></button>
-    <button class="btn" id="btnCubes">[ VAULTS ]</button>
+    <div class="btn2">
+      <button class="btn" id="btnDaily">[ DAILY ]<span class="dailyMark" id="dailyMark"></span></button>
+      <button class="btn" id="btnCubes">[ VAULTS ]</button>
+    </div>
     <button class="btn ghost" id="btnManual">[ CALIBRATE ]</button>
     <div class="foot">DIAGNOSTIC BUILD · NO DEAD PIXELS</div>
   </div>
@@ -1012,11 +1120,32 @@ h2+.manual{margin-top:14px;}
     <button class="btn" id="btnToCubes">[ VAULTS ]</button>
   </div>
   <div class="settings">
-    <div class="row" id="rowSound"><div><div class="lbl">SOUND</div></div><div class="sw on" id="swSound"></div></div>
-    <div class="row" id="rowHaptic"><div><div class="lbl">HAPTICS</div></div><div class="sw on" id="swHaptic"></div></div>
-    <div class="row" id="rowFx"><div><div class="lbl">EFFECTS</div><div class="hint">SHAKE · SPARKS · BLOOM</div></div><div class="sw on" id="swFx"></div></div>
-    <div class="row" id="rowToGo"><div><div class="lbl">FOLDS TO GO</div><div class="hint">CYAN: PERFECT LINE · RUST: YOU SLIPPED</div></div><div class="sw on" id="swToGo"></div></div>
-    <div class="row" id="rowDepth"><div><div class="lbl">DEPTH READOUT</div><div class="hint">DISTANCE PRINTED ON EVERY CELL</div></div><div class="sw" id="swDepth"></div></div>
+    <div class="setHead">SETTINGS</div>
+    <div class="row" id="rowSound"><div class="rowL">
+      <svg viewBox="0 0 16 16" class="rIc"><path d="M2.5 6.2h2.4L8.4 3v10L4.9 9.8H2.5Z"/><path d="M11 5.6a3.4 3.4 0 0 1 0 4.8"/><path d="M12.9 3.6a6 6 0 0 1 0 8.8"/></svg>
+      <div><div class="lbl">SOUND</div></div></div><div class="sw on" id="swSound"></div></div>
+    <div class="row" id="rowHaptic"><div class="rowL">
+      <svg viewBox="0 0 16 16" class="rIc"><rect x="5.2" y="1.8" width="5.6" height="12.4" rx="1.2"/><path d="M2.4 5.6v4.8M13.6 5.6v4.8"/></svg>
+      <div><div class="lbl">HAPTICS</div></div></div><div class="sw on" id="swHaptic"></div></div>
+    <div class="row" id="rowFx"><div class="rowL">
+      <svg viewBox="0 0 16 16" class="rIc"><path d="M8 1.6 9.7 6.3 14.4 8 9.7 9.7 8 14.4 6.3 9.7 1.6 8 6.3 6.3Z"/></svg>
+      <div><div class="lbl">EFFECTS</div><div class="hint">SHAKE · SPARKS · BLOOM</div></div></div><div class="sw on" id="swFx"></div></div>
+    <div class="row" id="rowToGo"><div class="rowL">
+      <svg viewBox="0 0 16 16" class="rIc"><circle cx="8" cy="8" r="6.2"/><circle cx="8" cy="8" r="2.2"/></svg>
+      <div><div class="lbl">FOLDS TO GO</div><div class="hint">CYAN: PERFECT LINE · RUST: YOU SLIPPED</div></div></div><div class="sw on" id="swToGo"></div></div>
+    <div class="row" id="rowDepth"><div class="rowL">
+      <svg viewBox="0 0 16 16" class="rIc"><rect x="1.8" y="1.8" width="8" height="8" rx="1"/><path d="M6.2 6.2h8v8h-8"/></svg>
+      <div><div class="lbl">DEPTH READOUT</div><div class="hint">DISTANCE PRINTED ON EVERY CELL</div></div></div><div class="sw" id="swDepth"></div></div>
+    <!-- A SWITCH SAYS WHETHER, A SLIDER SAYS HOW MUCH. Haptics were one bit
+         for a thing that is not one bit: a pattern that reads as a ratchet on
+         one phone is a jolt on another, and the only person who can settle
+         that is holding the phone. -->
+    <div class="row rowSlide" id="rowBuzz"><div class="rowL">
+      <svg viewBox="0 0 16 16" class="rIc"><path d="M1.6 8h2.2l2-4.4L8 12.4l2.2-6 1.6 1.6h2.6"/></svg>
+      <div style="flex:1"><div class="lbl">HAPTIC FEEDBACK</div>
+        <div class="slide"><span class="sLbl">INTENSITY</span>
+          <input type="range" id="buzzRange" min="0" max="150" step="10" value="100"></div>
+      </div></div></div>
   </div>
   <button class="btn ghost" id="btnManual2">[ CALIBRATE ]</button>
 </div>
@@ -2154,7 +2283,7 @@ var reduceMotion = false;
 try{ reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
 var store = {best:{}, reached:1, sound:1, haptic:1, depth:0, taught:0, sawPlate:0,
              sawPeek:0, peekHinted:0, togo:1, fx: reduceMotion ? 0 : 1,
-             daily:{day:-1, best:0, solved:0}};
+             buzz:100, view3d:0, daily:{day:-1, best:0, solved:0}};
 try{ var raw = localStorage.getItem('turnkey-v2'); if(raw) store = Object.assign(store, JSON.parse(raw)); }catch(e){}
 var saveT = 0;
 function save(){
@@ -2421,7 +2550,23 @@ function duck(sec){
    as a pulse. What it costs is DISCIPLINE: the moment a fifth pattern is
    added the four stop meaning anything. */
 var HAPTIC = {fold:10, move:20, fault:[5,5,5,5,5], collapse:[0,50,100]};
-function buzz(ms){ if(store.haptic && navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){} }
+/* INTENSITY IS A SCALE ON THE DURATIONS, because that is the only knob the
+   web gives you. navigator.vibrate takes milliseconds and nothing else — no
+   amplitude, no waveform — so "stronger" means "longer", which on every
+   phone motor is genuinely how it is perceived at these lengths. The four
+   patterns keep their RATIO to each other whatever the setting, so a fault
+   still reads as three taps and a collapse still reads as a ramp; the whole
+   vocabulary just gets quieter or louder together. Zero turns it off
+   without touching the HAPTICS switch, which is the difference between
+   "none" and "off" and is worth keeping separate. */
+function buzz(ms){
+  if(!store.haptic || !navigator.vibrate) return;
+  var k = (store.buzz === undefined ? 100 : store.buzz) / 100;
+  if(k <= 0) return;
+  var out = (typeof ms === 'number') ? Math.max(1, Math.round(ms*k))
+                                     : ms.map(function(v){ return Math.max(0, Math.round(v*k)); });
+  try{ navigator.vibrate(out); }catch(e){}
+}
 
 /* ============================================================
    BOARD STATE
@@ -2562,7 +2707,13 @@ function layout(){
      perspective term the hero is drawn with adds a little on top of it.
      At 1.34 the cube cleared on two phones and clipped the band by a pixel
      on the third, which is exactly the kind of margin that ships. */
-  var side = demo ? Math.max(60, Math.min(availW, availH) / 1.46)
+  /* 1.48, and the margin is the point. The vertical constraint is
+     side*0.71 <= availH/2, which is side <= availH/1.42 EXACTLY — so 1.42
+     is the value at which the hero touches the chrome on every screen and
+     any rounding tips it into an overlap. Two phones out of three failed at
+     that number. A fit constant has to have slack in it or it is not a fit,
+     it is a coincidence. */
+  var side = demo ? Math.max(60, Math.min(availW, availH) / 1.48)
                   : Math.max(60, Math.min(availW, availH));
   /* THE RULE IS PART OF THE BOARD'S FOOTPRINT.
 
@@ -2640,6 +2791,13 @@ function liveBasis(){
   if(peek.amt > 0.001){
     var e = peekE();
     B = pitchBasis(yawBasis(B, (PEEK_YAW + peek.yaw)*e), (PEEK_PITCH + peek.pitch)*e);
+  } else if(view3d && !demo){
+    /* A FIXED, SHALLOW LEAN. Not an orbit and not the peek's angle: enough
+       that every block shows a side and the cube is plainly a solid, little
+       enough that the board is still a grid you can read a puzzle off. The
+       peek's own angle is nearly twice this and is meant for looking THROUGH
+       the cube rather than playing on it. */
+    B = pitchBasis(yawBasis(B, VIEW3D_YAW), VIEW3D_PITCH);
   }
   return B;
 }
@@ -2658,6 +2816,14 @@ function liveZoom(){
   if(peek.amt > 0.001){
     var e2 = peekE();
     z = z*(1-e2) + fitScale(liveBasis(), N*S*0.82, N*S*0.82)*e2;
+  } else if(view3d){
+    /* THE LEANED CUBE HAS TO BE FITTED TOO. Left at 1 it projected wider
+       than the board it replaced and ran straight over the graticule and
+       out of the frame — a mode that does not fit its own screen. Measured
+       against the same box the peek uses, so 2D and 3D occupy the same
+       footprint and the toggle reads as the same object seen two ways
+       rather than as two different sizes of thing. */
+    z = fitScale(liveBasis(), N*S*0.88, N*S*0.88);
   }
   return z;
 }
@@ -2686,7 +2852,7 @@ function loadLevel(level){
      orientations, which cube nine and cube ten both have plenty of — carrying
      it across a level would answer a question about this cube with the
      distance to a different cube's exit. */
-  nodeN = 0;
+  nodeN = 0; hintsLeft = HINTS_PER_CUBE;
   remainCache = {}; remainN = 0; remain = null; remainOver = false; remainStale = false; goShown = '';
   M = ORI_ID; pos = lv.start.slice(); kmask = 0; doors = 0; turns = 0; world = 0;
   clearEff(lv); flip = null; plateT = 0;
@@ -3017,6 +3183,30 @@ function cellSprite(deck, dq, lq){
   c = document.createElement('canvas');
   c.width = c.height = CELL_R;
   var g = c.getContext('2d'), h = CELL_R/2, gr;
+  /* THE CELL IS A TILE, NOT A REGION OF A FILL.
+
+     Every cell was drawn edge to edge, so a run of traces was one unbroken
+     sheet of blue and a field of lattice was one unbroken sheet of slate:
+     you could see WHERE the circuit was and not how many cells it was made
+     of, which is the number the whole puzzle is counted in. A gutter and a
+     small radius turn the same information into countable objects.
+
+     Both are baked into the sprite rather than applied at blit time, so the
+     flat board and every wave, flip and scale-in inherit them from one
+     place and there is no path that can draw a square cell by mistake. */
+  var IN = CELL_R*0.045, RAD = CELL_R*0.085;
+  function cellPath(){
+    var x0 = IN, y0 = IN, w0 = CELL_R - IN*2;
+    g.beginPath();
+    if(g.roundRect) g.roundRect(x0, y0, w0, w0, RAD);
+    else {
+      g.moveTo(x0+RAD, y0);
+      g.arcTo(x0+w0, y0, x0+w0, y0+w0, RAD); g.arcTo(x0+w0, y0+w0, x0, y0+w0, RAD);
+      g.arcTo(x0, y0+w0, x0, y0, RAD);       g.arcTo(x0, y0, x0+w0, y0, RAD);
+      g.closePath();
+    }
+  }
+  cellPath(); g.clip();
   if(deck){
     /* the body, ramped sky-700 -> sky-400, with the lamp allowed to lift it
        a couple of percent and nothing else */
@@ -3050,8 +3240,8 @@ function cellSprite(deck, dq, lq){
     g.save();
     g.filter = 'blur(2.4px)';
     g.strokeStyle = 'rgba(224,247,255,' + (0.24 + 0.30*k).toFixed(3) + ')';
-    g.lineWidth = 3;
-    g.strokeRect(3, 3, CELL_R - 6, CELL_R - 6);
+    g.lineWidth = 3.2;
+    cellPath(); g.stroke();
     g.restore();
   } else {
     /* THE LATTICE IS FLAT, AND THAT WAS THE SECOND MISTAKE. A radial
@@ -3071,9 +3261,9 @@ function cellSprite(deck, dq, lq){
     g.fillRect(0, 0, CELL_R, CELL_R);
     g.save();
     g.filter = 'blur(3px)';
-    g.strokeStyle = 'rgba(0,0,0,0.55)';
+    g.strokeStyle = 'rgba(0,0,0,0.5)';
     g.lineWidth = 5;
-    g.strokeRect(2.5, 2.5, CELL_R - 5, CELL_R - 5);
+    cellPath(); g.stroke();
     g.restore();
   }
   cellCache[key] = c; cellCount++;
@@ -3400,6 +3590,11 @@ function drawContact(){}
 
    So the demo now owns demoM and demoSurf and cannot reach the rules at all.
    The renderer reads whichever is live; nothing else ever sees demoM.        */
+/* SHALLOW. At 0.30/0.26 this was most of the way to the peek's own angle,
+   which is built for looking THROUGH the cube; here the job is to keep a
+   board you can still read a puzzle off while every block shows a side. */
+var VIEW3D_YAW = 0.17, VIEW3D_PITCH = 0.15;
+var view3d = false;
 var demo = false, demoM = ORI_ID, demoSurf = null;
 var demoAxis = 'x', demoAng = 0, demoDir = 1, demoWait = 0, demoT = 0;
 function demoStart(){
@@ -4524,7 +4719,7 @@ function draw(){
      colour a display must never emit by accident. The engine is unlit. It
      is a diagram of a machine that has failed. */
   var a = liveAngle();
-  if(demo || peek.amt > 0.001 || (a && Math.abs(a.ang) > 1e-4)) draw3d();
+  if(demo || view3d || peek.amt > 0.001 || (a && Math.abs(a.ang) > 1e-4)) draw3d();
   else drawFlat();
   if(!demo) drawFrame();
   drawBeam();
@@ -5743,6 +5938,48 @@ function denyAt(u, v, col){
   ring(r[0] + S/2, r[1] + S/2, {r0:S*0.62, r1:S*0.30, dur:340, col:col || '239,68,68', a:0.75, w:3, sq:true});
   vig = Math.max(vig, 0.55); shake(0.10); faultFlash();
 }
+/* ---------- WHERE DID THEY ACTUALLY TAP? ---------------------------------
+   Flat, this is arithmetic: the board is an axis-aligned grid at a known
+   pitch, so a point divides straight down to a cell and always has.
+
+   Leaned over, it is not. Every column is projected through the same basis
+   and perspective the blocks are drawn with, so a cell's centre is nowhere
+   near where the flat formula says it is — and a view mode that draws one
+   thing and hits another is not a view mode, it is a bug with a switch on
+   it. So in 3D the tap is resolved against the picture: every surface cell
+   is projected exactly as it was drawn and the nearest centre wins, with a
+   radius so a tap into empty space stays a tap into empty space rather than
+   snapping to whatever happened to be closest.
+
+   Forty-nine projections on a touch-up. It costs nothing and it is the only
+   version of this that cannot drift from the renderer, because it asks the
+   renderer. */
+function cellAtPoint(px0, py0){
+  var u, v;
+  if(!view3d){
+    u = Math.round((px0 - CX)/S + N/2 - 0.5);
+    v = Math.round((CY - py0)/S + N/2 - 0.5);
+    return (u >= 0 && v >= 0 && u < N && v < N) ? [u, v] : null;
+  }
+  var m = liveBasis(), z = liveZoom(), c = (N-1)/2;
+  var best = null, bd = S*S*0.62, cam = camState();
+  for(u = 0; u < N; u++) for(v = 0; v < N; v++){
+    var sc = surf[u*N + v]; if(!sc) continue;
+    var w = sc.w;
+    var qx = w[0]-c, qy = w[1]-c, qz = w[2]-c;
+    var dp = m.F[0]*qx + m.F[1]*qy + m.F[2]*qz;
+    var kk = persp(PERSP*0.85, dp);
+    var sx = CX + (m.R[0]*qx + m.R[1]*qy + m.R[2]*qz)*S*z*kk;
+    var sy = CY - (m.U[0]*qx + m.U[1]*qy + m.U[2]*qz)*S*z*kk;
+    /* the camera moves the board and not the finger, so undo it */
+    sx = CX + (sx - CX + cam.x)*cam.zoom;
+    sy = CY + (sy - CY + cam.y)*cam.zoom;
+    var dx = sx - px0, dy = sy - py0, d2 = dx*dx + dy*dy;
+    if(d2 < bd){ bd = d2; best = [u, v]; }
+  }
+  return best;
+}
+
 function tapCell(u, v){
   if(walking || anim || won) return;
   var s = surf[u*N + v];
@@ -6240,8 +6477,8 @@ function onUp(e){
     drag = null;
     peekOff();
     if(wasPeek) return;                 /* a hold is looking, never walking */
-    var u = Math.round((p.x - CX)/S + N/2 - 0.5), v = Math.round((CY - p.y)/S + N/2 - 0.5);
-    if(u >= 0 && v >= 0 && u < N && v < N) tapCell(u, v);
+    var c = cellAtPoint(p.x, p.y);
+    if(c) tapCell(c[0], c[1]);
     return;
   }
   var ang = drag.ang, axis = drag.axis;
@@ -6349,8 +6586,12 @@ function refreshHud(){
   wt.style.background = 'rgba(' + (world === 2 ? PLATE_COL[2] : PLATE_COL[1]) + ',.10)';
   var kp = $('keyPill'), held = keysHeld();
   kp.style.display = lv.keys.length ? '' : 'none';
+  $('sepKey').style.display = lv.keys.length ? '' : 'none';
   $('keyN').textContent = held;
   $('keyTot').textContent = '/' + lv.keys.length;
+  $('hintN').textContent = hintsLeft;
+  $('hintPill').classList.toggle('spent', hintsLeft <= 0);
+  $('btnHint').disabled = hintsLeft <= 0;
   $('btnUndo').disabled = !undoStack.length;
   /* the live par is painted from here too, because whether it is jade or
      gold depends on the turn count this function just wrote */
@@ -6409,11 +6650,23 @@ function undo(){
   flash('120,170,255', 0.13, 320); shake(0.16); punch(0.02);
   revealT = 0;
 }
+/* ---------- HINTS ARE FINITE, AND THE COUNT IS ON SCREEN ------------------
+   An unlimited hint button is not a hint button, it is a solve button with
+   an extra tap, and a player who does not know how many they have will
+   either never press it or press it forever. Three a cube, shown in the
+   readout beside everything else it competes with, restored on every load
+   and on every restart — the cost is the CUBE, not the account, because a
+   resource that carries across levels turns a puzzle game into an economy.
+   Reaching zero disables the control rather than hiding it: a greyed field
+   that says 0 teaches the rule, a missing one is a mystery. */
+var HINTS_PER_CUBE = 3, hintsLeft = HINTS_PER_CUBE;
 function hint(){
-  if(!lv || won) return;
+  if(!lv || won || hintsLeft <= 0) return;
   var r = solve(lv, 40, {pos:pos, ori:oriIndex(M), kmask:kmask, doors:doors, world:world});
   if(!r.ok){ toast('NO ROUTE — UNDO'); sfx.stuck(); return; }
   if(!r.first){ toast('YOU ARE STANDING ON IT'); return; }
+  hintsLeft--;
+  refreshHud();
   if(r.first.kind === 'turn'){
     var names = ['FOLD LEFT', 'FOLD RIGHT', 'FOLD UP', 'FOLD DOWN'];
     toast(names[r.first.dir]);
@@ -6475,6 +6728,12 @@ $('btnDaily').onclick = function(){ audio(); goLevel(DAILY); };
 function refreshDaily(){
   var d = store.daily;
   $('dailyMark').textContent = (d && d.day === dayIndex() && d.solved) ? (d.best + ' FOLDS') : '';
+  /* and what CONTINUE is offering */
+  var L = firstUncleared(), band = vaultOf(L);
+  $('resumeVault').textContent = 'VAULT ' + roman(band) + ': ' + vaultName(band);
+  $('resumeName').textContent = levelName(L);
+  var par = L <= BAKED.length ? BAKED[L-1].par : (mintCache[L] ? mintCache[L].par : null);
+  $('resumePar').textContent = par === null ? ('CUBE ' + L) : ('PAR ' + par);
 }
 $('btnCubesBack').onclick = function(){ refreshDaily(); show('scTitle'); };
 $('vaultPrev').onclick = function(){ if(viewBand > 0){ viewBand--; buildCubeGrid(); } };
@@ -6509,6 +6768,37 @@ $('btnRestart').onclick = function(){ loadLevel(levelNo); show(null); };
 $('btnToCubes').onclick = openCubes;
 $('btnUndo').onclick = undo;
 $('btnHint').onclick = hint;
+(function(){
+  var t = $('viewTog');
+  function paint(){
+    t.classList.toggle('on', !!view3d);
+    $('viewVal').textContent = view3d ? '3D' : '2D';
+  }
+  view3d = !!store.view3d; paint();
+  t.onclick = function(){
+    view3d = !view3d; store.view3d = view3d ? 1 : 0; save();
+    paint(); sfx.peek(); buzz(HAPTIC.fold);
+  };
+})();
+(function(){
+  var r = $('buzzRange');
+  function paint(){
+    r.style.setProperty('--fill', (r.value/1.5) + '%');
+    store.buzz = +r.value; save();
+  }
+  r.value = store.buzz === undefined ? 100 : store.buzz;
+  r.style.setProperty('--fill', (r.value/1.5) + '%');
+  /* a slider that does not demonstrate itself is a slider nobody can set:
+     every change fires the MOVE pattern at the new strength, so the value
+     is felt rather than guessed */
+  r.oninput = function(){ paint(); };
+  r.onchange = function(){ paint(); buzz(HAPTIC.move); };
+  /* the row is a big tap target for the switch, and the slider lives inside
+     one — without this, dragging the slider toggles nothing but the parent
+     row's click handler would still fire on release */
+  r.onpointerdown = function(e){ e.stopPropagation(); };
+  r.onclick = function(e){ e.stopPropagation(); };
+})();
 $('btnNext').onclick = function(){ goLevel(levelNo + 1); };
 $('btnRetry').onclick = function(){ loadLevel(daily ? DAILY : levelNo); show(null); };
 $('btnWinCubes').onclick = function(){ if(daily) show('scTitle'); else openCubes(); };
