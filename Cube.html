@@ -589,10 +589,11 @@ h2+.manual{margin-top:14px;}
    is a condition being lived in, not a score. */
 #worldTag{
   position:absolute;left:50%;top:calc(var(--sa-top) + 8px + var(--h-read) + 10px);
-  transform:translateX(-50%) scale(.9);
-  padding:5px 14px;border-radius:var(--r-pill);
-  font-size:var(--t-micro);font-weight:900;letter-spacing:.22em;
-  opacity:0;transition:opacity .3s var(--ease),transform .3s var(--seat);
+  transform:translateX(-50%);
+  padding:5px 14px;border-radius:0;
+  font-size:var(--t-micro);font-weight:500;letter-spacing:.22em;
+  box-shadow:inset 0 0 0 var(--hair) currentColor;
+  opacity:0;transition:opacity .18s linear;
   pointer-events:none;white-space:nowrap;overflow:hidden;
 }
 #worldTag.on{opacity:1;transform:translateX(-50%) scale(1);animation:wtBreath 3s ease-in-out infinite;}
@@ -618,7 +619,7 @@ h2+.manual{margin-top:14px;}
   font-feature-settings:"tnum" 1;opacity:.85;
 }
 #worldTag.hot{animation:wtHot .5s steps(2,end) infinite;}
-#worldTag.hot .wclock{color:#ff5a5a;opacity:1;}
+#worldTag.hot .wclock{color:var(--fault);opacity:1;}
 @keyframes wtHot{0%,100%{opacity:1}50%{opacity:.55}}
 #worldTag .wbar{
   position:absolute;left:0;bottom:0;height:2px;width:100%;
@@ -629,14 +630,13 @@ h2+.manual{margin-top:14px;}
 #toast{
   position:absolute;left:50%;bottom:calc(var(--sa-bottom) + 120px);
   transform:translate(-50%,12px);
-  padding:11px 18px;border-radius:var(--r-pill);
-  background:var(--glass);
-  -webkit-backdrop-filter:blur(14px) saturate(1.25);
-          backdrop-filter:blur(14px) saturate(1.25);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 0 0 1px rgba(255,255,255,.065),
-             0 10px 26px -14px rgba(0,0,0,.9);
-  font-size:var(--t-sm);font-weight:700;letter-spacing:.05em;white-space:nowrap;
-  opacity:0;transition:opacity .22s ease,transform .22s ease;pointer-events:none;
+  /* A LINE PRINTED BY THE MACHINE, not a notification bubble. */
+  padding:10px 16px;border-radius:0;
+  background:var(--void);
+  box-shadow:inset 0 0 0 var(--hair) var(--edge);
+  font-size:var(--t-fine);font-weight:500;letter-spacing:.16em;white-space:nowrap;
+  color:var(--rust);
+  opacity:0;transition:opacity .14s linear;pointer-events:none;
 }
 #toast.on{opacity:1;transform:translate(-50%,0);}
 
@@ -659,14 +659,23 @@ h2+.manual{margin-top:14px;}
 .cube.perfect{background:rgba(34,211,238,.10);}
 .cube.locked{opacity:.34;}
 .cube .marks{display:flex;gap:3px;height:6px;}
-.cube .marks i{width:6px;height:6px;border-radius:0;background:var(--dim-2);}
-.cube .marks i.on{background:var(--arc);}
+.cube .marks i{width:6px;height:6px;border-radius:0;background:transparent;
+               box-shadow:inset 0 0 0 var(--hair) var(--dim-2);}
+.cube .marks i.on{background:var(--arc);box-shadow:none;}
 
 /* the vault pager — the only chrome an endless shelf needs */
   .vaultBar{display:flex;align-items:center;gap:10px;width:100%;max-width:440px;margin:0 auto 16px;}
-  .vaultId{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;
-           font-size:var(--t-fine);letter-spacing:.2em;font-weight:500;color:var(--dim);}
-  .vaultId i{width:11px;height:11px;border-radius:0;box-shadow:inset 0 0 0 var(--hair) var(--edge);flex:0 0 auto;}
+  /* ONE LINE, ALWAYS. VAULT III / INVERSION wrapped to two on a 390pt
+     phone and pushed the pager buttons out of line with each other, which
+     reads as broken rather than as long. */
+  .vaultId{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;
+           justify-content:center;gap:5px;
+           font-size:var(--t-tiny);letter-spacing:.18em;font-weight:500;color:var(--dim);
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  /* the swatch was a two-tone chip of the vault's palette. One palette
+     now, so it is a progress rail: how much of this vault is behind you. */
+  .vaultId i{width:min(180px,52vw);height:3px;border-radius:0;flex:0 0 auto;
+             box-shadow:inset 0 0 0 var(--hair) var(--edge-2);}
 
 /* ---------- CARDS ---------- */
 .card{
@@ -754,9 +763,9 @@ h2+.manual{margin-top:14px;}
       display:flex;align-items:center;justify-content:center;font-style:normal;}
 .mkey.rust{color:var(--rust);}
 .mkey.arc{color:var(--arc);}
-.mkey.jade{color:var(--lock);}
-.mkey.gold{color:var(--node);}
-.mkey.exit{color:var(--core);}
+.mkey.lock{color:var(--lock);}
+.mkey.node{color:var(--node);}
+.mkey.core{color:var(--core);}
 .mkey.plate{color:var(--rust);}
 .mtxt{flex:1;font-size:var(--t-sm);line-height:1.4;color:var(--dim);}
 .mtxt b{display:block;color:var(--ink);font-weight:500;font-size:var(--t-md);
@@ -853,12 +862,12 @@ h2+.manual{margin-top:14px;}
     <div class="meyebrow">THE VERBS</div>
     <div class="mrow"><i class="mkey">↔</i><div class="mtxt"><b>SWIPE TO FOLD</b>Past halfway it commits. The ticks say which folds have footing.</div></div>
     <div class="mrow"><i class="mkey arc">●</i><div class="mtxt"><b>TAP TO MOVE</b>Any trace connected to the one under you.</div></div>
-    <div class="mrow"><i class="mkey exit">◎</i><div class="mtxt"><b>COLLAPSE INTO THE CORE</b>The vault is solved.</div></div>
+    <div class="mrow"><i class="mkey core">◎</i><div class="mtxt"><b>COLLAPSE INTO THE CORE</b>The vault is solved.</div></div>
     <div class="meyebrow">THE OBJECTS</div>
     <div class="mrow"><i class="mkey">▣</i><div class="mtxt"><b>TRACE</b>Active circuit. Walkable. Bright is near, dim is far.</div></div>
     <div class="mrow"><i class="mkey">▦</i><div class="mtxt"><b>GRID</b>Dead lattice. No footing. Pure black is VOID.</div></div>
-    <div class="mrow"><i class="mkey gold">◆</i><div class="mtxt"><b>NODE</b>Collect every one to open every lock.</div></div>
-    <div class="mrow"><i class="mkey jade">⬢</i><div class="mtxt"><b>LOCK</b>A hex barrier. Opens when the nodes are in.</div></div>
+    <div class="mrow"><i class="mkey node">◆</i><div class="mtxt"><b>NODE</b>Collect every one to open every lock.</div></div>
+    <div class="mrow"><i class="mkey lock">⬢</i><div class="mtxt"><b>LOCK</b>A hex barrier. Opens when the nodes are in.</div></div>
     <div class="mrow"><i class="mkey plate">⊘</i><div class="mtxt"><b>PLATE</b>Inverts the lattice for five seconds.</div></div>
     <div class="meyebrow">WORTH KNOWING</div>
     <div class="mrow"><i class="mkey">◱</i><div class="mtxt"><b>HOLD FOR MATRIX</b>The lattice goes to glass. Keep holding and drag to turn it.</div></div>
@@ -2116,6 +2125,15 @@ function noise(dur, cut, gain, send, sweepTo){
 /* how many nodes have been taken in this vault — the glass chime climbs a
    fifth for each one, so the last is the brightest sound in the level */
 var nodeN = 0;
+/* and how many steps into the current walk, so the sonar thud shifts a few
+   hertz per footfall instead of repeating exactly. Reset on landing.
+
+   IT WAS DECLARED IN THE SECTION THE NEW SOUND DESIGN REPLACED, and losing
+   it threw once per footfall — inside the frame guard, which caught it,
+   reset the walk and re-settled the board, so the only symptom was that
+   walking sometimes stopped halfway. A silent frame guard turns a
+   ReferenceError into a gameplay bug. */
+var stepN = 0;
 var VAULT_ROOT = [55, 49, 61.7, 46.2, 58.3, 65.4, 51.9, 43.7];
 function ambience(band){
   var a = audio(); if(!a || !store.sound || band === ambBand) return;
@@ -4083,37 +4101,52 @@ function shownAt(cell){
    through `multiply` and adding the two copies back at opposite offsets.
    Half resolution costs a quarter of the fill and is invisible: the whole
    point is that it is gone before the eye resolves it. */
-var fault = 0, faultCv = null, fx2 = null;
+var fault = 0, capCv = null, capX = null, tintCv = null, tintX = null;
 function faultFlash(){ fault = 1; }
+function faultSize(){
+  var w = Math.max(1, Math.round(W*0.5)), h = Math.max(1, Math.round(H*0.5));
+  if(capCv && capCv.width === w && capCv.height === h) return;
+  capCv  = document.createElement('canvas'); capCv.width  = w; capCv.height  = h;
+  tintCv = document.createElement('canvas'); tintCv.width = w; tintCv.height = h;
+  capX = capCv.getContext('2d'); tintX = tintCv.getContext('2d');
+}
 function drawFault(){
   if(!fault) return;
   fault = 0;
   if(!store.fx) return;
-  if(!faultCv || faultCv.width !== Math.max(1, Math.round(W*0.5))){
-    faultCv = document.createElement('canvas');
-    faultCv.width  = Math.max(1, Math.round(W*0.5));
-    faultCv.height = Math.max(1, Math.round(H*0.5));
-    fx2 = faultCv.getContext('2d');
-  }
-  var d = Math.max(2, W*0.012);
-  var chans = [['rgb(255,0,0)', -d], ['rgb(0,255,255)', d]];
-  for(var i = 0; i < 2; i++){
-    fx2.globalCompositeOperation = 'source-over';
-    fx2.clearRect(0, 0, faultCv.width, faultCv.height);
-    fx2.drawImage(cv, 0, 0, faultCv.width, faultCv.height);
-    fx2.globalCompositeOperation = 'multiply';
-    fx2.fillStyle = chans[i][0];
-    fx2.fillRect(0, 0, faultCv.width, faultCv.height);
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.60;
-    ctx.drawImage(faultCv, chans[i][1], 0, W, H);
-    ctx.restore();
-  }
-  /* and the fault colour over the top of the wreckage */
+  faultSize();
+  var w = capCv.width, h = capCv.height;
+  capX.globalCompositeOperation = 'source-over';
+  capX.clearRect(0, 0, w, h);
+  capX.drawImage(cv, 0, 0, w, h);
+  /* THE FRAME IS REPLACED, NOT DECORATED. The first cut added two tinted
+     copies over the top of the untouched picture, which cannot separate
+     anything — the original is still there at full strength underneath and
+     the eye reads a faint double image rather than a split. Wipe to black
+     and rebuild the frame out of its own channels: red x frame plus
+     cyan x frame sums back to exactly the frame when they are aligned, so
+     offsetting them is a true split at the right overall brightness, with
+     no exposure change to give it away. */
   ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(DPR, DPR);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
   ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = 'rgba(239,68,68,0.16)';
+  var d = Math.max(3, W*0.018), chans = [['#f00', -d], ['#0ff', d]];
+  for(var i = 0; i < 2; i++){
+    tintX.globalCompositeOperation = 'source-over';
+    tintX.clearRect(0, 0, w, h);
+    tintX.drawImage(capCv, 0, 0);
+    tintX.globalCompositeOperation = 'multiply';
+    tintX.fillStyle = chans[i][0];
+    tintX.fillRect(0, 0, w, h);
+    ctx.drawImage(tintCv, chans[i][1], 0, W, H);
+  }
+  /* and the fault colour over the wreckage, so the frame is unmistakably a
+     FAILURE and not a mis-registration */
+  ctx.fillStyle = 'rgba(239,68,68,0.22)';
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
@@ -4857,6 +4890,30 @@ function stepDoors(dt){
    the flat board and the turning solid share them without either having to
    know how the other projects.                                            */
 
+/* EVERY MARK GETS A SOLDER-MASK OPENING.
+
+   A lime pad drawn straight onto a #38bdf8 trace has nowhere to go: the
+   tile is the brightest thing on the board, the mark is additive light on
+   top of it, and the middle clips to white — which is how the node first
+   came out, reading as a yellow smear rather than as a green component.
+   Turning the halo down stops the clipping and leaves the mark washed out
+   instead, because the problem is contrast, not exposure.
+
+   So the display CUTS THE TRACE where a component sits. A disc of black is
+   punched out of whatever has already been painted — clearRect, obeying the
+   clip, exactly the way the event horizon removes the tile under it — and
+   the mark is drawn into the hole. It is what a real board does (a pad is
+   an opening in the mask), it gives all three marks the same ground so they
+   can share one set of colours, and it means a node on a bright near trace
+   and one on a dim far trace look identical, which they should: how far
+   away a NODE is has never been information the player needs.            */
+function seat(cx, cy, r){
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.28318); ctx.clip();
+  ctx.clearRect(cx - r, cy - r, r*2, r*2);
+  ctx.restore();
+}
+
 /* THE NODE — collectible data. A diamond, because that is the shape this
    game has meant "pick this up" with since the first build and there is no
    reason to spend the player's memory re-teaching it; but drawn as a pad on
@@ -4867,6 +4924,7 @@ function drawKey(cx, cy, sz){
   var t = Date.now()/1000;
   var b = 0.86 + 0.14*Math.sin(t*2.4);              /* the breath */
   var r = sz*0.30*b, lead = sz*0.46;
+  seat(cx, cy, sz*0.40);
   halo(cx, cy, sz*0.9, S_KEY, 0.16*b);
   /* THE MARK IS MATTER, THE HALO IS LIGHT. Drawn into the frame, never into
      the glow buffer: that buffer is composited additively twice, and a lime
@@ -4906,6 +4964,7 @@ function drawKey(cx, cy, sz){
 var C_EXIT = [249, 115, 22], S_EXIT = '249,115,22';
 function drawGoal(cx, cy, sz){
   var t = Date.now()/1000, i, g = ctx;
+  seat(cx, cy, sz*0.46);
   halo(cx, cy, sz*1.25, S_EXIT, 0.22);
   g.save();
   g.lineWidth = 1;
@@ -4946,15 +5005,26 @@ function drawDoor(cx, cy, sz, op){
     a = -Math.PI/2 + i*Math.PI/3;
     pts.push([cx + Math.cos(a)*r, cy + Math.sin(a)*r]);
   }
+  /* THE PATH IS A FUNCTION, NOT A VARIABLE, and that is a bug fix rather
+     than a style. The hatch below calls beginPath inside the clip, which
+     destroys the hex the clip was built from — so the barrier stroke that
+     came after it was stroking the HATCH LINES, and stroking them after the
+     clip had been popped. On screen: yellow diagonals running clean across
+     three tiles, and no hex anywhere. A current path is not part of what
+     save/restore puts back, so anything that needs a path twice has to be
+     able to build it twice. */
+  function hexPath(){
+    g.beginPath();
+    for(var j = 0; j < 6; j++){ if(j) g.lineTo(pts[j][0], pts[j][1]); else g.moveTo(pts[0][0], pts[0][1]); }
+    g.closePath();
+  }
+  if(op < 0.02) seat(cx, cy, r*1.04);
   g.save();
-  g.globalAlpha = 1 - op;
   g.lineWidth = 1;
-  g.beginPath();
-  for(i = 0; i < 6; i++){ if(i) g.lineTo(pts[i][0], pts[i][1]); else g.moveTo(pts[0][0], pts[0][1]); }
-  g.closePath();
   /* the refusal: diagonal hatching, clipped to the hex, thinning out as the
      lock opens so it is empty well before the outline goes */
   g.save();
+  hexPath();
   g.clip();
   g.globalAlpha = (1 - op) * (1 - op);
   g.strokeStyle = 'rgba(250,204,21,0.55)';
@@ -4969,6 +5039,7 @@ function drawDoor(cx, cy, sz, op){
   /* and the barrier itself */
   g.globalAlpha = 1 - op;
   g.strokeStyle = 'rgba(250,204,21,0.95)';
+  hexPath();
   g.stroke();
   g.restore();
 }
@@ -5956,10 +6027,11 @@ function hint(){
   if(!r.ok){ toast('NO ROUTE — UNDO'); sfx.stuck(); return; }
   if(!r.first){ toast('YOU ARE STANDING ON IT'); return; }
   if(r.first.kind === 'turn'){
-    var names = ['drag LEFT', 'drag RIGHT', 'drag UP', 'drag DOWN'];
+    var names = ['FOLD LEFT', 'FOLD RIGHT', 'FOLD UP', 'FOLD DOWN'];
     toast(names[r.first.dir]);
   } else {
-    toast(r.turns ? 'walk first — ' + r.turns + ' turn' + (r.turns>1?'s':'') + ' to go' : 'walk — no turns left to make');
+    toast(r.turns ? 'MOVE FIRST — ' + r.turns + ' FOLD' + (r.turns>1?'S':'') + ' TO GO'
+                  : 'MOVE — NO FOLDS LEFT TO MAKE');
   }
 }
 
